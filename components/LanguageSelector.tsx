@@ -25,14 +25,13 @@ export default function LanguageSelector() {
 
   return (
     <>
-      {/* Language Toggle Button */}
+      {/* Language Toggle Button - Compact */}
       <button
         onClick={() => setShowModal(true)}
-        className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+        className="flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[60px]"
         title="Change Language"
       >
-        <span className="text-lg">🌐</span>
-        <span>{lang === "en" ? "English" : "বাংলা"}</span>
+        <span className="text-sm">{lang === "en" ? "EN" : "BN"}</span>
       </button>
 
       {/* Language Selection Modal */}

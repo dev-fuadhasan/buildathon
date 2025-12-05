@@ -25,6 +25,7 @@ export const translations = {
       search: "Search",
       filter: "Filter",
       close: "Close",
+      home: "Home",
     },
     // Homepage
     home: {
@@ -127,6 +128,7 @@ export const translations = {
       search: "খুঁজুন",
       filter: "ফিল্টার",
       close: "বন্ধ",
+      home: "হোম",
     },
     // Homepage
     home: {

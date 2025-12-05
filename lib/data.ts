@@ -117,3 +117,18 @@ export async function listAllDoctors() {
   return listJson<DoctorProfile>("doctors/");
 }
 
+export async function deleteDoctor(doctorId: string) {
+  const { deleteObject } = await import("./r2Client");
+  const doctorKey = `doctors/${doctorId}.json`;
+  await deleteObject(doctorKey);
+  // Also delete profile picture if exists
+  const doctor = await getDoctor(doctorId);
+  if (doctor?.profilePicture) {
+    try {
+      await deleteObject(doctor.profilePicture);
+    } catch (err) {
+      // Ignore errors if picture doesn't exist
+    }
+  }
+}
+

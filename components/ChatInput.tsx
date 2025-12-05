@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
+import { getLanguage } from "@/lib/i18n";
 
 type Props = {
   onSend: (text: string) => Promise<void> | void;
@@ -8,6 +10,8 @@ type Props = {
 };
 
 export default function ChatInput({ onSend, disabled }: Props) {
+  const t = useTranslation();
+  const lang = getLanguage();
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -28,7 +32,9 @@ export default function ChatInput({ onSend, disabled }: Props) {
       <div className="flex-1">
         <textarea
           className="input resize-none min-h-[60px] max-h-[120px]"
-          placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
+          placeholder={lang === "bn" 
+            ? "আপনার বার্তা টাইপ করুন... (প্রেরণ করতে Enter, নতুন লাইনের জন্য Shift+Enter)"
+            : `${t.chat.placeholder} (Press Enter to send, Shift+Enter for new line)`}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -50,12 +56,12 @@ export default function ChatInput({ onSend, disabled }: Props) {
         {sending ? (
           <span className="flex items-center gap-2">
             <span className="animate-spin">⏳</span>
-            <span>Sending...</span>
+            <span>{lang === "bn" ? "প্রেরণ করা হচ্ছে..." : "Sending..."}</span>
           </span>
         ) : (
           <span className="flex items-center gap-2">
             <span>📤</span>
-            <span>Send</span>
+            <span>{t.chat.send}</span>
           </span>
         )}
       </button>

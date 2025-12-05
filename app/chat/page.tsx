@@ -5,14 +5,23 @@ import ChatBubble from "@/components/ChatBubble";
 import ChatInput from "@/components/ChatInput";
 import Layout from "@/components/Layout";
 import Link from "next/link";
+import { useTranslation } from "@/hooks/useTranslation";
+import { getLanguage } from "@/lib/i18n";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 export default function ChatPage() {
+  const t = useTranslation();
+  const [lang] = useState(() => getLanguage());
+  
+  const initialMessage = lang === "bn" 
+    ? "হাই! আমি MomsCare, আপনার AI গর্ভাবস্থা সহায়ক। আপনার গর্ভাবস্থার যাত্রা সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন!"
+    : "Hi! I'm MomsCare, your AI pregnancy assistant. Ask me anything about your pregnancy journey!";
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm MomsCare, your AI pregnancy assistant. Ask me anything about your pregnancy journey!",
+      content: initialMessage,
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -81,16 +90,14 @@ export default function ChatPage() {
       <div className="flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-pink-600 mb-2">MomsCare AI Chat</h1>
+          <h1 className="text-3xl font-bold text-pink-600 mb-2">{t.chat.title}</h1>
           <div className="flex items-center gap-4">
             <p className="text-slate-600">
-              {isMother 
-                ? "✨ You're logged in! I'll provide personalized answers based on your profile."
-                : "💬 Public chat - Log in as a mother for personalized guidance."}
+              {isMother ? `✨ ${t.chat.personalized}` : `💬 ${t.chat.public}`}
             </p>
             {!isMother && (
               <Link href="/mother/login" className="btn-secondary text-sm">
-                Login for Personalized Chat
+                {t.common.login} {lang === "bn" ? "ব্যক্তিগতকৃত চ্যাটের জন্য" : "for Personalized Chat"}
               </Link>
             )}
           </div>
@@ -99,8 +106,7 @@ export default function ChatPage() {
         {/* Safety Disclaimer */}
         <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
           <p className="text-sm text-yellow-800">
-            ⚠️ <strong>Important:</strong> MomsCare is not a substitute for professional medical advice. 
-            Always consult with your healthcare provider for medical concerns and emergencies.
+            ⚠️ <strong>{lang === "bn" ? "গুরুত্বপূর্ণ:" : "Important:"}</strong> {t.chat.disclaimer}
           </p>
         </div>
 
@@ -112,7 +118,9 @@ export default function ChatPage() {
           {loading && (
             <div className="flex items-center gap-2 text-slate-500">
               <div className="animate-pulse">💭</div>
-              <span className="text-sm">MomsCare is thinking...</span>
+              <span className="text-sm">
+                {lang === "bn" ? "MomsCare চিন্তা করছে..." : "MomsCare is thinking..."}
+              </span>
             </div>
           )}
           <div ref={messagesEndRef} />

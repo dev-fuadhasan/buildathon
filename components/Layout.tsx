@@ -4,18 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PropsWithChildren } from "react";
 import LanguageSelector from "./LanguageSelector";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const links = [
-  { href: "/", label: "Home" },
-  { href: "/chat", label: "Chat" },
-  { href: "/mother/dashboard", label: "Mother" },
-  { href: "/doctor/dashboard", label: "Doctor" },
-  { href: "/admin/dashboard", label: "Admin" },
+  { href: "/", key: "home" },
+  { href: "/chat", key: "chat" },
+  { href: "/mother/dashboard", key: "mother" },
+  { href: "/doctor/dashboard", key: "doctor" },
+  { href: "/admin/dashboard", key: "admin" },
 ];
 
 export default function Layout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith("/admin");
+  const t = useTranslation();
+  
+  const linkLabels: Record<string, string> = {
+    home: t.common.home || "Home",
+    chat: t.chat.title || "Chat",
+    mother: t.mother.dashboard || "Mother",
+    doctor: t.doctor.dashboard || "Doctor",
+    admin: t.admin.dashboard || "Admin",
+  };
   
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-12 pt-8">
@@ -37,7 +47,7 @@ export default function Layout({ children }: PropsWithChildren) {
                       : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  {link.label}
+                  {linkLabels[link.key] || link.key}
                 </Link>
               );
             })}
