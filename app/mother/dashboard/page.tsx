@@ -118,7 +118,13 @@ export default function MotherDashboard() {
         },
         body: JSON.stringify(profile),
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        // If parsing fails, use empty object
+      }
       if (!res.ok) {
         setMessage(`❌ ${data.error || "Could not save profile"}`);
         return;
@@ -164,7 +170,13 @@ export default function MotherDashboard() {
         headers: authHeaders(),
         body: fd,
       });
-      const data = await res.json();
+      let data: any = {};
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        // If parsing fails, use empty object
+      }
       if (res.ok) {
         setMessage(`✅ ${t.mother.prescriptionUploaded}`);
         fileInput.value = "";

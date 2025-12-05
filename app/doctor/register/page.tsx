@@ -34,6 +34,16 @@ export default function DoctorRegister() {
     }
   };
 
+  const parseJsonResponse = async (res: Response) => {
+    try {
+      const text = await res.text();
+      if (!text) return {};
+      return JSON.parse(text);
+    } catch {
+      return {};
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,10 +60,13 @@ export default function DoctorRegister() {
           body: formData,
         });
         if (!picRes.ok) {
-          const picData = await picRes.json();
+          const picData = await parseJsonResponse(picRes);
           throw new Error(picData.error || "Failed to upload profile picture");
         }
-        const picData = await picRes.json();
+        const picData = await parseJsonResponse(picRes);
+        if (!picData.url) {
+          throw new Error("Failed to get profile picture URL");
+        }
         profilePictureUrl = picData.url;
       }
 
@@ -67,8 +80,10 @@ export default function DoctorRegister() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Registration failed");
+      const data = await parseJsonResponse(res);
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
 
       alert("Application submitted successfully! You can log in after admin approval.");
       router.push("/doctor/login");

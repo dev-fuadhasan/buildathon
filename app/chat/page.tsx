@@ -164,7 +164,13 @@ export default function ChatPage() {
                         },
                         body: formData,
                       });
-                      const data = await res.json();
+                      let data: any = {};
+                      try {
+                        const text = await res.text();
+                        data = text ? JSON.parse(text) : {};
+                      } catch {
+                        // If parsing fails, use empty object
+                      }
                       if (res.ok) {
                         setUploadMessage(lang === "bn" ? "✅ প্রেসক্রিপশন সফলভাবে আপলোড করা হয়েছে!" : "✅ Prescription uploaded successfully!");
                       } else {
