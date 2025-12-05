@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 
-type ListCardProps = {
+type Props = {
   title: string;
   subtitle?: string;
   badge?: ReactNode;
@@ -10,34 +10,27 @@ type ListCardProps = {
   children?: ReactNode;
 };
 
-export default function ListCard({ title, subtitle, badge, onClick, children }: ListCardProps) {
+export default function ListCard({ title, subtitle, badge, onClick, children }: Props) {
   return (
     <div
-      className={`group rounded-xl border-2 border-slate-200 bg-white p-4 transition-all hover:border-pink-300 hover:shadow-lg ${
-        onClick ? "cursor-pointer" : ""
-      }`}
       onClick={onClick}
+      className={`rounded-lg border-2 border-slate-200 bg-white p-4 transition-all hover:shadow-md ${
+        onClick ? "cursor-pointer hover:border-blue-300" : ""
+      }`}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-slate-800 truncate">{title}</h3>
+            <p className="font-semibold text-lg text-slate-800">{title}</p>
             {badge}
           </div>
-          {subtitle && (
-            <p className="text-sm text-slate-600 truncate">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
           {children}
         </div>
         {onClick && (
-          <div className="flex-shrink-0 text-pink-600 opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
+          <button className="btn-secondary text-sm ml-4">View Details</button>
         )}
       </div>
     </div>
   );
 }
-

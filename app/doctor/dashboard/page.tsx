@@ -2,6 +2,8 @@
 
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
+import ListCard from "@/components/ListCard";
+import DetailModal from "@/components/DetailModal";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -29,7 +31,7 @@ export default function DoctorDashboard() {
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionItem | null>(null);
   const [answerTexts, setAnswerTexts] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function DoctorDashboard() {
       if (res.ok) {
         setMessage("✅ Answer submitted successfully!");
         setAnswerTexts({ ...answerTexts, [questionId]: "" });
-        setExpandedQuestion(null);
+        setSelectedQuestion(null);
         loadQuestions();
       } else {
         setMessage(`❌ ${data.error || "Could not submit answer"}`);
@@ -158,244 +160,263 @@ export default function DoctorDashboard() {
             <h2 className="text-2xl font-bold mb-4 text-slate-800">
               ⏳ Pending Questions ({unansweredQuestions.length})
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {unansweredQuestions.map((q) => (
-                <DashboardCard key={q.id} title={`Question from ${q.mother?.name || q.mother?.email || "Mother"}`}>
-                  <div className="space-y-4">
-                    {/* Question */}
-                    <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-                      <p className="font-medium text-slate-800 mb-2">❓ Question:</p>
-                      <p className="text-slate-700">{q.question}</p>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Asked on {new Date(q.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-
-                    {/* Patient Details Toggle */}
-                    <div>
-                      <button
-                        onClick={() =>
-                          setExpandedQuestion(expandedQuestion === q.id ? null : q.id)
-                        }
-                        className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        {expandedQuestion === q.id ? "▼" : "▶"} View Patient Details
-                      </button>
-
-                      {expandedQuestion === q.id && q.mother && (
-                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                          <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
-                          <div className="grid gap-3 md:grid-cols-2 text-sm">
-                            <div>
-                              <span className="font-medium text-slate-600">Name:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.name || "N/A"}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-slate-600">Email:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.email}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-slate-600">Age:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.age || "N/A"}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-slate-600">Weeks Pregnant:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.weeksPregnant || "N/A"}</span>
-                            </div>
-                            {q.mother.dueDate && (
-                              <div>
-                                <span className="font-medium text-slate-600">Due Date:</span>
-                                <span className="ml-2 text-slate-800">
-                                  {new Date(q.mother.dueDate).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="md:col-span-2">
-                              <span className="font-medium text-slate-600">Medical Conditions:</span>
-                              <span className="ml-2 text-slate-800">
-                                {q.mother.conditions || "None reported"}
-                              </span>
-                            </div>
-                            <div className="md:col-span-2">
-                              <span className="font-medium text-slate-600">Medications:</span>
-                              <span className="ml-2 text-slate-800">
-                                {q.mother.medications || "None reported"}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Prescriptions */}
-                          {q.prescriptions && q.prescriptions.length > 0 && (
-                            <div className="mt-4">
-                              <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {q.prescriptions.map((p) => {
-                                  const fileName = p.key.split("/").pop() || "prescription";
-                                  return (
-                                    <a
-                                      key={p.key}
-                                      href={p.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
-                                    >
-                                      📄 {fileName}
-                                    </a>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Answer Form */}
-                    <div className="rounded-lg border border-slate-200 bg-white p-4">
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        💬 Your Answer:
-                      </label>
-                      <textarea
-                        className="input w-full h-32"
-                        placeholder="Provide a clear, supportive, and professional answer..."
-                        value={answerTexts[q.id] || ""}
-                        onChange={(e) =>
-                          setAnswerTexts({ ...answerTexts, [q.id]: e.target.value })
-                        }
-                        disabled={loading}
-                      />
-                      <div className="flex justify-end mt-3">
-                        <button
-                          className="btn-primary"
-                          onClick={() => submitAnswer(q.id)}
-                          disabled={loading || !answerTexts[q.id]?.trim()}
-                        >
-                          {loading ? "Submitting..." : "✅ Submit Answer"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </DashboardCard>
+                <ListCard
+                  key={q.id}
+                  title={q.mother?.name || q.mother?.email || "Mother"}
+                  subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
+                  badge={<span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>}
+                  onClick={() => setSelectedQuestion(q)}
+                >
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(q.createdAt).toLocaleDateString()}
+                  </p>
+                </ListCard>
               ))}
             </div>
           </div>
         )}
 
-        {/* Answered Questions */}
+        {/* Question Detail Modal */}
+        <DetailModal
+          isOpen={!!selectedQuestion && !selectedQuestion.answer}
+          onClose={() => setSelectedQuestion(null)}
+          title={`Question from ${selectedQuestion?.mother?.name || selectedQuestion?.mother?.email || "Mother"}`}
+        >
+          {selectedQuestion && !selectedQuestion.answer && (
+            <div className="space-y-6">
+              {/* Question */}
+              <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+                <p className="font-medium text-slate-800 mb-2">❓ Question:</p>
+                <p className="text-slate-700">{selectedQuestion.question}</p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
+                </p>
+              </div>
+
+              {/* Patient Details */}
+              {selectedQuestion.mother && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
+                  <div className="grid gap-3 md:grid-cols-2 text-sm">
+                    <div>
+                      <span className="font-medium text-slate-600">Name:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.name || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600">Email:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.email}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600">Age:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.age || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600">Weeks Pregnant:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant || "N/A"}</span>
+                    </div>
+                    {selectedQuestion.mother.dueDate && (
+                      <div>
+                        <span className="font-medium text-slate-600">Due Date:</span>
+                        <span className="ml-2 text-slate-800">
+                          {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-slate-600">Medical Conditions:</span>
+                      <span className="ml-2 text-slate-800">
+                        {selectedQuestion.mother.conditions || "None reported"}
+                      </span>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-slate-600">Medications:</span>
+                      <span className="ml-2 text-slate-800">
+                        {selectedQuestion.mother.medications || "None reported"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Prescriptions */}
+                  {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
+                    <div className="mt-4">
+                      <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedQuestion.prescriptions.map((p) => {
+                          const fileName = p.key.split("/").pop() || "prescription";
+                          return (
+                            <a
+                              key={p.key}
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+                            >
+                              📄 {fileName}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Answer Form */}
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  💬 Your Answer:
+                </label>
+                <textarea
+                  className="input w-full h-32"
+                  placeholder="Provide a clear, supportive, and professional answer..."
+                  value={answerTexts[selectedQuestion.id] || ""}
+                  onChange={(e) =>
+                    setAnswerTexts({ ...answerTexts, [selectedQuestion.id]: e.target.value })
+                  }
+                  disabled={loading}
+                />
+                <div className="flex justify-end mt-3">
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
+                      submitAnswer(selectedQuestion.id);
+                      setSelectedQuestion(null);
+                    }}
+                    disabled={loading || !answerTexts[selectedQuestion.id]?.trim()}
+                  >
+                    {loading ? "Submitting..." : "✅ Submit Answer"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DetailModal>
+
+        {/* Answered Questions - Minimal List */}
         {answeredQuestions.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold mb-4 text-slate-800">
               ✅ Answered Questions ({answeredQuestions.length})
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {answeredQuestions.map((q) => (
-                <DashboardCard key={q.id} title={`Question from ${q.mother?.name || q.mother?.email || "Mother"}`}>
-                  <div className="space-y-4">
-                    <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
-                      <p className="font-medium text-slate-800 mb-1">❓ Question:</p>
-                      <p className="text-sm text-slate-700">{q.question}</p>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Asked on {new Date(q.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-green-50 p-3 border border-green-200">
-                      <p className="font-medium text-green-800 mb-1">✅ Your Answer:</p>
-                      <p className="text-sm text-slate-700">{q.answer}</p>
-                      {q.answeredAt && (
-                        <p className="text-xs text-slate-500 mt-2">
-                          Answered on {new Date(q.answeredAt).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Patient Details Toggle for Answered Questions */}
-                    <div>
-                      <button
-                        onClick={() =>
-                          setExpandedQuestion(expandedQuestion === q.id ? null : q.id)
-                        }
-                        className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        {expandedQuestion === q.id ? "▼" : "▶"} View Patient Details
-                      </button>
-
-                      {expandedQuestion === q.id && q.mother && (
-                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                          <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
-                          <div className="grid gap-3 md:grid-cols-2 text-sm">
-                            <div>
-                              <span className="font-medium text-slate-600">Name:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.name || "N/A"}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-slate-600">Email:</span>
-                              <span className="ml-2 text-slate-800">{q.mother.email}</span>
-                            </div>
-                            {q.mother.age && (
-                              <div>
-                                <span className="font-medium text-slate-600">Age:</span>
-                                <span className="ml-2 text-slate-800">{q.mother.age}</span>
-                              </div>
-                            )}
-                            {q.mother.weeksPregnant && (
-                              <div>
-                                <span className="font-medium text-slate-600">Weeks Pregnant:</span>
-                                <span className="ml-2 text-slate-800">{q.mother.weeksPregnant}</span>
-                              </div>
-                            )}
-                            {q.mother.dueDate && (
-                              <div>
-                                <span className="font-medium text-slate-600">Due Date:</span>
-                                <span className="ml-2 text-slate-800">
-                                  {new Date(q.mother.dueDate).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="md:col-span-2">
-                              <span className="font-medium text-slate-600">Medical Conditions:</span>
-                              <span className="ml-2 text-slate-800">
-                                {q.mother.conditions || "None reported"}
-                              </span>
-                            </div>
-                            <div className="md:col-span-2">
-                              <span className="font-medium text-slate-600">Medications:</span>
-                              <span className="ml-2 text-slate-800">
-                                {q.mother.medications || "None reported"}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Prescriptions */}
-                          {q.prescriptions && q.prescriptions.length > 0 && (
-                            <div className="mt-4">
-                              <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {q.prescriptions.map((p) => {
-                                  const fileName = p.key.split("/").pop() || "prescription";
-                                  return (
-                                    <a
-                                      key={p.key}
-                                      href={p.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
-                                    >
-                                      📄 {fileName}
-                                    </a>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </DashboardCard>
+                <ListCard
+                  key={q.id}
+                  title={q.mother?.name || q.mother?.email || "Mother"}
+                  subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
+                  badge={<span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Answered</span>}
+                  onClick={() => setSelectedQuestion(q)}
+                >
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(q.createdAt).toLocaleDateString()}
+                  </p>
+                </ListCard>
               ))}
             </div>
           </div>
         )}
+
+        {/* Answered Question Detail Modal */}
+        <DetailModal
+          isOpen={!!selectedQuestion && !!selectedQuestion.answer}
+          onClose={() => setSelectedQuestion(null)}
+          title={`Question from ${selectedQuestion?.mother?.name || selectedQuestion?.mother?.email || "Mother"}`}
+        >
+          {selectedQuestion && selectedQuestion.answer && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
+                <p className="font-medium text-slate-800 mb-1">❓ Question:</p>
+                <p className="text-sm text-slate-700">{selectedQuestion.question}</p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-lg bg-green-50 p-3 border border-green-200">
+                <p className="font-medium text-green-800 mb-1">✅ Your Answer:</p>
+                <p className="text-sm text-slate-700">{selectedQuestion.answer}</p>
+                {selectedQuestion.answeredAt && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    Answered on {new Date(selectedQuestion.answeredAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+
+              {/* Patient Details */}
+              {selectedQuestion.mother && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
+                  <div className="grid gap-3 md:grid-cols-2 text-sm">
+                    <div>
+                      <span className="font-medium text-slate-600">Name:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.name || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600">Email:</span>
+                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.email}</span>
+                    </div>
+                    {selectedQuestion.mother.age && (
+                      <div>
+                        <span className="font-medium text-slate-600">Age:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.age}</span>
+                      </div>
+                    )}
+                    {selectedQuestion.mother.weeksPregnant && (
+                      <div>
+                        <span className="font-medium text-slate-600">Weeks Pregnant:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant}</span>
+                      </div>
+                    )}
+                    {selectedQuestion.mother.dueDate && (
+                      <div>
+                        <span className="font-medium text-slate-600">Due Date:</span>
+                        <span className="ml-2 text-slate-800">
+                          {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-slate-600">Medical Conditions:</span>
+                      <span className="ml-2 text-slate-800">
+                        {selectedQuestion.mother.conditions || "None reported"}
+                      </span>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium text-slate-600">Medications:</span>
+                      <span className="ml-2 text-slate-800">
+                        {selectedQuestion.mother.medications || "None reported"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Prescriptions */}
+                  {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
+                    <div className="mt-4">
+                      <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedQuestion.prescriptions.map((p) => {
+                          const fileName = p.key.split("/").pop() || "prescription";
+                          return (
+                            <a
+                              key={p.key}
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+                            >
+                              📄 {fileName}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </DetailModal>
 
         {/* Empty State */}
         {questions.length === 0 && (

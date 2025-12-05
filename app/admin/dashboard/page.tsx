@@ -2,14 +2,24 @@
 
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
+import ListCard from "@/components/ListCard";
+import DetailModal from "@/components/DetailModal";
 import { useEffect, useState } from "react";
 
 type Doctor = {
   id: string;
   name?: string;
   email: string;
+  phone?: string;
   specialty?: string;
+  bmdcNumber?: string;
+  clinicName?: string;
+  clinicAddress?: string;
+  qualification?: string;
+  experience?: string;
+  profilePicture?: string;
   status: "pending" | "approved" | "rejected";
+  verificationComment?: string;
   createdAt: string;
 };
 
@@ -17,9 +27,18 @@ type Mother = {
   id: string;
   name?: string;
   email: string;
-  age?: number;
-  weeksPregnant?: number;
   phone?: string;
+  age?: number;
+  address?: string;
+  bloodGroup?: string;
+  weeksPregnant?: number;
+  dueDate?: string;
+  conditions?: string;
+  medications?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  previousPregnancies?: number;
+  allergies?: string;
   createdAt: string;
 };
 
@@ -39,13 +58,33 @@ export default function AdminDashboard() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "doctors" | "mothers">("overview");
-  const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null);
-  const [expandedMother, setExpandedMother] = useState<string | null>(null);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
   const [actionModal, setActionModal] = useState<{
     doctorId: string;
     action: "approve" | "reject";
     comment: string;
   } | null>(null);
+
+  const loadDoctorDetails = async (doctorId: string) => {
+    const res = await fetch(`/api/admin/doctor-details?id=${doctorId}`, {
+      headers: headers(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSelectedDoctor(data.doctor);
+    }
+  };
+
+  const loadMotherDetails = async (motherId: string) => {
+    const res = await fetch(`/api/admin/mother-details?id=${motherId}`, {
+      headers: headers(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSelectedMother(data.profile);
+    }
+  };
 
   useEffect(() => {
     const t = localStorage.getItem("adminToken") || "";
@@ -261,55 +300,51 @@ export default function AdminDashboard() {
         {/* Doctors Tab */}
         {activeTab === "doctors" && (
           <DashboardCard title="All Doctors">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {allDoctors.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">No doctors registered yet.</p>
               ) : (
                 allDoctors.map((d) => (
-                  <div
+                  <ListCard
                     key={d.id}
-                    className="rounded-lg border-2 border-slate-200 bg-white p-4 hover:shadow-md transition-shadow"
+                    title={d.name || "Unnamed doctor"}
+                    subtitle={d.email}
+                    badge={
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        d.status === "approved" 
+                          ? "bg-green-100 text-green-700"
+                          : d.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {d.status}
+                      </span>
+                    }
+                    onClick={() => loadDoctorDetails(d.id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-lg">{d.name || "Unnamed doctor"}</p>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            d.status === "approved" 
-                              ? "bg-green-100 text-green-700"
-                              : d.status === "pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
-                          }`}>
-                            {d.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-600">{d.email}</p>
-                        {d.specialty && (
-                          <p className="text-sm text-slate-500 mt-1">Specialty: {d.specialty}</p>
-                        )}
-                        <p className="text-xs text-slate-500 mt-2">
-                          Registered: {new Date(d.createdAt).toLocaleDateString()}
-                        </p>
+                    {d.status === "pending" && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          className="btn-primary text-xs py-1 px-3"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openActionModal(d.id, "approve");
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn-secondary text-xs py-1 px-3"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openActionModal(d.id, "reject");
+                          }}
+                        >
+                          Reject
+                        </button>
                       </div>
-                      {d.status === "pending" && (
-                        <div className="flex gap-2">
-                          <button
-                            className="btn-primary text-sm"
-                            onClick={() => openActionModal(d.id, "approve")}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="btn-secondary text-sm"
-                            onClick={() => openActionModal(d.id, "reject")}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    )}
+                  </ListCard>
                 ))
               )}
             </div>
@@ -319,41 +354,201 @@ export default function AdminDashboard() {
         {/* Mothers Tab */}
         {activeTab === "mothers" && (
           <DashboardCard title="All Mothers">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {allMothers.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">No mothers registered yet.</p>
               ) : (
                 allMothers.map((m) => (
-                  <div
+                  <ListCard
                     key={m.id}
-                    className="rounded-lg border-2 border-slate-200 bg-white p-4 hover:shadow-md transition-shadow"
+                    title={m.name || "Unnamed mother"}
+                    subtitle={m.email}
+                    onClick={() => loadMotherDetails(m.id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-lg">{m.name || "Unnamed mother"}</p>
-                        <p className="text-sm text-slate-600">{m.email}</p>
-                        {m.phone && (
-                          <p className="text-sm text-slate-500 mt-1">Phone: {m.phone}</p>
-                        )}
-                        {m.age && (
-                          <p className="text-sm text-slate-500">Age: {m.age}</p>
-                        )}
-                        {m.weeksPregnant && (
-                          <p className="text-sm text-slate-500">
-                            {m.weeksPregnant} weeks pregnant
-                          </p>
-                        )}
-                        <p className="text-xs text-slate-500 mt-2">
-                          Registered: {new Date(m.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    {m.weeksPregnant && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        {m.weeksPregnant} weeks pregnant
+                      </p>
+                    )}
+                  </ListCard>
                 ))
               )}
             </div>
           </DashboardCard>
         )}
+
+        {/* Doctor Details Modal */}
+        <DetailModal
+          isOpen={!!selectedDoctor}
+          onClose={() => setSelectedDoctor(null)}
+          title={`Doctor Details: ${selectedDoctor?.name || "N/A"}`}
+        >
+          {selectedDoctor && (
+            <div className="space-y-4">
+              {selectedDoctor.profilePicture && (
+                <div className="flex justify-center">
+                  <img
+                    src={selectedDoctor.profilePicture}
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-blue-200"
+                  />
+                </div>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Name</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.name || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Email</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Phone</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Specialty</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.specialty || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">BMDC Number</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.bmdcNumber || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Qualifications</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.qualification || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Experience</p>
+                  <p className="text-lg font-semibold">
+                    {selectedDoctor.experience ? `${selectedDoctor.experience} years` : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Status</p>
+                  <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${
+                    selectedDoctor.status === "approved" 
+                      ? "bg-green-100 text-green-700"
+                      : selectedDoctor.status === "pending"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
+                  }`}>
+                    {selectedDoctor.status}
+                  </span>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Clinic/Hospital Name</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.clinicName || "N/A"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Clinic Address</p>
+                  <p className="text-lg font-semibold">{selectedDoctor.clinicAddress || "N/A"}</p>
+                </div>
+                {selectedDoctor.verificationComment && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm font-medium text-slate-600">Admin Comment</p>
+                    <div className="mt-2 p-3 bg-slate-50 rounded-lg">
+                      <p className="text-sm">{selectedDoctor.verificationComment}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Registered</p>
+                  <p className="text-sm text-slate-500">
+                    {new Date(selectedDoctor.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DetailModal>
+
+        {/* Mother Details Modal */}
+        <DetailModal
+          isOpen={!!selectedMother}
+          onClose={() => setSelectedMother(null)}
+          title={`Mother Details: ${selectedMother?.name || "N/A"}`}
+        >
+          {selectedMother && (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Name</p>
+                  <p className="text-lg font-semibold">{selectedMother.name || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Email</p>
+                  <p className="text-lg font-semibold">{selectedMother.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Phone</p>
+                  <p className="text-lg font-semibold">{selectedMother.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Age</p>
+                  <p className="text-lg font-semibold">{selectedMother.age || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Weeks Pregnant</p>
+                  <p className="text-lg font-semibold">{selectedMother.weeksPregnant || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Due Date</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMother.dueDate
+                      ? new Date(selectedMother.dueDate).toLocaleDateString()
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Blood Group</p>
+                  <p className="text-lg font-semibold">{selectedMother.bloodGroup || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Previous Pregnancies</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMother.previousPregnancies ?? "N/A"}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Address</p>
+                  <p className="text-lg font-semibold">{selectedMother.address || "N/A"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Medical Conditions</p>
+                  <p className="text-lg font-semibold">{selectedMother.conditions || "None"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Medications</p>
+                  <p className="text-lg font-semibold">{selectedMother.medications || "None"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Allergies</p>
+                  <p className="text-lg font-semibold">{selectedMother.allergies || "None"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Emergency Contact</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMother.emergencyContact || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Emergency Phone</p>
+                  <p className="text-lg font-semibold">
+                    {selectedMother.emergencyPhone || "N/A"}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Registered</p>
+                  <p className="text-sm text-slate-500">
+                    {new Date(selectedMother.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DetailModal>
 
         {/* Action Modal */}
         {actionModal && (
