@@ -36,12 +36,24 @@ export default function ChatPage() {
           messages: newMessages,
         }),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || `HTTP ${res.status}`);
+      }
+
       const data = await res.json();
+      if (!data.reply) {
+        throw new Error("No reply received from server");
+      }
+
       setMessages([...newMessages, { role: "assistant", content: data.reply }]);
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Chat error:", err);
+      const errorMessage = err.message || "Sorry, something went wrong. Please try again.";
       setMessages([
         ...newMessages,
-        { role: "assistant", content: "Sorry, something went wrong." },
+        { role: "assistant", content: `Error: ${errorMessage}` },
       ]);
     } finally {
       setLoading(false);

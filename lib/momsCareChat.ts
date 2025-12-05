@@ -1,4 +1,4 @@
-import { groq } from "./groqClient";
+import { groq, isGroqConfigured } from "./groqClient";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -9,30 +9,61 @@ export type ChatMessage = {
  * Ask the MomsCare assistant a question with optional profile context.
  */
 export async function askMomsCare(
-  messages: ChatMessage[],
+  messages: Array<{ role: string; content: string }>,
   profileContext?: string,
 ): Promise<string> {
-  const systemPrompt = `You are MomsCare, a supportive assistant for pregnant mothers.
+  if (!isGroqConfigured()) {
+    throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
+  }
+
+  try {
+    const systemPrompt = `You are MomsCare, a supportive assistant for pregnant mothers.
 Always include a safety reminder: you are not a substitute for professional medical advice and emergencies require contacting a healthcare provider immediately.
 Be concise, warm, and evidence-informed. If profile context is provided, personalize the guidance while respecting privacy.`;
 
-  const profileNote = profileContext
-    ? `\n\nMother profile context:\n${profileContext}`
-    : "";
+    const profileNote = profileContext
+      ? `\n\nMother profile context:\n${profileContext}`
+      : "";
 
-  const completion = await groq.chat.completions.create({
-    model: "meta-llama/llama-3.1-70b-versatile",
-    messages: [
-      { role: "system", content: systemPrompt + profileNote },
-      ...messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    ],
-    temperature: 0.6,
-    max_tokens: 400,
-  });
+    // Filter and format messages - only include user and assistant messages
+    // Convert role to match Groq's expected format
+    const formattedMessages = messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
+        content: m.content || "",
+      }))
+      .filter((m) => m.content.trim().length > 0);
 
-  return completion.choices?.[0]?.message?.content ?? "Sorry, I could not respond.";
+    if (formattedMessages.length === 0) {
+      throw new Error("No valid messages provided");
+    }
+
+    if (!groq) {
+      throw new Error("Groq client is not initialized");
+    }
+
+    const completion = await groq.chat.completions.create({
+      model: "meta-llama/llama-3.1-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt + profileNote },
+        ...formattedMessages,
+      ],
+      temperature: 0.6,
+      max_tokens: 400,
+    });
+
+    const reply = completion.choices?.[0]?.message?.content;
+    if (!reply) {
+      throw new Error("No response from AI");
+    }
+
+    return reply;
+  } catch (error: any) {
+    console.error("Groq API error:", error);
+    throw new Error(
+      error.message || "Failed to get response from AI. Please check your API key and try again."
+    );
+  }
 }
 
