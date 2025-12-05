@@ -76,9 +76,8 @@ If prescription images are provided, analyze them carefully and provide relevant
     }
 
     // Use a vision-capable model if we have images
-    // Try vision model first, fallback to regular model if not available
     const model = prescriptionUrls && prescriptionUrls.length > 0
-      ? "llama-3.2-11b-vision-preview" // Vision model for image analysis
+      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for image analysis
       : "llama-3.1-8b-instant"; // Regular model for text-only
 
     const completion = await groq.chat.completions.create({
