@@ -41,6 +41,11 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "doctors" | "mothers">("overview");
   const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null);
   const [expandedMother, setExpandedMother] = useState<string | null>(null);
+  const [actionModal, setActionModal] = useState<{
+    doctorId: string;
+    action: "approve" | "reject";
+    comment: string;
+  } | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("adminToken") || "";
@@ -87,16 +92,31 @@ export default function AdminDashboard() {
     }
   };
 
-  const updateDoctor = async (doctorId: string, action: "approve" | "reject") => {
+  const openActionModal = (doctorId: string, action: "approve" | "reject") => {
+    setActionModal({ doctorId, action, comment: "" });
+  };
+
+  const closeActionModal = () => {
+    setActionModal(null);
+  };
+
+  const updateDoctor = async () => {
+    if (!actionModal) return;
+    
     setMessage("");
     const res = await fetch("/api/admin/doctors", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers() },
-      body: JSON.stringify({ doctorId, action }),
+      body: JSON.stringify({
+        doctorId: actionModal.doctorId,
+        action: actionModal.action,
+        comment: actionModal.comment.trim() || undefined,
+      }),
     });
     const data = await res.json();
     if (res.ok) {
-      setMessage(`✅ Doctor ${action === "approve" ? "approved" : "rejected"} successfully`);
+      setMessage(`✅ Doctor ${actionModal.action === "approve" ? "approved" : "rejected"} successfully`);
+      closeActionModal();
       loadPending();
       loadAllDoctors();
       loadOverview();
@@ -219,13 +239,13 @@ export default function AdminDashboard() {
                       <div className="flex gap-2">
                         <button
                           className="btn-primary"
-                          onClick={() => updateDoctor(d.id, "approve")}
+                          onClick={() => openActionModal(d.id, "approve")}
                         >
                           ✅ Approve
                         </button>
                         <button
                           className="btn-secondary"
-                          onClick={() => updateDoctor(d.id, "reject")}
+                          onClick={() => openActionModal(d.id, "reject")}
                         >
                           ❌ Reject
                         </button>
@@ -276,13 +296,13 @@ export default function AdminDashboard() {
                         <div className="flex gap-2">
                           <button
                             className="btn-primary text-sm"
-                            onClick={() => updateDoctor(d.id, "approve")}
+                            onClick={() => openActionModal(d.id, "approve")}
                           >
                             Approve
                           </button>
                           <button
                             className="btn-secondary text-sm"
-                            onClick={() => updateDoctor(d.id, "reject")}
+                            onClick={() => openActionModal(d.id, "reject")}
                           >
                             Reject
                           </button>
@@ -333,6 +353,49 @@ export default function AdminDashboard() {
               )}
             </div>
           </DashboardCard>
+        )}
+
+        {/* Action Modal */}
+        {actionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+              <h2 className="text-2xl font-bold text-slate-800 mb-4">
+                {actionModal.action === "approve" ? "✅ Approve Doctor" : "❌ Reject Doctor"}
+              </h2>
+              <p className="text-slate-600 mb-4">
+                {actionModal.action === "approve"
+                  ? "Add an optional comment for the doctor:"
+                  : "Please provide a reason for rejection (required):"}
+              </p>
+              <textarea
+                className="input w-full h-32 mb-4"
+                placeholder={
+                  actionModal.action === "approve"
+                    ? "Optional comment..."
+                    : "Reason for rejection..."
+                }
+                value={actionModal.comment}
+                onChange={(e) =>
+                  setActionModal({ ...actionModal, comment: e.target.value })
+                }
+                required={actionModal.action === "reject"}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={updateDoctor}
+                  className="btn-primary flex-1"
+                  disabled={
+                    actionModal.action === "reject" && !actionModal.comment.trim()
+                  }
+                >
+                  Confirm {actionModal.action === "approve" ? "Approval" : "Rejection"}
+                </button>
+                <button onClick={closeActionModal} className="btn-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Layout>

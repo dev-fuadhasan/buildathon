@@ -26,8 +26,17 @@ export type DoctorProfile = {
   email: string;
   passwordHash: string;
   name?: string;
+  phone?: string;
   specialty?: string;
+  bmdcNumber?: string; // BMDC Registration Number
+  clinicName?: string; // Clinic/Hospital name
+  clinicAddress?: string;
+  profilePicture?: string; // URL to profile picture in R2
+  qualification?: string; // Medical qualifications
+  experience?: string; // Years of experience
   status: "pending" | "approved" | "rejected";
+  verificationComment?: string; // Admin's comment on verification
+  pendingVerification?: boolean; // True when profile is edited and needs re-verification
   createdAt: string;
   updatedAt: string;
 };

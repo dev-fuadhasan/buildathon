@@ -112,15 +112,20 @@ export default function DoctorDashboard() {
               Answer questions from mothers with care and expertise.
             </p>
           </div>
-          <button
-            className="btn-secondary text-sm"
-            onClick={() => {
-              localStorage.removeItem("doctorToken");
-              location.href = "/";
-            }}
-          >
-            Logout
-          </button>
+          <div className="flex gap-3">
+            <Link href="/doctor/profile" className="btn-secondary text-sm">
+              👤 My Profile
+            </Link>
+            <button
+              className="btn-secondary text-sm"
+              onClick={() => {
+                localStorage.removeItem("doctorToken");
+                location.href = "/";
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Message Alert */}

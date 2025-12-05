@@ -13,20 +13,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  if (doctor.status !== "approved") {
-    return NextResponse.json(
-      { error: "Doctor not approved yet. Please contact admin." },
-      { status: 403 },
-    );
-  }
-
   const valid = await verifyPassword(password, doctor.passwordHash);
   if (!valid) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  // Allow login regardless of status, but include status info
   const token = signAuthToken({ id: doctor.id, email: doctor.email, role: "doctor" });
   const { passwordHash, ...safe } = doctor;
-  return NextResponse.json({ token, doctor: safe });
+  
+  // Include status and comment info
+  return NextResponse.json({ 
+    token, 
+    doctor: safe,
+    status: doctor.status,
+    verificationComment: doctor.verificationComment,
+    pendingVerification: doctor.pendingVerification,
+  });
 }
 

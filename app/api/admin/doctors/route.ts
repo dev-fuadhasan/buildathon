@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { doctorId, action } = await req.json();
+  const { doctorId, action, comment } = await req.json();
   if (!doctorId || !["approve", "reject"].includes(action)) {
     return NextResponse.json({ error: "doctorId and action required" }, { status: 400 });
   }
@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
   const updated = {
     ...doctor,
     status: action === "approve" ? ("approved" as const) : ("rejected" as const),
+    verificationComment: comment || undefined,
+    pendingVerification: false,
     updatedAt: new Date().toISOString(),
   };
   await saveDoctor(updated);

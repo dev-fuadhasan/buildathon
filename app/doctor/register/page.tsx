@@ -9,25 +9,68 @@ export default function DoctorRegister() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    specialty: "",
+    phone: "",
     password: "",
+    specialty: "",
+    bmdcNumber: "",
+    clinicName: "",
+    clinicAddress: "",
+    qualification: "",
+    experience: "",
   });
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Profile picture must be less than 5MB");
+        return;
+      }
+      setProfilePicture(file);
+      setError("");
+    }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
     try {
+      // First upload profile picture if provided
+      let profilePictureUrl = "";
+      if (profilePicture) {
+        const formData = new FormData();
+        formData.append("file", profilePicture);
+        const picRes = await fetch("/api/doctor/profile-picture", {
+          method: "POST",
+          body: formData,
+        });
+        if (!picRes.ok) {
+          const picData = await picRes.json();
+          throw new Error(picData.error || "Failed to upload profile picture");
+        }
+        const picData = await picRes.json();
+        profilePictureUrl = picData.url;
+      }
+
+      // Then register doctor
       const res = await fetch("/api/auth/doctor/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          profilePicture: profilePictureUrl,
+        }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
-      alert("Submitted for approval. You can log in after admin approval.");
+
+      alert("Application submitted successfully! You can log in after admin approval.");
       router.push("/doctor/login");
     } catch (err: any) {
       setError(err.message);
@@ -38,49 +81,201 @@ export default function DoctorRegister() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Doctor Application</h1>
-          <p className="text-slate-600">Submit your details for admin approval.</p>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-blue-600 mb-2">Doctor Application</h1>
+          <p className="text-slate-600">Submit your details for admin approval</p>
         </div>
-        <form onSubmit={onSubmit} className="card space-y-4">
-          <input
-            className="input"
-            placeholder="Full name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <input
-            className="input"
-            placeholder="Email"
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <input
-            className="input"
-            placeholder="Specialty"
-            value={form.specialty}
-            onChange={(e) => setForm({ ...form, specialty: e.target.value })}
-            required
-          />
-          <input
-            className="input"
-            placeholder="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
-            {loading ? "Submitting..." : "Submit for approval"}
+
+        <form onSubmit={onSubmit} className="card space-y-6">
+          {/* Personal Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="Dr. John Doe"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="doctor@example.com"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="+880 1234 567890"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Password *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="Create a strong password"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Professional Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Professional Information</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Specialty *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="e.g., Obstetrics & Gynecology"
+                  value={form.specialty}
+                  onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  BMDC Registration Number *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="BMDC-12345"
+                  value={form.bmdcNumber}
+                  onChange={(e) => setForm({ ...form, bmdcNumber: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Medical Qualifications *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="e.g., MBBS, FCPS"
+                  value={form.qualification}
+                  onChange={(e) => setForm({ ...form, qualification: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Years of Experience *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="e.g., 10"
+                  type="number"
+                  min="0"
+                  value={form.experience}
+                  onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Clinic Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Clinic/Hospital Information</h3>
+            <div className="grid gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Clinic/Hospital Name *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="e.g., City Hospital"
+                  value={form.clinicName}
+                  onChange={(e) => setForm({ ...form, clinicName: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Clinic Address *
+                </label>
+                <textarea
+                  className="input w-full h-24"
+                  placeholder="Full address of your clinic/hospital"
+                  value={form.clinicAddress}
+                  onChange={(e) => setForm({ ...form, clinicAddress: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Picture */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Profile Picture</h3>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Upload Profile Picture (Max 5MB) *
+              </label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleFileChange}
+                className="input w-full"
+                required
+              />
+              {profilePicture && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ {profilePicture.name} selected
+                </p>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary w-full py-3 text-lg"
+            disabled={loading}
+          >
+            {loading ? "Submitting..." : "Submit Application for Approval"}
           </button>
+
+          <p className="text-xs text-slate-500 text-center">
+            Your application will be reviewed by admin. You'll be notified once approved.
+          </p>
         </form>
       </div>
     </Layout>
   );
 }
-

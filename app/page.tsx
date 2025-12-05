@@ -31,7 +31,7 @@ export default function Home() {
             </div>
             <h1 className="mt-2 text-5xl font-bold text-slate-900 md:text-6xl lg:text-7xl">
               {t.home.title}
-            </h1>
+          </h1>
             <p className="mt-6 max-w-2xl text-xl text-slate-600 leading-relaxed">
               {t.home.subtitle}
             </p>
@@ -114,7 +114,7 @@ export default function Home() {
             <Link
               href="/doctor/login"
               className="rounded-lg border-2 border-blue-300 bg-white px-6 py-3 font-semibold text-blue-600 transition-all hover:bg-blue-50"
-            >
+          >
               Doctor {t.common.login}
             </Link>
           </div>
@@ -127,6 +127,6 @@ export default function Home() {
           © {new Date().getFullYear()} MomsCare. All rights reserved.
         </p>
       </footer>
-    </main>
+      </main>
   );
 }
