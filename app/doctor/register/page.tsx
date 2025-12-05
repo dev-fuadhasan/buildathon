@@ -45,7 +45,7 @@ export default function DoctorRegister() {
       if (profilePicture) {
         const formData = new FormData();
         formData.append("file", profilePicture);
-        const picRes = await fetch("/api/doctor/profile-picture", {
+        const picRes = await fetch("/api/doctor/profile-picture-register", {
           method: "POST",
           body: formData,
         });
