@@ -569,14 +569,50 @@ export default function MotherDashboard() {
                               <p className="text-xs text-slate-500">Click to view</p>
                             </div>
                           </div>
-                          <a
-                            href={p.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-secondary text-sm"
-                          >
-                            View
-                          </a>
+                          <div className="flex gap-2">
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-secondary text-sm"
+                            >
+                              View
+                            </a>
+                            <button
+                              onClick={async () => {
+                                if (!confirm(t.common.deleteConfirm || "Are you sure you want to delete this prescription?")) {
+                                  return;
+                                }
+                                setDeletingPrescription(p.key);
+                                try {
+                                  const encodedKey = encodeURIComponent(p.key);
+                                  const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                    method: "DELETE",
+                                    headers: authHeaders(),
+                                  });
+                                  if (res.ok) {
+                                    setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
+                                    fetchPrescriptions();
+                                  } else {
+                                    let data: any = {};
+                                    try {
+                                      const text = await res.text();
+                                      data = text ? JSON.parse(text) : {};
+                                    } catch {}
+                                    setMessage(`❌ ${data.error || t.common.deleteFailed || "Failed to delete prescription"}`);
+                                  }
+                                } catch (err) {
+                                  setMessage(`❌ ${t.common.networkError || "Network error"}`);
+                                } finally {
+                                  setDeletingPrescription(null);
+                                }
+                              }}
+                              disabled={deletingPrescription === p.key}
+                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              {deletingPrescription === p.key ? "..." : "🗑️"}
+                            </button>
+                          </div>
                         </div>
                       );
                     })}

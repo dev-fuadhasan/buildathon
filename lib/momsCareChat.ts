@@ -6,11 +6,12 @@ export type ChatMessage = {
 };
 
 /**
- * Ask the MomsCare assistant a question with optional profile context.
+ * Ask the MomsCare assistant a question with optional profile context and prescription images.
  */
 export async function askMomsCare(
   messages: Array<{ role: string; content: string }>,
   profileContext?: string,
+  prescriptionUrls?: string[],
 ): Promise<string> {
   if (!isGroqConfigured()) {
     throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
@@ -19,7 +20,8 @@ export async function askMomsCare(
   try {
     const systemPrompt = `You are MomsCare, a supportive assistant for pregnant mothers.
 Always include a safety reminder: you are not a substitute for professional medical advice and emergencies require contacting a healthcare provider immediately.
-Be concise, warm, and evidence-informed. If profile context is provided, personalize the guidance while respecting privacy.`;
+Be concise, warm, and evidence-informed. If profile context is provided, personalize the guidance while respecting privacy.
+If prescription images are provided, analyze them carefully and provide relevant medical advice based on the prescription content.`;
 
     const profileNote = profileContext
       ? `\n\nMother profile context:\n${profileContext}`
@@ -29,11 +31,34 @@ Be concise, warm, and evidence-informed. If profile context is provided, persona
     // Convert role to match Groq's expected format
     const formattedMessages = messages
       .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({
-        role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
-        content: m.content || "",
-      }))
-      .filter((m) => m.content.trim().length > 0);
+      .map((m) => {
+        const role = (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant";
+        
+        // If this is the last user message and we have prescription URLs, include images
+        if (role === "user" && prescriptionUrls && prescriptionUrls.length > 0 && m === messages[messages.length - 1]) {
+          return {
+            role,
+            content: [
+              { type: "text", text: m.content || "" },
+              ...prescriptionUrls.map((url) => ({
+                type: "image_url" as const,
+                image_url: { url },
+              })),
+            ],
+          };
+        }
+        
+        return {
+          role,
+          content: m.content || "",
+        };
+      })
+      .filter((m) => {
+        if (typeof m.content === "string") {
+          return m.content.trim().length > 0;
+        }
+        return true; // Array content (with images) is always valid
+      });
 
     if (formattedMessages.length === 0) {
       throw new Error("No valid messages provided");
@@ -43,8 +68,13 @@ Be concise, warm, and evidence-informed. If profile context is provided, persona
       throw new Error("Groq client is not initialized");
     }
 
+    // Use a vision-capable model if we have images
+    const model = prescriptionUrls && prescriptionUrls.length > 0
+      ? "llama-3.2-11b-vision-preview" // Vision model for image analysis
+      : "llama-3.1-8b-instant"; // Regular model for text-only
+
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant", // Valid Groq model (alternative: "mixtral-8x7b-32768", "llama-3-8b-8192")
+      model,
       messages: [
         { role: "system", content: systemPrompt + profileNote },
         ...formattedMessages,

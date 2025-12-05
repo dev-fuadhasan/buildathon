@@ -91,6 +91,7 @@ export const translations = {
       totalPrescriptions: "Total Prescriptions",
       questionsAsked: "Questions Asked",
       questionsAnswered: "Questions Answered",
+      prescriptionDeleted: "Prescription deleted successfully",
     },
     // Doctor Dashboard
     doctor: {
@@ -209,6 +210,9 @@ export const translations = {
       close: "বন্ধ",
       home: "হোম",
       pleaseLogin: "অনুগ্রহ করে লগইন করুন।",
+      deleteConfirm: "আপনি কি এটি মুছে ফেলতে নিশ্চিত?",
+      deleteFailed: "মুছে ফেলতে ব্যর্থ",
+      networkError: "নেটওয়ার্ক ত্রুটি",
     },
     // Homepage
     home: {
@@ -273,6 +277,7 @@ export const translations = {
       totalPrescriptions: "মোট প্রেসক্রিপশন",
       questionsAsked: "প্রশ্ন জিজ্ঞাসা করা হয়েছে",
       questionsAnswered: "প্রশ্নের উত্তর দেওয়া হয়েছে",
+      prescriptionDeleted: "প্রেসক্রিপশন সফলভাবে মুছে ফেলা হয়েছে",
     },
     // Doctor Dashboard
     doctor: {
