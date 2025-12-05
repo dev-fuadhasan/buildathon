@@ -298,15 +298,21 @@ export default function AdminDashboard() {
                           Applied: {new Date(d.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button
-                          className="btn-primary"
+                          className="btn-secondary text-sm"
+                          onClick={() => loadDoctorDetails(d.id)}
+                        >
+                          👁️ Show Details
+                        </button>
+                        <button
+                          className="btn-primary text-sm"
                           onClick={() => openActionModal(d.id, "approve")}
                         >
                           ✅ Approve
                         </button>
                         <button
-                          className="btn-secondary"
+                          className="btn-secondary text-sm"
                           onClick={() => openActionModal(d.id, "reject")}
                         >
                           ❌ Reject

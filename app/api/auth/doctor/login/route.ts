@@ -18,17 +18,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  // Allow login regardless of status, but include status info
+  // Only allow approved doctors to login
+  if (doctor.status !== "approved") {
+    const statusMessage = doctor.status === "pending" 
+      ? "Your account is pending admin approval. Please wait for approval before logging in."
+      : doctor.status === "rejected"
+      ? `Your account has been rejected. ${doctor.verificationComment ? `Reason: ${doctor.verificationComment}` : ""}`
+      : "Your account is not approved. Please contact admin.";
+    
+    return NextResponse.json({ 
+      error: statusMessage,
+      status: doctor.status,
+      verificationComment: doctor.verificationComment,
+    }, { status: 403 });
+  }
+
   const token = signAuthToken({ id: doctor.id, email: doctor.email, role: "doctor" });
   const { passwordHash, ...safe } = doctor;
   
-  // Include status and comment info
   return NextResponse.json({ 
     token, 
     doctor: safe,
     status: doctor.status,
-    verificationComment: doctor.verificationComment,
-    pendingVerification: doctor.pendingVerification,
   });
 }
 
