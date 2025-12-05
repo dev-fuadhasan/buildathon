@@ -25,8 +25,8 @@ export default function Layout({ children }: PropsWithChildren) {
   };
   
   return (
-    <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-12 pt-8">
-      <nav className="mb-8 flex items-center justify-between rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur border border-white/60">
+    <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-4 pt-4">
+      <nav className="mb-4 flex items-center justify-between rounded-2xl bg-white/90 p-3 shadow-lg backdrop-blur border border-white/60">
         <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
           🌸 MomsCare
         </Link>
