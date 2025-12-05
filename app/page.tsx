@@ -15,6 +15,11 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-4">
+      {/* Language Toggle - Top Right */}
+      <div className="flex justify-end">
+        <LanguageSelector />
+      </div>
+      
       {/* Hero Section */}
       <header className="flex flex-col gap-8 rounded-3xl bg-gradient-to-br from-pink-50 via-white to-blue-50 p-12 shadow-2xl backdrop-blur">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">

@@ -11,12 +11,10 @@ const links = [
   { href: "/chat", key: "chat" },
   { href: "/mother/dashboard", key: "mother" },
   { href: "/doctor/dashboard", key: "doctor" },
-  { href: "/admin/dashboard", key: "admin" },
 ];
 
 export default function Layout({ children }: PropsWithChildren) {
   const pathname = usePathname();
-  const isAdminPage = pathname.startsWith("/admin");
   const t = useTranslation();
   
   const linkLabels: Record<string, string> = {
@@ -24,7 +22,6 @@ export default function Layout({ children }: PropsWithChildren) {
     chat: t.chat.title || "Chat",
     mother: t.mother.dashboard || "Mother",
     doctor: t.doctor.dashboard || "Doctor",
-    admin: t.admin.dashboard || "Admin",
   };
   
   return (
@@ -35,7 +32,7 @@ export default function Layout({ children }: PropsWithChildren) {
         </Link>
         <div className="flex items-center gap-3">
           <div className="flex gap-2 text-sm">
-            {links.filter(link => !isAdminPage || link.href === "/admin/dashboard").map((link) => {
+            {links.map((link) => {
               const active = pathname.startsWith(link.href);
               return (
                 <Link

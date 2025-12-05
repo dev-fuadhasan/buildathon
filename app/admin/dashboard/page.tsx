@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/hooks/useTranslation";
 
 type Doctor = {
   id: string;
@@ -51,6 +52,7 @@ type Overview = {
 };
 
 export default function AdminDashboard() {
+  const t = useTranslation();
   const [token, setToken] = useState("");
   const [pending, setPending] = useState<Doctor[]>([]);
   const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
@@ -500,33 +502,33 @@ export default function AdminDashboard() {
         <DetailModal
           isOpen={!!selectedMother}
           onClose={() => setSelectedMother(null)}
-          title={`Mother Details: ${selectedMother?.name || "N/A"}`}
+          title={`${t.admin.motherDetails}: ${selectedMother?.name || "N/A"}`}
         >
           {selectedMother && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Name</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.name}</p>
                   <p className="text-lg font-semibold">{selectedMother.name || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Email</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.email}</p>
                   <p className="text-lg font-semibold">{selectedMother.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Phone</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.phone}</p>
                   <p className="text-lg font-semibold">{selectedMother.phone || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Age</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.age}</p>
                   <p className="text-lg font-semibold">{selectedMother.age || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Weeks Pregnant</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.weeksPregnant}</p>
                   <p className="text-lg font-semibold">{selectedMother.weeksPregnant || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Due Date</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.dueDate}</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.dueDate
                       ? new Date(selectedMother.dueDate).toLocaleDateString()
@@ -534,45 +536,45 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Blood Group</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.bloodGroup}</p>
                   <p className="text-lg font-semibold">{selectedMother.bloodGroup || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Previous Pregnancies</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.previousPregnancies}</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.previousPregnancies ?? "N/A"}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">Address</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.address}</p>
                   <p className="text-lg font-semibold">{selectedMother.address || "N/A"}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">Medical Conditions</p>
-                  <p className="text-lg font-semibold">{selectedMother.conditions || "None"}</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.conditions}</p>
+                  <p className="text-lg font-semibold">{selectedMother.conditions || t.admin.none}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">Medications</p>
-                  <p className="text-lg font-semibold">{selectedMother.medications || "None"}</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.medications}</p>
+                  <p className="text-lg font-semibold">{selectedMother.medications || t.admin.none}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">Allergies</p>
-                  <p className="text-lg font-semibold">{selectedMother.allergies || "None"}</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.allergies}</p>
+                  <p className="text-lg font-semibold">{selectedMother.allergies || t.admin.none}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Emergency Contact</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.emergencyContact}</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.emergencyContact || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Emergency Phone</p>
+                  <p className="text-sm font-medium text-slate-600">{t.mother.emergencyPhone}</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.emergencyPhone || "N/A"}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">Registered</p>
+                  <p className="text-sm font-medium text-slate-600">{t.admin.registered}</p>
                   <p className="text-sm text-slate-500">
                     {new Date(selectedMother.createdAt).toLocaleString()}
                   </p>

@@ -4,6 +4,7 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/hooks/useTranslation";
 
 type Profile = {
   name?: string;
@@ -26,6 +27,7 @@ type Prescription = { key: string; url: string };
 type Question = { id: string; question: string; answer?: string; createdAt: string; answeredAt?: string };
 
 export default function MotherDashboard() {
+  const t = useTranslation();
   const [token, setToken] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -94,7 +96,7 @@ export default function MotherDashboard() {
         return;
       }
       setProfile(data.profile);
-      setMessage("✅ Profile updated successfully!");
+      setMessage(`✅ ${t.mother.profileUpdated}`);
     } catch (err) {
       setMessage("❌ Network error. Please try again.");
     } finally {
@@ -212,15 +214,15 @@ export default function MotherDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-pink-600">
-              Welcome back{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}!
+              {t.mother.welcome}{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}!
             </h1>
             <p className="text-slate-600 mt-1">
-              Manage your pregnancy journey with personalized care.
+              {t.home.mothersDesc}
             </p>
           </div>
           <div className="flex gap-3">
             <Link href="/chat" className="btn-secondary">
-              💬 Chat with AI
+              💬 {t.chat.title}
             </Link>
             <button
               className="btn-secondary text-sm"
@@ -229,7 +231,7 @@ export default function MotherDashboard() {
                 location.href = "/";
               }}
             >
-              Logout
+              {t.common.logout}
             </button>
           </div>
         </div>
@@ -248,10 +250,10 @@ export default function MotherDashboard() {
         {/* Tabs */}
         <div className="flex gap-2 border-b border-slate-200">
           {[
-            { id: "profile", label: "👤 Profile", icon: "👤" },
-            { id: "prescriptions", label: "📄 Prescriptions", icon: "📄" },
-            { id: "questions", label: "❓ Q&A with Doctors", icon: "❓" },
-            { id: "progress", label: "📊 Progress", icon: "📊" },
+            { id: "profile", label: `👤 ${t.mother.profile}`, icon: "👤" },
+            { id: "prescriptions", label: `📄 ${t.mother.prescriptions}`, icon: "📄" },
+            { id: "questions", label: `❓ ${t.mother.questions}`, icon: "❓" },
+            { id: "progress", label: `📊 ${t.mother.progress}`, icon: "📊" },
           ].map((tab) => (
             <button
               key={tab.id}
