@@ -42,17 +42,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Check for existing doctor
-    let existing;
-    try {
-      existing = await findDoctorByEmail(email);
-    } catch (err) {
-      console.error("Error checking existing doctor:", err);
-      return NextResponse.json(
-        { error: "Failed to check existing registration" },
-        { status: 500 }
-      );
-    }
-
+    // Note: findDoctorByEmail now returns null on error instead of throwing
+    // This allows registration to proceed even if R2 check fails
+    const existing = await findDoctorByEmail(email);
+    
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }

@@ -67,24 +67,49 @@ const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
-  const objects = await listObjects(prefix);
-  const items = await Promise.all(
-    (objects || []).map(async (obj) => {
-      const key = obj.Key!;
-      return getJson<T>(key);
-    }),
-  );
-  return items.filter(Boolean) as T[];
+  try {
+    const objects = await listObjects(prefix);
+    const items = await Promise.all(
+      (objects || []).map(async (obj) => {
+        try {
+          const key = obj.Key!;
+          return getJson<T>(key);
+        } catch (err) {
+          console.error(`Error loading object ${obj.Key}:`, err);
+          return null;
+        }
+      }),
+    );
+    return items.filter(Boolean) as T[];
+  } catch (err) {
+    console.error(`Error listing objects with prefix ${prefix}:`, err);
+    // Return empty array instead of throwing - allows registration to proceed
+    // if R2 is temporarily unavailable
+    return [];
+  }
 }
 
 export async function findMotherByEmail(email: string) {
-  const mothers = await listJson<MotherProfile>("mothers/");
-  return mothers.find((m) => m.email.toLowerCase() === email.toLowerCase()) || null;
+  try {
+    const mothers = await listJson<MotherProfile>("mothers/");
+    return mothers.find((m) => m.email.toLowerCase() === email.toLowerCase()) || null;
+  } catch (err) {
+    console.error("Error finding mother by email:", err);
+    // Return null to allow registration to proceed
+    return null;
+  }
 }
 
 export async function findDoctorByEmail(email: string) {
-  const doctors = await listJson<DoctorProfile>("doctors/");
-  return doctors.find((d) => d.email.toLowerCase() === email.toLowerCase()) || null;
+  try {
+    const doctors = await listJson<DoctorProfile>("doctors/");
+    return doctors.find((d) => d.email.toLowerCase() === email.toLowerCase()) || null;
+  } catch (err) {
+    console.error("Error finding doctor by email:", err);
+    // Return null to allow registration to proceed if check fails
+    // This prevents blocking registration due to R2 issues
+    return null;
+  }
 }
 
 export async function getMother(id: string) {

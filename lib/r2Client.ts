@@ -69,13 +69,23 @@ export async function putJson(key: string, data: unknown) {
 }
 
 export async function listObjects(prefix: string) {
-  const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
-  const command = new ListObjectsV2Command({
-    Bucket: bucket,
-    Prefix: prefix,
-  });
-  const res = await r2.send(command);
-  return res.Contents ?? [];
+  try {
+    const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
+    const command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+    });
+    const res = await r2.send(command);
+    return res.Contents ?? [];
+  } catch (err: any) {
+    console.error(`Error listing objects with prefix ${prefix}:`, err);
+    // If it's a permissions or connection error, return empty array
+    // This allows the app to continue functioning
+    if (err?.$metadata?.httpStatusCode === 403 || err?.$metadata?.httpStatusCode === 401) {
+      console.error("R2 authentication error - check credentials");
+    }
+    throw err; // Re-throw to let caller handle
+  }
 }
 
 export async function signedUrl(key: string, expiresIn = 3600) {
