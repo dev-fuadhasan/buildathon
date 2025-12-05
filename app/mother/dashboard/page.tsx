@@ -138,7 +138,7 @@ export default function MotherDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Prescription uploaded successfully!");
+        setMessage(`✅ ${t.mother.prescriptionUploaded}`);
         fileInput.value = "";
         fetchPrescriptions();
       } else {
@@ -171,7 +171,7 @@ export default function MotherDashboard() {
       const data = await res.json();
       if (res.ok) {
         setQuestionText("");
-        setMessage("✅ Question submitted! A doctor will respond soon.");
+        setMessage(`✅ ${t.mother.questionSubmitted}`);
         fetchQuestions();
       } else {
         setMessage(`❌ ${data.error || "Could not send question"}`);
@@ -587,18 +587,18 @@ export default function MotherDashboard() {
                       </div>
                       {q.answer ? (
                         <div className="mt-3 rounded bg-white p-3">
-                          <p className="text-sm font-medium text-green-700 mb-1">👨‍⚕️ Doctor's Answer:</p>
+                          <p className="text-sm font-medium text-green-700 mb-1">👨‍⚕️ {t.mother.answered}:</p>
                           <p className="text-sm text-slate-700">{q.answer}</p>
                           {q.answeredAt && (
                             <p className="text-xs text-slate-500 mt-2">
-                              Answered on {new Date(q.answeredAt).toLocaleDateString()}
+                              {t.doctor.answeredOn || "Answered on"} {new Date(q.answeredAt).toLocaleDateString()}
                             </p>
                           )}
                         </div>
                       ) : (
                         <div className="mt-2 flex items-center gap-2 text-sm text-yellow-700">
                           <span>⏳</span>
-                          <span>Waiting for doctor's response...</span>
+                          <span>{t.mother.waiting}</span>
                         </div>
                       )}
                     </div>
