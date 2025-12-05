@@ -4,7 +4,7 @@ import { deleteObject } from "@/lib/r2Client";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   try {
     const user = getUserFromRequest(req);
@@ -12,7 +12,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const key = decodeURIComponent(params.key);
+    const { key: keyParam } = await params;
+    const key = decodeURIComponent(keyParam);
     
     // Verify the prescription belongs to this mother
     if (!key.startsWith(`prescriptions/${user.id}/`)) {

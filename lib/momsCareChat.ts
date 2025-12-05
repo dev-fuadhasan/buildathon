@@ -42,7 +42,7 @@ If prescription images are provided, analyze them carefully and provide relevant
             role,
             content: [
               { 
-                type: "text", 
+                type: "text" as const, 
                 text: (m.content || "") + (prescriptionUrls.length > 0 
                   ? `\n\nI have ${prescriptionUrls.length} prescription(s) uploaded. Please analyze them and provide recommendations based on my pregnancy profile.` 
                   : "") 
@@ -51,7 +51,7 @@ If prescription images are provided, analyze them carefully and provide relevant
                 type: "image_url" as const,
                 image_url: { url },
               })),
-            ],
+            ] as Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>,
           };
         }
         

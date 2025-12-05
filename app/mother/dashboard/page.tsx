@@ -55,6 +55,7 @@ export default function MotherDashboard() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress">("profile");
+  const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
@@ -599,10 +600,10 @@ export default function MotherDashboard() {
                                       const text = await res.text();
                                       data = text ? JSON.parse(text) : {};
                                     } catch {}
-                                    setMessage(`❌ ${data.error || t.common.deleteFailed || "Failed to delete prescription"}`);
+                                    setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
                                   }
                                 } catch (err) {
-                                  setMessage(`❌ ${t.common.networkError || "Network error"}`);
+                                  setMessage(`❌ Network error`);
                                 } finally {
                                   setDeletingPrescription(null);
                                 }
