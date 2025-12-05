@@ -2,6 +2,7 @@
 
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
+import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -24,11 +25,27 @@ type Profile = {
 };
 
 type Prescription = { key: string; url: string };
-type Question = { id: string; question: string; answer?: string; createdAt: string; answeredAt?: string };
+type Comment = {
+  id: string;
+  authorId: string;
+  authorRole: "doctor" | "mother";
+  content: string;
+  createdAt: string;
+  replies?: Comment[];
+};
+type Question = { 
+  id: string; 
+  question: string; 
+  answer?: string; 
+  createdAt: string; 
+  answeredAt?: string;
+  comments?: Comment[];
+};
 
 export default function MotherDashboard() {
   const t = useTranslation();
   const [token, setToken] = useState("");
+  const [motherId, setMotherId] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -42,6 +59,13 @@ export default function MotherDashboard() {
     const t = localStorage.getItem("motherToken") || "";
     setToken(t);
     if (!t) return;
+    // Get mother ID from token
+    try {
+      const payload = JSON.parse(atob(t.split('.')[1]));
+      setMotherId(payload.id || "");
+    } catch {
+      // Will be set when profile loads
+    }
     fetchProfile(t);
     fetchPrescriptions(t);
     fetchQuestions(t);
@@ -55,6 +79,9 @@ export default function MotherDashboard() {
     if (res.ok) {
       const data = await res.json();
       setProfile(data.profile);
+      if (data.profile?.id && !motherId) {
+        setMotherId(data.profile.id);
+      }
     }
   };
 
@@ -599,6 +626,20 @@ export default function MotherDashboard() {
                         <div className="mt-2 flex items-center gap-2 text-sm text-yellow-700">
                           <span>⏳</span>
                           <span>{t.mother.waiting}</span>
+                        </div>
+                      )}
+                      
+                      {/* Comments Section */}
+                      {motherId && (
+                        <div className="mt-4 border-t border-slate-200 pt-4">
+                          <CommentSection
+                            questionId={q.id}
+                            userRole="mother"
+                            userId={motherId}
+                            token={token}
+                            comments={q.comments}
+                            onCommentAdded={() => fetchQuestions(token)}
+                          />
                         </div>
                       )}
                     </div>

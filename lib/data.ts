@@ -41,6 +41,16 @@ export type DoctorProfile = {
   updatedAt: string;
 };
 
+export type Comment = {
+  id: string;
+  questionId?: string;
+  authorId: string;
+  authorRole: "doctor" | "mother";
+  content: string;
+  createdAt: string;
+  replies?: Comment[];
+};
+
 export type Question = {
   id: string;
   motherId: string;
@@ -49,6 +59,7 @@ export type Question = {
   doctorId?: string;
   createdAt: string;
   answeredAt?: string;
+  comments?: Comment[];
 };
 
 const motherKey = (id: string) => `mothers/${id}.json`;

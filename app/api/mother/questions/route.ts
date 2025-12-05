@@ -9,7 +9,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const questions = await listMotherQuestions(user.id);
-  return NextResponse.json({ questions });
+  // Ensure comments are included
+  const questionsWithComments = questions.map(q => ({
+    ...q,
+    comments: q.comments || [],
+  }));
+  return NextResponse.json({ questions: questionsWithComments });
 }
 
 export async function POST(req: NextRequest) {

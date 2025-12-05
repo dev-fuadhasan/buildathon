@@ -4,8 +4,18 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
+import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+
+type Comment = {
+  id: string;
+  authorId: string;
+  authorRole: "doctor" | "mother";
+  content: string;
+  createdAt: string;
+  replies?: Comment[];
+};
 
 type QuestionItem = {
   id: string;
@@ -14,6 +24,7 @@ type QuestionItem = {
   createdAt: string;
   answeredAt?: string;
   motherId: string;
+  comments?: Comment[];
   mother?: {
     name?: string;
     email: string;
@@ -28,6 +39,7 @@ type QuestionItem = {
 
 export default function DoctorDashboard() {
   const [token, setToken] = useState("");
+  const [doctorId, setDoctorId] = useState("");
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -37,7 +49,16 @@ export default function DoctorDashboard() {
   useEffect(() => {
     const t = localStorage.getItem("doctorToken") || "";
     setToken(t);
-    if (t) loadQuestions(t);
+    if (t) {
+      // Get doctor ID from token
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]));
+        setDoctorId(payload.id || "");
+      } catch {
+        // Will be set when questions load
+      }
+      loadQuestions(t);
+    }
   }, []);
 
   const headers = (t = token) => (t ? { Authorization: `Bearer ${t}` } : undefined);
@@ -290,6 +311,25 @@ export default function DoctorDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Comments Section */}
+              {selectedQuestion && doctorId && (
+                <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                  <CommentSection
+                    questionId={selectedQuestion.id}
+                    userRole="doctor"
+                    userId={doctorId}
+                    token={token}
+                    comments={selectedQuestion.comments}
+                    onCommentAdded={() => {
+                      loadQuestions();
+                      // Reload selected question to get updated comments
+                      const updated = questions.find(q => q.id === selectedQuestion.id);
+                      if (updated) setSelectedQuestion(updated);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </DetailModal>
@@ -412,6 +452,24 @@ export default function DoctorDashboard() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Comments Section for Answered Questions */}
+              {selectedQuestion && doctorId && (
+                <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                  <CommentSection
+                    questionId={selectedQuestion.id}
+                    userRole="doctor"
+                    userId={doctorId}
+                    token={token}
+                    comments={selectedQuestion.comments}
+                    onCommentAdded={() => {
+                      loadQuestions();
+                      const updated = questions.find(q => q.id === selectedQuestion.id);
+                      if (updated) setSelectedQuestion(updated);
+                    }}
+                  />
                 </div>
               )}
             </div>

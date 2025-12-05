@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
         ...q,
         mother: mother ? motherSafe : undefined,
         prescriptions,
+        comments: q.comments || [],
       };
     }),
   );

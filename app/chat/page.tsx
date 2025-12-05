@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import ChatBubble from "@/components/ChatBubble";
 import ChatInput from "@/components/ChatInput";
+import ChatPrescriptionUpload from "@/components/ChatPrescriptionUpload";
 import Layout from "@/components/Layout";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -26,6 +27,8 @@ export default function ChatPage() {
   ]);
   const [loading, setLoading] = useState(false);
   const [isMother, setIsMother] = useState(false);
+  const [motherToken, setMotherToken] = useState("");
+  const [uploadMessage, setUploadMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -37,8 +40,9 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    const motherToken = localStorage.getItem("motherToken");
-    setIsMother(!!motherToken);
+    const token = localStorage.getItem("motherToken") || "";
+    setMotherToken(token);
+    setIsMother(!!token);
   }, []);
 
   const getToken = () =>
@@ -126,9 +130,47 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Upload Message */}
+        {uploadMessage && (
+          <div className={`rounded-lg p-3 mb-2 ${
+            uploadMessage.includes("✅") 
+              ? "bg-green-50 text-green-800 border border-green-200" 
+              : "bg-red-50 text-red-800 border border-red-200"
+          }`}>
+            {uploadMessage}
+          </div>
+        )}
+
         {/* Chat Input */}
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <ChatInput onSend={sendMessage} disabled={loading} />
+          {isMother && (
+            <ChatPrescriptionUpload
+              onUpload={async (file) => {
+                setUploadMessage("");
+                const formData = new FormData();
+                formData.append("file", file);
+                try {
+                  const res = await fetch("/api/mother/prescriptions", {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${motherToken}`,
+                    },
+                    body: formData,
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setUploadMessage(lang === "bn" ? "✅ প্রেসক্রিপশন সফলভাবে আপলোড করা হয়েছে!" : "✅ Prescription uploaded successfully!");
+                  } else {
+                    setUploadMessage(`❌ ${data.error || (lang === "bn" ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed")}`);
+                  }
+                } catch (err) {
+                  setUploadMessage(`❌ ${lang === "bn" ? "নেটওয়ার্ক ত্রুটি" : "Network error"}`);
+                }
+              }}
+              disabled={loading}
+            />
+          )}
         </div>
       </div>
     </Layout>
