@@ -150,7 +150,15 @@ export async function listAllMothers() {
 }
 
 export async function listAllDoctors() {
-  return listJson<DoctorProfile>("doctors/");
+  try {
+    const doctors = await listJson<DoctorProfile>("doctors/");
+    console.log(`[Data] listAllDoctors: Found ${doctors.length} doctors`);
+    return doctors;
+  } catch (err) {
+    console.error("[Data] Error in listAllDoctors:", err);
+    // Return empty array instead of throwing to prevent breaking admin dashboard
+    return [];
+  }
 }
 
 export async function deleteDoctor(doctorId: string) {

@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     // Save doctor
     try {
       await saveDoctor(doctor);
+      console.log(`[Doctor Register] Successfully saved doctor: ${doctor.id}, email: ${doctor.email}, status: ${doctor.status}`);
     } catch (err) {
       console.error("Error saving doctor:", err);
       return NextResponse.json(
