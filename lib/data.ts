@@ -69,20 +69,27 @@ const questionKey = (id: string) => `questions/${id}.json`;
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
     const objects = await listObjects(prefix);
+    console.log(`[Data] listJson: Found ${objects.length} objects with prefix "${prefix}"`);
     const items = await Promise.all(
       (objects || []).map(async (obj) => {
         try {
           const key = obj.Key!;
-          return getJson<T>(key);
+          const item = await getJson<T>(key);
+          if (!item) {
+            console.warn(`[Data] listJson: Object ${key} returned null`);
+          }
+          return item;
         } catch (err) {
-          console.error(`Error loading object ${obj.Key}:`, err);
+          console.error(`[Data] Error loading object ${obj.Key}:`, err);
           return null;
         }
       }),
     );
-    return items.filter(Boolean) as T[];
+    const validItems = items.filter(Boolean) as T[];
+    console.log(`[Data] listJson: Successfully loaded ${validItems.length} valid items from ${items.length} total`);
+    return validItems;
   } catch (err) {
-    console.error(`Error listing objects with prefix ${prefix}:`, err);
+    console.error(`[Data] Error listing objects with prefix ${prefix}:`, err);
     // Return empty array instead of throwing - allows registration to proceed
     // if R2 is temporarily unavailable
     return [];
