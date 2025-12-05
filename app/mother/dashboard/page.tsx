@@ -9,10 +9,17 @@ type Profile = {
   name?: string;
   email: string;
   age?: number;
+  phone?: string;
+  address?: string;
+  bloodGroup?: string;
   weeksPregnant?: number;
   dueDate?: string;
   conditions?: string;
   medications?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  previousPregnancies?: number;
+  allergies?: string;
 };
 
 type Prescription = { key: string; url: string };
@@ -332,6 +339,69 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      className="input w-full"
+                      placeholder="+1 234 567 8900"
+                      type="tel"
+                      value={profile.phone || ""}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Blood Group
+                    </label>
+                    <select
+                      className="input w-full"
+                      value={profile.bloodGroup || ""}
+                      onChange={(e) => setProfile({ ...profile, bloodGroup: e.target.value })}
+                    >
+                      <option value="">Select blood group</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Previous Pregnancies
+                    </label>
+                    <input
+                      className="input w-full"
+                      placeholder="Number of previous pregnancies"
+                      type="number"
+                      min="0"
+                      value={profile.previousPregnancies ?? ""}
+                      onChange={(e) =>
+                        setProfile({
+                          ...profile,
+                          previousPregnancies: Number(e.target.value) || undefined,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Address
+                  </label>
+                  <textarea
+                    className="input w-full h-20"
+                    placeholder="Your full address"
+                    value={profile.address || ""}
+                    onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Medical Conditions
                     </label>
                     <input
@@ -339,6 +409,17 @@ export default function MotherDashboard() {
                       placeholder="e.g., Gestational diabetes"
                       value={profile.conditions || ""}
                       onChange={(e) => setProfile({ ...profile, conditions: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Allergies
+                    </label>
+                    <input
+                      className="input w-full"
+                      placeholder="e.g., Penicillin, Latex"
+                      value={profile.allergies || ""}
+                      onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
                     />
                   </div>
                 </div>
@@ -352,6 +433,38 @@ export default function MotherDashboard() {
                     value={profile.medications || ""}
                     onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
                   />
+                </div>
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="font-semibold text-slate-800 mb-3">Emergency Contact Information</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Emergency Contact Name
+                      </label>
+                      <input
+                        className="input w-full"
+                        placeholder="Contact person name"
+                        value={profile.emergencyContact || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, emergencyContact: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Emergency Contact Phone
+                      </label>
+                      <input
+                        className="input w-full"
+                        placeholder="+1 234 567 8900"
+                        type="tel"
+                        value={profile.emergencyPhone || ""}
+                        onChange={(e) =>
+                          setProfile({ ...profile, emergencyPhone: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
                 <button type="submit" className="btn-primary" disabled={loading}>
                   {loading ? "Saving..." : "💾 Save Profile"}
