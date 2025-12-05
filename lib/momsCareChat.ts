@@ -44,7 +44,7 @@ Be concise, warm, and evidence-informed. If profile context is provided, persona
     }
 
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-3.1-70b-versatile",
+      model: "llama-3.1-8b-instant", // Valid Groq model (alternative: "mixtral-8x7b-32768", "llama-3-8b-8192")
       messages: [
         { role: "system", content: systemPrompt + profileNote },
         ...formattedMessages,

@@ -11,7 +11,7 @@ export default function Home() {
             </p>
             <h1 className="mt-2 text-4xl font-bold text-slate-900 md:text-5xl">
               Pregnancy guidance with trusted doctors and AI.
-            </h1>
+          </h1>
             <p className="mt-4 max-w-2xl text-lg text-slate-600">
               Chat with MomsCare AI, track your pregnancy, upload prescriptions, and get answers from approved doctors — all in one place.
             </p>
@@ -82,6 +82,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-    </main>
+      </main>
   );
 }
