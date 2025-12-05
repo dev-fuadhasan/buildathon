@@ -29,18 +29,25 @@ If prescription images are provided, analyze them carefully and provide relevant
 
     // Filter and format messages - only include user and assistant messages
     // Convert role to match Groq's expected format
-    const formattedMessages = messages
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => {
+    const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
+    
+    const formattedMessages = filteredMessages
+      .map((m, index, arr) => {
         const role = (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant";
         
         // If this is the last user message and we have prescription URLs, include images
-        if (role === "user" && prescriptionUrls && prescriptionUrls.length > 0 && m === messages[messages.length - 1]) {
+        const isLastUserMessage = role === "user" && index === arr.length - 1;
+        if (isLastUserMessage && prescriptionUrls && prescriptionUrls.length > 0) {
           return {
             role,
             content: [
-              { type: "text", text: m.content || "" },
-              ...prescriptionUrls.map((url) => ({
+              { 
+                type: "text", 
+                text: (m.content || "") + (prescriptionUrls.length > 0 
+                  ? `\n\nI have ${prescriptionUrls.length} prescription(s) uploaded. Please analyze them and provide recommendations based on my pregnancy profile.` 
+                  : "") 
+              },
+              ...prescriptionUrls.slice(0, 3).map((url) => ({
                 type: "image_url" as const,
                 image_url: { url },
               })),
