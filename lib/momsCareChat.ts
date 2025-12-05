@@ -36,9 +36,9 @@ CRITICAL RULES - STRICTLY ENFORCE:
 7. If prescription images are provided, analyze them carefully and provide relevant medical advice based on the prescription content.
 8. LANGUAGE SUPPORT: You can understand and respond in both English and Bengali (Bangla). When a user asks in Bengali, respond in Bengali. When asked in English, respond in English. Never mention that you don't understand a language or ask users to switch languages. Always respond naturally in the same language the user uses.
 
-When declining irrelevant questions, use a friendly but firm response in the same language the user used. DO NOT attempt to answer or interpret the question. Simply redirect:
+When declining irrelevant questions, use a CONCISE friendly but firm response in the same language the user used. DO NOT attempt to answer or interpret the question. Simply redirect with a SHORT message:
 - English: "I'm here to help with pregnancy and maternal health questions. Please ask me something related to your pregnancy journey, prenatal care, or maternal health, and I'll be happy to help!"
-- Bengali: "আমি গর্ভাবস্থা এবং মাতৃস্বাস্থ্য সম্পর্কিত প্রশ্নে সাহায্য করতে এখানে আছি। অনুগ্রহ করে আপনার গর্ভাবস্থা, প্রসবপূর্ব যত্ন, বা মাতৃস্বাস্থ্য সম্পর্কিত কিছু জিজ্ঞাসা করুন, আমি খুশি হয়ে সাহায্য করব!"`;
+- Bengali: "আমি গর্ভাবস্থা এবং মাতৃস্বাস্থ্য সম্পর্কিত প্রশ্নে সাহায্য করতে এখানে আছি। অনুগ্রহ করে আপনার গর্ভাবস্থা, প্রসবপূর্ব যত্ন, বা মাতৃস্বাস্থ্য সম্পর্কিত কিছু জিজ্ঞাসা করুন।"`;
 
     const profileNote = profileContext
       ? `\n\nMother profile context:\n${profileContext}`
@@ -108,7 +108,7 @@ When declining irrelevant questions, use a friendly but firm response in the sam
         ...formattedMessages,
       ],
       temperature: 0.6,
-      max_tokens: 400,
+      max_tokens: 800, // Increased to allow complete responses in both English and Bengali
     });
 
     const reply = completion.choices?.[0]?.message?.content;
