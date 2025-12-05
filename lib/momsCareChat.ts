@@ -38,20 +38,24 @@ If prescription images are provided, analyze them carefully and provide relevant
         // If this is the last user message and we have prescription URLs, include images
         const isLastUserMessage = role === "user" && index === arr.length - 1;
         if (isLastUserMessage && prescriptionUrls && prescriptionUrls.length > 0) {
+          const textContent = (m.content || "") + (prescriptionUrls.length > 0 
+            ? `\n\nI have ${prescriptionUrls.length} prescription(s) uploaded. Please analyze them and provide recommendations based on my pregnancy profile.` 
+            : "");
+          
           return {
             role,
             content: [
               { 
                 type: "text" as const, 
-                text: (m.content || "") + (prescriptionUrls.length > 0 
-                  ? `\n\nI have ${prescriptionUrls.length} prescription(s) uploaded. Please analyze them and provide recommendations based on my pregnancy profile.` 
-                  : "") 
+                text: textContent,
               },
               ...prescriptionUrls.slice(0, 3).map((url) => ({
                 type: "image_url" as const,
-                image_url: { url },
+                image_url: {
+                  url: url,
+                },
               })),
-            ] as Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>,
+            ],
           };
         }
         
