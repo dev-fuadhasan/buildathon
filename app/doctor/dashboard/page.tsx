@@ -29,10 +29,17 @@ type QuestionItem = {
     name?: string;
     email: string;
     age?: number;
+    phone?: string;
+    address?: string;
+    bloodGroup?: string;
     weeksPregnant?: number;
     dueDate?: string;
     conditions?: string;
     medications?: string;
+    allergies?: string;
+    previousPregnancies?: number;
+    emergencyContact?: string;
+    emergencyPhone?: string;
   };
   prescriptions?: { key: string; url: string }[];
 };
