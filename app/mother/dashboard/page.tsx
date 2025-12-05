@@ -580,7 +580,7 @@ export default function MotherDashboard() {
                             </a>
                             <button
                               onClick={async () => {
-                                if (!confirm(t.common.deleteConfirm || "Are you sure you want to delete this prescription?")) {
+                                if (!confirm("Are you sure you want to delete this prescription?")) {
                                   return;
                                 }
                                 setDeletingPrescription(p.key);
