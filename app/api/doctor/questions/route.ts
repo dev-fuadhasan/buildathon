@@ -24,7 +24,17 @@ export async function GET(req: NextRequest) {
       const { passwordHash, ...motherSafe } = mother || ({} as any);
       return {
         ...q,
-        mother: mother ? motherSafe : undefined,
+        mother: mother ? {
+          ...motherSafe,
+          // Include all fields
+          phone: mother.phone,
+          address: mother.address,
+          bloodGroup: mother.bloodGroup,
+          previousPregnancies: mother.previousPregnancies,
+          allergies: mother.allergies,
+          emergencyContact: mother.emergencyContact,
+          emergencyPhone: mother.emergencyPhone,
+        } : undefined,
         prescriptions,
         comments: q.comments || [],
       };
