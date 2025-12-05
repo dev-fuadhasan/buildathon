@@ -329,11 +329,11 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Due Date
+                      {t.mother.dueDate}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="Select due date"
+                      placeholder={t.mother.dueDate}
                       type="date"
                       value={profile.dueDate || ""}
                       onChange={(e) => setProfile({ ...profile, dueDate: e.target.value })}
@@ -341,11 +341,11 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Phone Number
+                      {t.mother.phone}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="+1 234 567 8900"
+                      placeholder={t.mother.enterPhone}
                       type="tel"
                       value={profile.phone || ""}
                       onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
@@ -353,14 +353,14 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Blood Group
+                      {t.mother.bloodGroup}
                     </label>
                     <select
                       className="input w-full"
                       value={profile.bloodGroup || ""}
                       onChange={(e) => setProfile({ ...profile, bloodGroup: e.target.value })}
                     >
-                      <option value="">Select blood group</option>
+                      <option value="">{t.mother.selectBloodGroup}</option>
                       <option value="A+">A+</option>
                       <option value="A-">A-</option>
                       <option value="B+">B+</option>
@@ -373,11 +373,11 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Previous Pregnancies
+                      {t.mother.previousPregnancies}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="Number of previous pregnancies"
+                      placeholder={t.mother.previousPregnancies}
                       type="number"
                       min="0"
                       value={profile.previousPregnancies ?? ""}
@@ -392,11 +392,11 @@ export default function MotherDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Address
+                    {t.mother.address}
                   </label>
                   <textarea
                     className="input w-full h-20"
-                    placeholder="Your full address"
+                    placeholder={t.mother.enterAddress}
                     value={profile.address || ""}
                     onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                   />
@@ -404,22 +404,22 @@ export default function MotherDashboard() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Medical Conditions
+                      {t.mother.conditions}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="e.g., Gestational diabetes"
+                      placeholder={t.mother.enterConditions}
                       value={profile.conditions || ""}
                       onChange={(e) => setProfile({ ...profile, conditions: e.target.value })}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Allergies
+                      {t.mother.allergies}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="e.g., Penicillin, Latex"
+                      placeholder={t.mother.enterAllergies}
                       value={profile.allergies || ""}
                       onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
                     />
@@ -427,25 +427,25 @@ export default function MotherDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Current Medications
+                    {t.mother.medications}
                   </label>
                   <textarea
                     className="input w-full h-24"
-                    placeholder="List your current medications and dosages"
+                    placeholder={t.mother.enterMedications}
                     value={profile.medications || ""}
                     onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
                   />
                 </div>
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="font-semibold text-slate-800 mb-3">Emergency Contact Information</h4>
+                  <h4 className="font-semibold text-slate-800 mb-3">{t.mother.emergencyContact} {t.common.info || "Information"}</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Emergency Contact Name
+                        {t.mother.emergencyContact}
                       </label>
                       <input
                         className="input w-full"
-                        placeholder="Contact person name"
+                        placeholder={t.mother.enterEmergencyContact}
                         value={profile.emergencyContact || ""}
                         onChange={(e) =>
                           setProfile({ ...profile, emergencyContact: e.target.value })
@@ -454,11 +454,11 @@ export default function MotherDashboard() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Emergency Contact Phone
+                        {t.mother.emergencyPhone}
                       </label>
                       <input
                         className="input w-full"
-                        placeholder="+1 234 567 8900"
+                        placeholder={t.mother.enterEmergencyPhone}
                         type="tel"
                         value={profile.emergencyPhone || ""}
                         onChange={(e) =>
@@ -469,7 +469,7 @@ export default function MotherDashboard() {
                   </div>
                 </div>
                 <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? "Saving..." : "💾 Save Profile"}
+                  {loading ? t.common.loading : `💾 ${t.common.save} ${t.mother.profile}`}
                 </button>
               </form>
             )}
@@ -484,7 +484,7 @@ export default function MotherDashboard() {
                 <form onSubmit={uploadPrescription} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Upload Prescription (PDF, PNG, JPG - Max 10MB)
+                      {t.mother.uploadPrescription} (PDF, PNG, JPG - Max 10MB)
                     </label>
                     <input
                       type="file"
@@ -495,7 +495,7 @@ export default function MotherDashboard() {
                     />
                   </div>
                   <button type="submit" className="btn-primary" disabled={uploading}>
-                    {uploading ? "⏳ Uploading..." : "📤 Upload Prescription"}
+                    {uploading ? `⏳ ${t.common.loading}` : `📤 ${t.mother.uploadPrescription}`}
                   </button>
                 </form>
               </div>
@@ -504,8 +504,8 @@ export default function MotherDashboard() {
                 <h3 className="text-lg font-semibold mb-3">Your Prescriptions ({prescriptions.length})</h3>
                 {prescriptions.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    <p className="text-lg mb-2">No prescriptions uploaded yet</p>
-                    <p className="text-sm">Upload your first prescription above</p>
+                    <p className="text-lg mb-2">{t.mother.noPrescriptions}</p>
+                    <p className="text-sm">{t.mother.uploadPrescription}</p>
                   </div>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -544,17 +544,17 @@ export default function MotherDashboard() {
         {/* Questions Tab */}
         {activeTab === "questions" && (
           <div className="grid gap-6 md:grid-cols-2">
-            <DashboardCard title="Ask a Doctor">
+            <DashboardCard title={t.mother.askDoctor}>
               <div className="space-y-4">
                 <textarea
                   className="input w-full h-32"
-                  placeholder="Type your question here... Be specific about your concerns."
+                  placeholder={t.mother.questionPlaceholder}
                   value={questionText}
                   onChange={(e) => setQuestionText(e.target.value)}
                   disabled={loading}
                 />
                 <button className="btn-primary w-full" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
-                  {loading ? "Sending..." : "📤 Submit Question"}
+                  {loading ? t.common.loading : `📤 ${t.common.submit} ${t.mother.questions.split(" ")[0]}`}
                 </button>
                 <p className="text-xs text-slate-500">
                   💡 Tip: Include details about symptoms, timing, and any concerns you have.
@@ -562,12 +562,12 @@ export default function MotherDashboard() {
               </div>
             </DashboardCard>
 
-            <DashboardCard title="Your Questions & Answers">
+            <DashboardCard title={t.mother.yourQuestions}>
               <div className="space-y-4">
                 {questions.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    <p>No questions yet</p>
-                    <p className="text-sm mt-1">Ask your first question to get started</p>
+                    <p>{t.mother.noQuestions}</p>
+                    <p className="text-sm mt-1">{t.mother.askDoctor}</p>
                   </div>
                 ) : (
                   questions.map((q) => (
