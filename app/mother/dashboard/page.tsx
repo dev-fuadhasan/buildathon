@@ -225,10 +225,12 @@ export default function MotherDashboard() {
     return (
       <Layout>
         <div className="mx-auto max-w-xl text-center">
-          <h1 className="text-3xl font-bold mb-4">Mother Dashboard</h1>
-          <p className="text-slate-600 mb-6">Please log in to continue.</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent mb-4">
+            {t.mother.dashboard}
+          </h1>
+          <p className="text-slate-600 mb-6">{t.common.pleaseLogin}</p>
           <Link href="/mother/login" className="btn-primary inline-block">
-            Login
+            {t.common.login}
           </Link>
         </div>
       </Layout>
@@ -276,7 +278,7 @@ export default function MotherDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-200">
+        <div className="flex gap-2 border-b-2 border-slate-200 mb-6">
           {[
             { id: "profile", label: `👤 ${t.mother.profile}`, icon: "👤" },
             { id: "prescriptions", label: `📄 ${t.mother.prescriptions}`, icon: "📄" },
@@ -286,10 +288,10 @@ export default function MotherDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 font-medium transition-colors ${
+              className={`px-6 py-3 font-semibold transition-all duration-200 rounded-t-lg ${
                 activeTab === tab.id
-                  ? "border-b-2 border-pink-600 text-pink-600"
-                  : "text-slate-600 hover:text-pink-600"
+                  ? "bg-gradient-to-b from-pink-50 to-white border-t-2 border-l-2 border-r-2 border-pink-600 text-pink-600 shadow-sm"
+                  : "text-slate-600 hover:text-pink-600 hover:bg-pink-50/50"
               }`}
             >
               {tab.label}
@@ -299,34 +301,34 @@ export default function MotherDashboard() {
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
-          <DashboardCard title="Your Health Profile">
+          <DashboardCard title={t.mother.yourHealthProfile}>
             {profile && (
               <form className="space-y-4" onSubmit={saveProfile}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Full Name
+                      {t.mother.name}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="Enter your full name"
+                      placeholder={t.mother.enterName}
                       value={profile.name || ""}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Email
+                      {t.mother.email}
                     </label>
                     <input className="input w-full" value={profile.email} disabled />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Age
+                      {t.mother.age}
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="Your age"
+                      placeholder={t.mother.enterAge}
                       type="number"
                       min="18"
                       max="50"
@@ -338,7 +340,7 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Weeks Pregnant
+                      {t.mother.weeksPregnant}
                     </label>
                     <input
                       className="input w-full"
@@ -466,7 +468,7 @@ export default function MotherDashboard() {
                 </div>
                 <div className="border-t border-slate-200 pt-4">
                   <h4 className="font-semibold text-slate-800 mb-3">
-                    {t.mother.emergencyContact} Information
+                    {t.mother.emergencyContact}
                   </h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -508,7 +510,7 @@ export default function MotherDashboard() {
 
         {/* Prescriptions Tab */}
         {activeTab === "prescriptions" && (
-          <DashboardCard title="Prescription Management">
+          <DashboardCard title={t.mother.prescriptions}>
             <div className="space-y-6">
               <div className="rounded-lg border-2 border-dashed border-pink-200 bg-pink-50 p-6">
                 <form onSubmit={uploadPrescription} className="space-y-4">
@@ -531,7 +533,9 @@ export default function MotherDashboard() {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-3">Your Prescriptions ({prescriptions.length})</h3>
+                <h3 className="text-lg font-semibold mb-3 text-slate-800">
+                  {t.mother.totalPrescriptions}: {prescriptions.length}
+                </h3>
                 {prescriptions.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     <p className="text-lg mb-2">{t.mother.noPrescriptions}</p>

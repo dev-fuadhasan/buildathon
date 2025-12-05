@@ -28,10 +28,10 @@ export default function ChatInput({ onSend, disabled }: Props) {
   };
 
   return (
-    <div className="flex gap-2 items-end">
-      <div className="flex-1">
+    <div className="flex gap-3 items-end">
+      <div className="flex-1 relative">
         <textarea
-          className="input resize-none min-h-[60px] max-h-[120px]"
+          className="input resize-none min-h-[70px] max-h-[150px] pr-12 text-base"
           placeholder={lang === "bn" 
             ? "আপনার বার্তা টাইপ করুন... (প্রেরণ করতে Enter, নতুন লাইনের জন্য Shift+Enter)"
             : `${t.chat.placeholder} (Press Enter to send, Shift+Enter for new line)`}
@@ -50,18 +50,18 @@ export default function ChatInput({ onSend, disabled }: Props) {
       <button
         onClick={handleSend}
         disabled={sending || disabled || !value.trim()}
-        className="btn-primary px-6 py-3 h-[60px] flex items-center justify-center"
+        className="btn-primary px-8 py-3.5 h-[70px] flex items-center justify-center min-w-[120px] shadow-lg hover:shadow-xl transition-all"
         title="Send message (Enter)"
       >
         {sending ? (
           <span className="flex items-center gap-2">
-            <span className="animate-spin">⏳</span>
-            <span>{lang === "bn" ? "প্রেরণ করা হচ্ছে..." : "Sending..."}</span>
+            <span className="animate-spin text-xl">⏳</span>
+            <span className="font-semibold">{lang === "bn" ? "প্রেরণ..." : "Sending..."}</span>
           </span>
         ) : (
           <span className="flex items-center gap-2">
-            <span>📤</span>
-            <span>{t.chat.send}</span>
+            <span className="text-xl">📤</span>
+            <span className="font-semibold">{t.chat.send}</span>
           </span>
         )}
       </button>

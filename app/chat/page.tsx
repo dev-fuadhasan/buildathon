@@ -91,86 +91,94 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-200px)] max-w-4xl mx-auto">
+      <div className="flex flex-col h-[calc(100vh-180px)] max-w-6xl mx-auto gap-4">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-pink-600 mb-2">{t.chat.title}</h1>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent mb-2">
+              {t.chat.title}
+            </h1>
             <p className="text-slate-600">
               {isMother ? `✨ ${t.chat.personalized}` : `💬 ${t.chat.public}`}
             </p>
-            {!isMother && (
-              <Link href="/mother/login" className="btn-secondary text-sm">
-                {t.common.login} {lang === "bn" ? "ব্যক্তিগতকৃত চ্যাটের জন্য" : "for Personalized Chat"}
-              </Link>
-            )}
           </div>
+          {!isMother && (
+            <Link href="/mother/login" className="btn-secondary">
+              {t.common.login} {lang === "bn" ? "ব্যক্তিগতকৃত চ্যাটের জন্য" : "for Personalized Chat"}
+            </Link>
+          )}
         </div>
 
         {/* Safety Disclaimer */}
-        <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
-          <p className="text-sm text-yellow-800">
+        <div className="rounded-xl bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 p-4 shadow-sm">
+          <p className="text-sm text-yellow-900 font-medium">
             ⚠️ <strong>{lang === "bn" ? "গুরুত্বপূর্ণ:" : "Important:"}</strong> {t.chat.disclaimer}
           </p>
         </div>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 space-y-4 mb-4">
-          {messages.map((msg, idx) => (
-            <ChatBubble key={idx} role={msg.role} content={msg.content} />
-          ))}
-          {loading && (
-            <div className="flex items-center gap-2 text-slate-500">
-              <div className="animate-pulse">💭</div>
-              <span className="text-sm">
-                {lang === "bn" ? "MomsCare চিন্তা করছে..." : "MomsCare is thinking..."}
-              </span>
+        {/* Main Chat Container */}
+        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          {/* Chat Messages - Large Section */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50 to-white">
+            {messages.map((msg, idx) => (
+              <ChatBubble key={idx} role={msg.role} content={msg.content} />
+            ))}
+            {loading && (
+              <div className="flex items-center gap-3 text-slate-500">
+                <div className="animate-pulse text-2xl">💭</div>
+                <span className="text-sm font-medium">
+                  {lang === "bn" ? "MomsCare চিন্তা করছে..." : "MomsCare is thinking..."}
+                </span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Upload Message */}
+          {uploadMessage && (
+            <div className={`mx-4 mb-2 rounded-lg p-3 ${
+              uploadMessage.includes("✅") 
+                ? "bg-green-50 text-green-800 border border-green-200" 
+                : "bg-red-50 text-red-800 border border-red-200"
+            }`}>
+              <p className="text-sm font-medium">{uploadMessage}</p>
             </div>
           )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        {/* Upload Message */}
-        {uploadMessage && (
-          <div className={`rounded-lg p-3 mb-2 ${
-            uploadMessage.includes("✅") 
-              ? "bg-green-50 text-green-800 border border-green-200" 
-              : "bg-red-50 text-red-800 border border-red-200"
-          }`}>
-            {uploadMessage}
+          {/* Input Section - Compact */}
+          <div className="border-t border-slate-200 bg-white p-4">
+            <ChatInput onSend={sendMessage} disabled={loading} />
+            {/* Prescription Upload - Small, Collapsible */}
+            {isMother && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <ChatPrescriptionUpload
+                  onUpload={async (file) => {
+                    setUploadMessage("");
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    try {
+                      const res = await fetch("/api/mother/prescriptions", {
+                        method: "POST",
+                        headers: {
+                          Authorization: `Bearer ${motherToken}`,
+                        },
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        setUploadMessage(lang === "bn" ? "✅ প্রেসক্রিপশন সফলভাবে আপলোড করা হয়েছে!" : "✅ Prescription uploaded successfully!");
+                      } else {
+                        setUploadMessage(`❌ ${data.error || (lang === "bn" ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed")}`);
+                      }
+                    } catch (err) {
+                      setUploadMessage(`❌ ${lang === "bn" ? "নেটওয়ার্ক ত্রুটি" : "Network error"}`);
+                    }
+                  }}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Chat Input */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <ChatInput onSend={sendMessage} disabled={loading} />
-          {isMother && (
-            <ChatPrescriptionUpload
-              onUpload={async (file) => {
-                setUploadMessage("");
-                const formData = new FormData();
-                formData.append("file", file);
-                try {
-                  const res = await fetch("/api/mother/prescriptions", {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${motherToken}`,
-                    },
-                    body: formData,
-                  });
-                  const data = await res.json();
-                  if (res.ok) {
-                    setUploadMessage(lang === "bn" ? "✅ প্রেসক্রিপশন সফলভাবে আপলোড করা হয়েছে!" : "✅ Prescription uploaded successfully!");
-                  } else {
-                    setUploadMessage(`❌ ${data.error || (lang === "bn" ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed")}`);
-                  }
-                } catch (err) {
-                  setUploadMessage(`❌ ${lang === "bn" ? "নেটওয়ার্ক ত্রুটি" : "Network error"}`);
-                }
-              }}
-              disabled={loading}
-            />
-          )}
         </div>
       </div>
     </Layout>

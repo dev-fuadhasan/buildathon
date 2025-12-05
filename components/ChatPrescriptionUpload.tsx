@@ -47,38 +47,35 @@ export default function ChatPrescriptionUpload({ onUpload, disabled }: Props) {
   };
 
   return (
-    <div className="border-t border-slate-200 pt-3 mt-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-medium text-slate-700">
-          {lang === "bn" ? "📄 প্রেসক্রিপশন আপলোড করুন" : "📄 Upload Prescription"}
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <input
-          id="chat-prescription-input"
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
-          onChange={handleFileChange}
-          disabled={uploading || disabled}
-          className="input flex-1 text-sm"
-        />
-        {file && (
+    <div className="flex items-center gap-2">
+      <label htmlFor="chat-prescription-input" className="text-xs font-medium text-slate-600 cursor-pointer hover:text-pink-600 transition-colors">
+        {lang === "bn" ? "📄 প্রেসক্রিপশন" : "📄 Prescription"}
+      </label>
+      <input
+        id="chat-prescription-input"
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg"
+        onChange={handleFileChange}
+        disabled={uploading || disabled}
+        className="hidden"
+      />
+      <label htmlFor="chat-prescription-input" className="flex-1 text-xs text-slate-500 cursor-pointer hover:text-slate-700 transition-colors truncate">
+        {file ? file.name : (lang === "bn" ? "ফাইল নির্বাচন করুন" : "Choose file")}
+      </label>
+      {file && (
+        <>
+          <span className="text-xs text-slate-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
           <button
             onClick={handleUpload}
             disabled={uploading || disabled}
-            className="btn-primary text-sm px-4 py-2"
+            className="btn-primary text-xs px-3 py-1.5 h-auto"
           >
             {uploading 
-              ? (lang === "bn" ? "আপলোড হচ্ছে..." : "Uploading...")
+              ? (lang === "bn" ? "..." : "...")
               : (lang === "bn" ? "আপলোড" : "Upload")
             }
           </button>
-        )}
-      </div>
-      {file && (
-        <p className="text-xs text-slate-500 mt-1">
-          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-        </p>
+        </>
       )}
     </div>
   );

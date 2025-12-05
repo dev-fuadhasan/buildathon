@@ -26,6 +26,7 @@ export const translations = {
       filter: "Filter",
       close: "Close",
       home: "Home",
+      pleaseLogin: "Please log in to continue.",
     },
     // Homepage
     home: {
@@ -207,6 +208,7 @@ export const translations = {
       filter: "ফিল্টার",
       close: "বন্ধ",
       home: "হোম",
+      pleaseLogin: "অনুগ্রহ করে লগইন করুন।",
     },
     // Homepage
     home: {
