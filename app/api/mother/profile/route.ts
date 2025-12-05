@@ -26,10 +26,17 @@ export async function PUT(req: NextRequest) {
     ...mother,
     name: body.name ?? mother.name,
     age: body.age ?? mother.age,
+    phone: body.phone ?? mother.phone,
+    address: body.address ?? mother.address,
+    bloodGroup: body.bloodGroup ?? mother.bloodGroup,
     weeksPregnant: body.weeksPregnant ?? mother.weeksPregnant,
     dueDate: body.dueDate ?? mother.dueDate,
     conditions: body.conditions ?? mother.conditions,
     medications: body.medications ?? mother.medications,
+    emergencyContact: body.emergencyContact ?? mother.emergencyContact,
+    emergencyPhone: body.emergencyPhone ?? mother.emergencyPhone,
+    previousPregnancies: body.previousPregnancies ?? mother.previousPregnancies,
+    allergies: body.allergies ?? mother.allergies,
     updatedAt: new Date().toISOString(),
   };
 

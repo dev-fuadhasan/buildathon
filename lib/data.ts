@@ -6,10 +6,17 @@ export type MotherProfile = {
   passwordHash: string;
   name?: string;
   age?: number;
+  phone?: string;
+  address?: string;
+  bloodGroup?: string;
   weeksPregnant?: number;
   dueDate?: string;
   conditions?: string;
   medications?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  previousPregnancies?: number;
+  allergies?: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -285,10 +285,13 @@ export default function DoctorDashboard() {
             <div className="space-y-4">
               {answeredQuestions.map((q) => (
                 <DashboardCard key={q.id} title={`Question from ${q.mother?.name || q.mother?.email || "Mother"}`}>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
                       <p className="font-medium text-slate-800 mb-1">❓ Question:</p>
                       <p className="text-sm text-slate-700">{q.question}</p>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Asked on {new Date(q.createdAt).toLocaleString()}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-green-50 p-3 border border-green-200">
                       <p className="font-medium text-green-800 mb-1">✅ Your Answer:</p>
@@ -299,11 +302,89 @@ export default function DoctorDashboard() {
                         </p>
                       )}
                     </div>
-                    {q.mother && (
-                      <div className="text-xs text-slate-500">
-                        Patient: {q.mother.name || q.mother.email} • {q.mother.weeksPregnant || "N/A"} weeks pregnant
-                      </div>
-                    )}
+
+                    {/* Patient Details Toggle for Answered Questions */}
+                    <div>
+                      <button
+                        onClick={() =>
+                          setExpandedQuestion(expandedQuestion === q.id ? null : q.id)
+                        }
+                        className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        {expandedQuestion === q.id ? "▼" : "▶"} View Patient Details
+                      </button>
+
+                      {expandedQuestion === q.id && q.mother && (
+                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
+                          <div className="grid gap-3 md:grid-cols-2 text-sm">
+                            <div>
+                              <span className="font-medium text-slate-600">Name:</span>
+                              <span className="ml-2 text-slate-800">{q.mother.name || "N/A"}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-slate-600">Email:</span>
+                              <span className="ml-2 text-slate-800">{q.mother.email}</span>
+                            </div>
+                            {q.mother.age && (
+                              <div>
+                                <span className="font-medium text-slate-600">Age:</span>
+                                <span className="ml-2 text-slate-800">{q.mother.age}</span>
+                              </div>
+                            )}
+                            {q.mother.weeksPregnant && (
+                              <div>
+                                <span className="font-medium text-slate-600">Weeks Pregnant:</span>
+                                <span className="ml-2 text-slate-800">{q.mother.weeksPregnant}</span>
+                              </div>
+                            )}
+                            {q.mother.dueDate && (
+                              <div>
+                                <span className="font-medium text-slate-600">Due Date:</span>
+                                <span className="ml-2 text-slate-800">
+                                  {new Date(q.mother.dueDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                            <div className="md:col-span-2">
+                              <span className="font-medium text-slate-600">Medical Conditions:</span>
+                              <span className="ml-2 text-slate-800">
+                                {q.mother.conditions || "None reported"}
+                              </span>
+                            </div>
+                            <div className="md:col-span-2">
+                              <span className="font-medium text-slate-600">Medications:</span>
+                              <span className="ml-2 text-slate-800">
+                                {q.mother.medications || "None reported"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Prescriptions */}
+                          {q.prescriptions && q.prescriptions.length > 0 && (
+                            <div className="mt-4">
+                              <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {q.prescriptions.map((p) => {
+                                  const fileName = p.key.split("/").pop() || "prescription";
+                                  return (
+                                    <a
+                                      key={p.key}
+                                      href={p.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+                                    >
+                                      📄 {fileName}
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </DashboardCard>
               ))}
