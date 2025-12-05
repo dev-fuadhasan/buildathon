@@ -464,7 +464,9 @@ export default function MotherDashboard() {
                   />
                 </div>
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="font-semibold text-slate-800 mb-3">{t.mother.emergencyContact} {t.common.info || "Information"}</h4>
+                  <h4 className="font-semibold text-slate-800 mb-3">
+                    {t.mother.emergencyContact} {getLanguage() === "bn" ? "তথ্য" : "Information"}
+                  </h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
