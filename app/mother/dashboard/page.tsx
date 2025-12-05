@@ -6,6 +6,7 @@ import CommentSection from "@/components/CommentSection";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
+import { getLanguage } from "@/lib/i18n";
 
 type Profile = {
   name?: string;
