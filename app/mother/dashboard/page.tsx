@@ -525,34 +525,32 @@ export default function MotherDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      {t.mother.weeksPregnant}
+                      Days Pregnant
                     </label>
                     <input
                       className="input w-full"
-                      placeholder="e.g., 20"
+                      placeholder="e.g., 140 (20 weeks)"
                       type="number"
                       min="1"
-                      max="42"
-                      value={profile.weeksPregnant ?? ""}
-                      onChange={(e) =>
+                      max="280"
+                      value={profile.daysPregnant ?? ""}
+                      onChange={(e) => {
+                        const days = Number(e.target.value) || undefined;
                         setProfile({
                           ...profile,
-                          weeksPregnant: Number(e.target.value) || undefined,
-                        })
-                      }
+                          daysPregnant: days,
+                          weeksPregnant: days ? Math.floor(days / 7) : undefined, // Auto-calculate weeks
+                        });
+                      }}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      {t.mother.dueDate}
-                    </label>
-                    <input
-                      className="input w-full"
-                      placeholder={t.mother.dueDate}
-                      type="date"
-                      value={profile.dueDate || ""}
-                      onChange={(e) => setProfile({ ...profile, dueDate: e.target.value })}
-                    />
+                    {profile.daysPregnant && (
+                      <div className="mt-2 p-2 bg-blue-50 rounded-lg text-sm">
+                        <p className="text-blue-800">
+                          <strong>Calculated:</strong> {Math.floor((profile.daysPregnant || 0) / 7)} weeks,{" "}
+                          {Math.floor((profile.daysPregnant || 0) / 30)} months
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -901,16 +899,14 @@ export default function MotherDashboard() {
                       />
                     </div>
                   </div>
-                  {profile?.dueDate && (
+                  {profile?.daysPregnant && (
                     <div className="rounded-lg bg-pink-50 p-4">
-                      <p className="text-sm font-medium text-pink-700 mb-1">📅 Due Date</p>
+                      <p className="text-sm font-medium text-pink-700 mb-1">📊 Pregnancy Progress</p>
                       <p className="text-lg font-semibold text-pink-900">
-                        {new Date(profile.dueDate).toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {Math.floor((profile.daysPregnant || 0) / 7)} weeks, {Math.floor((profile.daysPregnant || 0) / 30)} months
+                      </p>
+                      <p className="text-sm text-pink-700 mt-1">
+                        {profile.daysPregnant} days pregnant
                       </p>
                     </div>
                   )}
