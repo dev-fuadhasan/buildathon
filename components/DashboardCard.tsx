@@ -5,16 +5,17 @@ import { PropsWithChildren, ReactNode } from "react";
 type Props = PropsWithChildren<{
   title: string | ReactNode;
   action?: ReactNode;
+  className?: string;
 }>;
 
-export default function DashboardCard({ title, action, children }: Props) {
+export default function DashboardCard({ title, action, children, className = "" }: Props) {
   return (
-    <div className="rounded-2xl bg-white border-2 border-slate-100 shadow-xl p-6 space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
+    <div className={`dashboard-card ${className}`}>
+      <div className="dashboard-card-header flex items-center justify-between">
+        <h3 className="dashboard-card-title text-xl font-bold">
           {title}
         </h3>
-        {action}
+        {action && <div className="flex items-center gap-2">{action}</div>}
       </div>
       <div className="space-y-4">
         {children}
@@ -22,4 +23,3 @@ export default function DashboardCard({ title, action, children }: Props) {
     </div>
   );
 }
-

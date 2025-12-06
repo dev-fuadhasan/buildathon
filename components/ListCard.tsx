@@ -8,29 +8,25 @@ type Props = {
   badge?: ReactNode;
   onClick?: () => void;
   children?: ReactNode;
+  className?: string;
 };
 
-export default function ListCard({ title, subtitle, badge, onClick, children }: Props) {
+export default function ListCard({ title, subtitle, badge, onClick, children, className = "" }: Props) {
   return (
     <div
+      className={`rounded-xl border-2 border-neutral-200 bg-white p-5 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-pink-300 hover:scale-[1.01] ${className}`}
       onClick={onClick}
-      className={`rounded-lg border-2 border-slate-200 bg-white p-4 transition-all hover:shadow-md ${
-        onClick ? "cursor-pointer hover:border-blue-300" : ""
-      }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="font-semibold text-lg text-slate-800">{title}</p>
-            {badge}
-          </div>
-          {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
-          {children}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-neutral-800 truncate">{title}</h4>
+          {subtitle && (
+            <p className="text-sm text-neutral-600 mt-1 line-clamp-2">{subtitle}</p>
+          )}
         </div>
-        {onClick && (
-          <button className="btn-secondary text-sm ml-4">View Details</button>
-        )}
+        {badge && <div className="ml-3 flex-shrink-0">{badge}</div>}
       </div>
+      {children && <div className="mt-3">{children}</div>}
     </div>
   );
 }

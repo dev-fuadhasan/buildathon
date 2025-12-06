@@ -1,32 +1,43 @@
 "use client";
 
 import { ReactNode } from "react";
+import Icon from "./Icon";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | ReactNode;
   children: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
 };
 
-export default function DetailModal({ isOpen, onClose, title, children }: Props) {
+export default function DetailModal({ isOpen, onClose, title, children, size = "lg" }: Props) {
   if (!isOpen) return null;
 
+  const sizeClasses = {
+    sm: "max-w-md",
+    md: "max-w-2xl",
+    lg: "max-w-4xl",
+    xl: "max-w-6xl",
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+      <div className={`${sizeClasses[size]} w-full max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col`}>
+        <div className="flex items-center justify-between p-6 border-b border-neutral-200 bg-gradient-to-r from-pink-50 to-rose-50">
+          <h2 className="text-2xl font-bold text-neutral-800">{title}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
+            className="p-2 rounded-lg hover:bg-white/80 transition-colors text-neutral-600 hover:text-neutral-800"
+            aria-label="Close"
           >
-            ×
+            <Icon name="close" size={24} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
-

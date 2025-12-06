@@ -478,3 +478,12 @@ export async function markNotificationAsRead(motherId: string, notificationId: s
   }
 }
 
+export async function deleteNotification(motherId: string, notificationId: string): Promise<void> {
+  try {
+    const { deleteObject } = await import("./r2Client");
+    await deleteObject(notificationKey(motherId, notificationId));
+  } catch (err) {
+    console.error("Error deleting notification:", err);
+  }
+}
+

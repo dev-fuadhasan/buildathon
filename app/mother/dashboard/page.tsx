@@ -186,6 +186,30 @@ export default function MotherDashboard() {
     }
   };
 
+  const deleteNotification = async (notificationId: string) => {
+    if (!confirm("Are you sure you want to delete this notification?")) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/mother/notifications?notificationId=${notificationId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        setMessage("Notification deleted successfully");
+        fetchNotifications();
+      } else {
+        const data = await res.json();
+        setMessage(`Failed to delete notification: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      setMessage("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const checkDailyTask = async (t = token) => {
     try {
       await fetch("/api/mother/check-daily-task", {
@@ -512,19 +536,30 @@ export default function MotherDashboard() {
           </div>
         </div>
 
-        {/* Message Alert */}
+        {/* Message Alert - Redesigned */}
         {message && (
-          <div className={`rounded-lg p-4 ${
+          <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
-              ? "bg-green-50 text-green-800 border border-green-200" 
-              : "bg-red-50 text-red-800 border border-red-200"
+              ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 
+              : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-red-200"
           }`}>
-            {message}
+            <Icon 
+              name={message.includes("successfully") || message.includes("Success") ? "success" : "error"} 
+              size={24} 
+              className="flex-shrink-0 mt-0.5"
+            />
+            <p className="flex-1 font-medium">{message}</p>
+            <button
+              onClick={() => setMessage("")}
+              className="flex-shrink-0 text-neutral-400 hover:text-neutral-600"
+            >
+              <Icon name="close" size={20} />
+            </button>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b-2 border-slate-200 mb-6 overflow-x-auto">
+        {/* Tabs - Redesigned */}
+        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2">
           {[
             { id: "profile", label: t.mother.profile, icon: "profile" },
             { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
@@ -536,14 +571,17 @@ export default function MotherDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 font-semibold transition-all duration-200 rounded-t-lg flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? "bg-gradient-to-b from-pink-50 to-white border-t-2 border-l-2 border-r-2 border-pink-600 text-pink-600 shadow-sm"
-                  : "text-slate-600 hover:text-pink-600 hover:bg-pink-50/50"
+              className={`tab flex items-center gap-2 px-6 py-3.5 ${
+                activeTab === tab.id ? "tab-active" : "tab-inactive"
               }`}
             >
               <Icon name={tab.icon} size={20} />
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.id === "notifications" && unreadCount > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1482,22 +1520,32 @@ export default function MotherDashboard() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`rounded-lg border p-4 transition-colors ${
+                    className={`rounded-xl border-2 p-5 transition-all duration-300 hover:shadow-md ${
                       notification.read
-                        ? "border-slate-200 bg-slate-50"
-                        : "border-pink-200 bg-pink-50"
+                        ? "border-neutral-200 bg-gradient-to-br from-neutral-50 to-white"
+                        : "border-pink-300 bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 shadow-sm"
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-semibold text-slate-800">{notification.title || (notification.type === "report_decision" ? "Report Decision" : "Notification")}</h4>
-                      {!notification.read && (
+                      <div className="flex gap-2">
+                        {!notification.read && (
+                          <button
+                            className="text-xs text-pink-600 hover:text-pink-700 px-2 py-1 rounded hover:bg-pink-50 transition-colors"
+                            onClick={() => markNotificationAsRead(notification.id)}
+                          >
+                            Mark as read
+                          </button>
+                        )}
                         <button
-                          className="text-xs text-pink-600 hover:text-pink-700"
-                          onClick={() => markNotificationAsRead(notification.id)}
+                          className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition-colors flex items-center gap-1"
+                          onClick={() => deleteNotification(notification.id)}
+                          disabled={loading}
                         >
-                          Mark as read
+                          <Icon name="delete" size={14} />
+                          Delete
                         </button>
-                      )}
+                      </div>
                     </div>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">
                       {notification.content || notification.message || ""}
