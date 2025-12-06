@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
     status: action === "approve" ? ("approved" as const) : ("rejected" as const),
     verificationComment: comment || undefined,
     pendingVerification: false,
+    // Clear changes and previous values after admin action
+    changes: undefined,
+    previousValues: undefined,
     updatedAt: new Date().toISOString(),
   };
   await saveDoctor(updated);

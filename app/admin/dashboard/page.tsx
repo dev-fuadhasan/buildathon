@@ -7,6 +7,12 @@ import DetailModal from "@/components/DetailModal";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 
+type ProfileChange = {
+  field: string;
+  oldValue: string | undefined;
+  newValue: string | undefined;
+};
+
 type Doctor = {
   id: string;
   name?: string;
@@ -21,6 +27,8 @@ type Doctor = {
   profilePicture?: string;
   status: "pending" | "approved" | "rejected";
   verificationComment?: string;
+  previousValues?: Partial<Doctor>;
+  changes?: ProfileChange[];
   createdAt: string;
 };
 
@@ -686,6 +694,50 @@ export default function AdminDashboard() {
                   {selectedDoctor.name ? selectedDoctor.name.charAt(0).toUpperCase() : "D"}
                 </div>
               </div>
+              {/* Changes Section - Show if doctor has pending changes */}
+              {selectedDoctor.changes && selectedDoctor.changes.length > 0 && (
+                <div className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 mb-4">
+                  <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                    📝 Profile Changes Pending Review
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedDoctor.changes.map((change, idx) => {
+                      const fieldLabels: Record<string, string> = {
+                        email: "Email",
+                        name: "Name",
+                        phone: "Phone",
+                        specialty: "Specialty",
+                        bmdcNumber: "BMDC Number",
+                        clinicName: "Clinic/Hospital Name",
+                        clinicAddress: "Clinic Address",
+                        qualification: "Qualifications",
+                        experience: "Experience",
+                      };
+                      const fieldLabel = fieldLabels[change.field] || change.field;
+                      return (
+                        <div key={idx} className="bg-white rounded-lg p-3 border border-yellow-200">
+                          <p className="font-medium text-slate-800 mb-2">{fieldLabel}</p>
+                          <div className="grid md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-slate-500 text-xs mb-1">Previous Value:</p>
+                              <p className="text-red-700 font-medium line-through">
+                                {change.oldValue || "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-slate-500 text-xs mb-1">New Value:</p>
+                              <p className="text-green-700 font-medium">
+                                {change.newValue || "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Name</p>

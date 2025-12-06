@@ -24,6 +24,12 @@ export type MotherProfile = {
   updatedAt: string;
 };
 
+export type ProfileChange = {
+  field: string;
+  oldValue: string | undefined;
+  newValue: string | undefined;
+};
+
 export type DoctorProfile = {
   id: string;
   email: string;
@@ -40,6 +46,8 @@ export type DoctorProfile = {
   status: "pending" | "approved" | "rejected";
   verificationComment?: string; // Admin's comment on verification
   pendingVerification?: boolean; // True when profile is edited and needs re-verification
+  previousValues?: Partial<DoctorProfile>; // Store previous values before changes
+  changes?: ProfileChange[]; // Track what fields were changed
   createdAt: string;
   updatedAt: string;
 };

@@ -58,6 +58,46 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  // Track changes by comparing old and new values
+  const changes: Array<{ field: string; oldValue: string | undefined; newValue: string | undefined }> = [];
+  const fieldsToCheck = [
+    { key: "email", old: doctor.email, new: emailChanged ? newEmail : doctor.email },
+    { key: "name", old: doctor.name, new: body.name },
+    { key: "phone", old: doctor.phone, new: body.phone },
+    { key: "specialty", old: doctor.specialty, new: body.specialty },
+    { key: "bmdcNumber", old: doctor.bmdcNumber, new: body.bmdcNumber },
+    { key: "clinicName", old: doctor.clinicName, new: body.clinicName },
+    { key: "clinicAddress", old: doctor.clinicAddress, new: body.clinicAddress },
+    { key: "qualification", old: doctor.qualification, new: body.qualification },
+    { key: "experience", old: doctor.experience, new: body.experience },
+  ];
+
+  fieldsToCheck.forEach(({ key, old, new: newVal }) => {
+    const oldStr = old?.toString().trim() || "";
+    const newStr = newVal?.toString().trim() || "";
+    if (oldStr !== newStr) {
+      changes.push({
+        field: key,
+        oldValue: old || undefined,
+        newValue: newVal || undefined,
+      });
+    }
+  });
+
+  // Store previous values before updating (only if there are actual changes)
+  const previousValues = changes.length > 0 ? {
+    email: doctor.email,
+    name: doctor.name,
+    phone: doctor.phone,
+    specialty: doctor.specialty,
+    bmdcNumber: doctor.bmdcNumber,
+    clinicName: doctor.clinicName,
+    clinicAddress: doctor.clinicAddress,
+    qualification: doctor.qualification,
+    experience: doctor.experience,
+    profilePicture: doctor.profilePicture,
+  } : doctor.previousValues;
+
   // When doctor edits profile, it needs re-verification
   const updated = {
     ...doctor,
@@ -75,6 +115,8 @@ export async function PUT(req: NextRequest) {
     status: doctor.status === "approved" ? ("pending" as const) : doctor.status,
     pendingVerification: doctor.status === "approved" ? true : doctor.pendingVerification,
     verificationComment: doctor.status === "approved" ? undefined : doctor.verificationComment,
+    previousValues: previousValues, // Store previous values
+    changes: changes.length > 0 ? changes : undefined, // Store changes
     updatedAt: new Date().toISOString(),
   };
 
