@@ -22,11 +22,15 @@ export default function DoctorLogin() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
+      if (!res.ok) {
+        // Display the error message from the API
+        setError(data.error || "Login failed");
+        return;
+      }
       localStorage.setItem("doctorToken", data.token);
       router.push("/doctor/dashboard");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

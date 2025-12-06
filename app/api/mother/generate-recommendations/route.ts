@@ -37,26 +37,46 @@ export async function POST(req: NextRequest) {
     }
     
     const { hour, minute } = getCurrentTimeInTimezone(timezone);
+    const today = getCurrentDateInTimezone(timezone);
     
-    // Determine time of day - exactly at 8 AM or 8 PM (with 5 minute window)
+    // Determine which recommendation should be sent
+    // Morning recommendation: should be sent if it's after 8 AM and hasn't been sent today
+    // Evening recommendation: should be sent if it's after 8 PM and hasn't been sent today
     let timeOfDay: "morning" | "evening" | null = null;
-    if (hour === 8 && minute <= 5) {
+    
+    // Check if morning recommendation should be sent (after 8 AM, before 8 PM, and not sent today)
+    if (hour >= 8 && hour < 20 && mother.lastMorningAdviceDate !== today) {
       timeOfDay = "morning";
-    } else if (hour === 20 && minute <= 5) {
+    }
+    // Check if evening recommendation should be sent (after 8 PM and not sent today)
+    else if (hour >= 20 && mother.lastNightAdviceDate !== today) {
       timeOfDay = "evening";
+    }
+    // If it's before 8 AM, check if yesterday's evening recommendation was missed
+    else if (hour < 8) {
+      // Check if yesterday's evening recommendation was missed
+      // Calculate yesterday's date in the user's timezone
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: timezone });
+      if (mother.lastNightAdviceDate !== yesterdayStr) {
+        timeOfDay = "evening"; // Send yesterday's evening recommendation
+      }
     }
 
     if (!timeOfDay) {
       return NextResponse.json({
-        message: "Not the right time for recommendations",
+        message: "All recommendations for today have been sent",
         currentHour: hour,
         currentMinute: minute,
         timezone,
+        lastMorningAdviceDate: mother.lastMorningAdviceDate,
+        lastNightAdviceDate: mother.lastNightAdviceDate,
       });
     }
     
     // Check if we already generated recommendation for this time today
-    const today = getCurrentDateInTimezone(timezone);
     const lastNotificationKey = timeOfDay === "morning" ? "lastMorningAdviceDate" : "lastNightAdviceDate";
     if (mother[lastNotificationKey] === today) {
       return NextResponse.json({

@@ -35,6 +35,13 @@ export default function CommentSection({ questionId, userRole, userId, token, co
     loadComments();
   }, [questionId]);
 
+  // Sync with initialComments prop when it changes
+  useEffect(() => {
+    if (initialComments && initialComments.length > 0) {
+      setComments(initialComments);
+    }
+  }, [initialComments]);
+
   const loadComments = async () => {
     try {
       const res = await fetch(`/api/questions/comments?questionId=${questionId}`, {

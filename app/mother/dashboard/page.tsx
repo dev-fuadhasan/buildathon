@@ -1016,16 +1016,21 @@ export default function MotherDashboard() {
                       userRole="mother"
                       userId={motherId}
                       token={token}
-                      comments={selectedQuestion.comments}
-                      onCommentAdded={() => {
-                        fetchQuestions(token);
-                        // Refresh selected question
-                        fetch(`/api/mother/questions`, { headers: authHeaders() })
-                          .then(r => r.json())
-                          .then(d => {
-                            const updated = d.questions.find((q: any) => q.id === selectedQuestion.id);
-                            if (updated) setSelectedQuestion(updated);
-                          });
+                      comments={selectedQuestion.comments || []}
+                      onCommentAdded={async () => {
+                        // Refresh questions list
+                        await fetchQuestions(token);
+                        // Refresh selected question with latest comments
+                        try {
+                          const res = await fetch(`/api/mother/questions`, { headers: authHeaders() });
+                          const data = await res.json();
+                          const updated = data.questions?.find((q: any) => q.id === selectedQuestion.id);
+                          if (updated) {
+                            setSelectedQuestion(updated);
+                          }
+                        } catch (err) {
+                          console.error("Failed to refresh question:", err);
+                        }
                       }}
                     />
                   </div>

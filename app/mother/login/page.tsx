@@ -22,11 +22,15 @@ export default function MotherLogin() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
+      if (!res.ok) {
+        // Display the error message from the API
+        setError(data.error || "Login failed");
+        return;
+      }
       localStorage.setItem("motherToken", data.token);
       router.push("/mother/dashboard");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
