@@ -68,11 +68,37 @@ export async function POST(req: NextRequest) {
     // Get journal entries
     const journalEntries = await listJournalEntries(user.id);
     
+    // Get prescriptions
+    const { listObjects, signedUrl } = await import("@/lib/r2Client");
+    let prescriptionUrls: string[] = [];
+    try {
+      const prefix = `prescriptions/${user.id}/`;
+      const objects = await listObjects(prefix);
+      prescriptionUrls = await Promise.all(
+        (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
+      );
+    } catch (err) {
+      console.error("Failed to fetch prescriptions for recommendation:", err);
+    }
+    
+    // Get recent questions and answers
+    const { listMotherQuestions } = await import("@/lib/data");
+    const questions = await listMotherQuestions(user.id);
+    const questionsAndAnswers = questions
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+      .map(q => ({
+        question: q.question,
+        answer: q.answer,
+      }));
+    
     // Generate recommendation
     const recommendation = await generateJournalRecommendation(
       mother,
       journalEntries,
-      timeOfDay
+      timeOfDay,
+      prescriptionUrls,
+      questionsAndAnswers
     );
 
     // Create notification

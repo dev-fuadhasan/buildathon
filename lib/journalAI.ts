@@ -3,17 +3,19 @@
  * Analyzes journal entries and provides personalized recommendations
  */
 
-import { MotherProfile, DailyJournalEntry, listJournalEntries } from "./data";
+import { MotherProfile, DailyJournalEntry, listJournalEntries, listMotherQuestions } from "./data";
 import { askMomsCare } from "./momsCareChat";
 import { getCurrentTimeInTimezone } from "./pregnancyTracker";
 
 /**
- * Generates AI recommendation based on journal entries and profile
+ * Generates AI recommendation based on journal entries, profile, prescriptions, and Q&A
  */
 export async function generateJournalRecommendation(
   mother: MotherProfile,
   journalEntries: DailyJournalEntry[],
-  timeOfDay: "morning" | "evening"
+  timeOfDay: "morning" | "evening",
+  prescriptionUrls?: string[],
+  questionsAndAnswers?: Array<{ question: string; answer?: string }>
 ): Promise<string> {
   try {
     // Get recent journal entries (last 7 days)
@@ -43,20 +45,46 @@ Medications: ${mother.medications || "None"}
 Allergies: ${mother.allergies || "None"}
 `;
     
+    // Build Q&A context
+    let qaContext = "";
+    if (questionsAndAnswers && questionsAndAnswers.length > 0) {
+      const recentQA = questionsAndAnswers.slice(0, 5); // Last 5 Q&As
+      qaContext = recentQA
+        .map((qa) => {
+          if (qa.answer) {
+            return `Q: ${qa.question}\nA: ${qa.answer}`;
+          }
+          return `Q: ${qa.question} (Not yet answered)`;
+        })
+        .join("\n\n---\n\n");
+    }
+    
     // Create prompt based on time of day
     const timePrompt = timeOfDay === "morning"
-      ? "Good morning! Based on the mother's recent daily journal entries and profile, provide a brief, encouraging morning recommendation for today. Focus on: nutrition tips, activity suggestions, self-care reminders, and any concerns to watch for. Keep it warm, supportive, and actionable (2-3 sentences)."
-      : "Good evening! Based on the mother's recent daily journal entries and profile, provide a brief, supportive evening recommendation. Focus on: rest suggestions, reflection on the day, preparation for tomorrow, and any health reminders. Keep it warm, supportive, and actionable (2-3 sentences).";
+      ? "Good morning! Based on the mother's recent daily journal entries, profile, prescriptions (if any), and previous questions/answers, provide a brief, encouraging morning recommendation for today. Focus on: nutrition tips, activity suggestions, self-care reminders, medication compliance (if prescriptions exist), and any concerns to watch for. Keep it warm, supportive, and actionable (2-3 sentences)."
+      : "Good evening! Based on the mother's recent daily journal entries, profile, prescriptions (if any), and previous questions/answers, provide a brief, supportive evening recommendation. Focus on: rest suggestions, reflection on the day, preparation for tomorrow, medication reminders (if prescriptions exist), and any health reminders. Keep it warm, supportive, and actionable (2-3 sentences).";
+    
+    let fullContext = `${timePrompt}\n\nProfile:\n${profileContext}\n\nRecent Journal Entries:\n${journalContext || "No entries yet. Encourage the mother to start journaling."}`;
+    
+    if (qaContext) {
+      fullContext += `\n\nRecent Questions & Answers:\n${qaContext}`;
+    }
+    
+    if (prescriptionUrls && prescriptionUrls.length > 0) {
+      fullContext += `\n\nNote: The mother has ${prescriptionUrls.length} prescription(s) on file. Consider medication compliance and any prescription-related advice.`;
+    }
+    
+    fullContext += `\n\nPlease provide a personalized recommendation in the same language as the journal entries (English, Bengali, or Banglish).`;
     
     const systemMessage = {
       role: "user",
-      content: `${timePrompt}\n\nProfile:\n${profileContext}\n\nRecent Journal Entries:\n${journalContext || "No entries yet. Encourage the mother to start journaling."}\n\nPlease provide a personalized recommendation in the same language as the journal entries (English, Bengali, or Banglish).`,
+      content: fullContext,
     };
     
     const recommendation = await askMomsCare(
       [systemMessage],
       profileContext,
-      undefined,
+      prescriptionUrls, // Pass prescription URLs for analysis
       mother.daysPregnant ? Math.floor(mother.daysPregnant / 7) : undefined
     );
     

@@ -158,14 +158,19 @@ export default function MotherDashboard() {
         const data = await res.json();
         setJournalEntries(data.entries || []);
         
-        // Load today's entry if exists
+        // Set today's date but don't auto-load entry - let user select date first
         const today = new Date().toISOString().split("T")[0];
-        const todayEntry = data.entries?.find((e: JournalEntry) => e.date === today);
-        if (todayEntry) {
-          setTodayJournal(todayEntry.entry);
+        if (!selectedJournalDate) {
           setSelectedJournalDate(today);
+          setTodayJournal(""); // Always start with empty textarea - don't auto-load
         } else {
-          setSelectedJournalDate(today);
+          // If date is already selected, only load entry if it exists for that date
+          const entry = data.entries?.find((e: JournalEntry) => e.date === selectedJournalDate);
+          if (entry) {
+            setTodayJournal(entry.entry);
+          } else {
+            setTodayJournal(""); // Clear if no entry for selected date
+          }
         }
       }
     } catch (err) {
@@ -1064,6 +1069,37 @@ export default function MotherDashboard() {
                       </p>
                     </div>
                   )}
+                  {profile && (() => {
+                    const { assessRisk } = require("@/lib/riskPrediction");
+                    const riskAssessment = assessRisk(profile);
+                    const riskColors: Record<"low" | "medium" | "high", string> = {
+                      low: "bg-green-100 text-green-700 border-green-200",
+                      medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
+                      high: "bg-red-100 text-red-700 border-red-200",
+                    };
+                    const riskLevel = riskAssessment.overallRisk as "low" | "medium" | "high";
+                    return (
+                      <div className={`rounded-lg border-2 p-4 ${riskColors[riskLevel]}`}>
+                        <p className="text-sm font-medium mb-1">⚠️ Risk Level</p>
+                        <p className="text-lg font-semibold capitalize">
+                          {riskAssessment.overallRisk} Risk
+                        </p>
+                        <p className="text-xs mt-1 opacity-90">
+                          Risk Score: {riskAssessment.riskScore}/100
+                        </p>
+                        {riskAssessment.riskFactors.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                            <p className="text-xs font-medium mb-1">Key Factors:</p>
+                            <ul className="text-xs space-y-1">
+                              {riskAssessment.riskFactors.slice(0, 3).map((factor: any, idx: number) => (
+                                <li key={idx}>• {factor.factor}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">
@@ -1116,6 +1152,7 @@ export default function MotherDashboard() {
                       const date = e.target.value;
                       setSelectedJournalDate(date);
                       const entry = journalEntries.find((entry) => entry.date === date);
+                      // Only load entry if it exists, otherwise start with empty textarea
                       setTodayJournal(entry?.entry || "");
                     }}
                   />
