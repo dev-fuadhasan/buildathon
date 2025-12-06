@@ -16,13 +16,32 @@ type Profile = {
   address?: string;
   bloodGroup?: string;
   weeksPregnant?: number;
+  daysPregnant?: number;
   dueDate?: string;
+  timezone?: string;
   conditions?: string;
   medications?: string;
   emergencyContact?: string;
   emergencyPhone?: string;
   previousPregnancies?: number;
   allergies?: string;
+};
+
+type JournalEntry = {
+  id: string;
+  date: string;
+  entry: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type Notification = {
+  id: string;
+  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general";
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
 };
 
 type Prescription = { key: string; url: string };
@@ -54,8 +73,13 @@ export default function MotherDashboard() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications">("profile");
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [todayJournal, setTodayJournal] = useState("");
+  const [selectedJournalDate, setSelectedJournalDate] = useState<string>("");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
@@ -71,6 +95,20 @@ export default function MotherDashboard() {
     fetchProfile(t);
     fetchPrescriptions(t);
     fetchQuestions(t);
+    fetchJournalEntries(t);
+    fetchNotifications(t);
+    // Update pregnancy progress and check for daily tasks/recommendations
+    updatePregnancyProgress(t);
+    checkDailyTask(t);
+    checkRecommendations(t);
+    
+    // Set up interval to check for daily tasks (every hour)
+    const interval = setInterval(() => {
+      checkDailyTask(t);
+      checkRecommendations(t);
+    }, 60 * 60 * 1000); // Check every hour
+    
+    return () => clearInterval(interval);
   }, []);
 
   const authHeaders = (t = token) =>
@@ -94,6 +132,134 @@ export default function MotherDashboard() {
     if (res.ok) {
       const data = await res.json();
       setPrescriptions(data.items || []);
+    }
+  };
+
+  const updatePregnancyProgress = async (t = token) => {
+    try {
+      await fetch("/api/mother/update-progress", {
+        method: "POST",
+        headers: authHeaders(t),
+      });
+      // Reload profile to get updated days
+      fetchProfile(t);
+    } catch (err) {
+      console.error("Failed to update pregnancy progress:", err);
+    }
+  };
+
+  const fetchJournalEntries = async (t = token) => {
+    try {
+      const res = await fetch("/api/mother/journal", { headers: authHeaders(t) });
+      if (res.ok) {
+        const data = await res.json();
+        setJournalEntries(data.entries || []);
+        
+        // Load today's entry if exists
+        const today = new Date().toISOString().split("T")[0];
+        const todayEntry = data.entries?.find((e: JournalEntry) => e.date === today);
+        if (todayEntry) {
+          setTodayJournal(todayEntry.entry);
+          setSelectedJournalDate(today);
+        } else {
+          setSelectedJournalDate(today);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch journal entries:", err);
+    }
+  };
+
+  const fetchNotifications = async (t = token) => {
+    try {
+      const res = await fetch("/api/mother/notifications", { headers: authHeaders(t) });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.notifications?.filter((n: Notification) => !n.read).length || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  const checkDailyTask = async (t = token) => {
+    try {
+      await fetch("/api/mother/check-daily-task", {
+        method: "POST",
+        headers: authHeaders(t),
+      });
+      fetchNotifications(t); // Refresh notifications
+    } catch (err) {
+      // Silent fail - this is a background check
+    }
+  };
+
+  const checkRecommendations = async (t = token) => {
+    try {
+      await fetch("/api/mother/generate-recommendations", {
+        method: "POST",
+        headers: authHeaders(t),
+      });
+      fetchNotifications(t); // Refresh notifications
+    } catch (err) {
+      // Silent fail - this is a background check
+    }
+  };
+
+  const saveJournalEntry = async () => {
+    if (!selectedJournalDate || !todayJournal.trim()) {
+      setMessage("Please write something in your journal");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const existing = journalEntries.find((e) => e.date === selectedJournalDate);
+      
+      const res = await fetch("/api/mother/journal", {
+        method: existing ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          date: selectedJournalDate,
+          entry: todayJournal.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Journal entry saved successfully!");
+        fetchJournalEntries();
+      } else {
+        setMessage(`❌ ${data.error || "Failed to save journal entry"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await fetch("/api/mother/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          notificationId,
+          markAsRead: true,
+        }),
+      });
+      fetchNotifications();
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
     }
   };
 
@@ -225,11 +391,15 @@ export default function MotherDashboard() {
   };
 
   const calculateProgress = () => {
-    if (!profile?.weeksPregnant || !profile?.dueDate) return null;
+    // Use days if available, otherwise calculate from weeks
+    const currentDays = profile?.daysPregnant || (profile?.weeksPregnant ? profile.weeksPregnant * 7 : 0);
+    if (!currentDays) return null;
+    
+    const totalDays = 280; // 40 weeks * 7 days
     const totalWeeks = 40;
-    const currentWeeks = profile.weeksPregnant;
-    const percentage = Math.min((currentWeeks / totalWeeks) * 100, 100);
-    return { percentage, weeks: currentWeeks, total: totalWeeks };
+    const currentWeeks = Math.floor(currentDays / 7);
+    const percentage = Math.min((currentDays / totalDays) * 100, 100);
+    return { percentage, weeks: currentWeeks, days: currentDays, total: totalWeeks };
   };
 
   const progress = calculateProgress();
@@ -291,12 +461,14 @@ export default function MotherDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b-2 border-slate-200 mb-6">
+        <div className="flex gap-2 border-b-2 border-slate-200 mb-6 overflow-x-auto">
           {[
             { id: "profile", label: `👤 ${t.mother.profile}`, icon: "👤" },
             { id: "prescriptions", label: `📄 ${t.mother.prescriptions}`, icon: "📄" },
             { id: "questions", label: `❓ ${t.mother.questions}`, icon: "❓" },
             { id: "progress", label: `📊 ${t.mother.progress}`, icon: "📊" },
+            { id: "journal", label: `📝 Journal`, icon: "📝" },
+            { id: "notifications", label: `🔔 Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: "🔔" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -714,7 +886,12 @@ export default function MotherDashboard() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium">Week {progress.weeks} of {progress.total}</span>
+                      <span className="font-medium">
+                        {progress.days 
+                          ? `${Math.floor(progress.days / 7)} weeks ${progress.days % 7} days`
+                          : `Week ${progress.weeks}`
+                        } of {progress.total} weeks
+                      </span>
                       <span className="text-pink-600 font-semibold">{Math.round(progress.percentage)}%</span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
@@ -770,6 +947,135 @@ export default function MotherDashboard() {
               </div>
             </DashboardCard>
           </div>
+        )}
+
+        {/* Journal Tab */}
+        {activeTab === "journal" && (
+          <div className="space-y-6">
+            <DashboardCard title="📝 Daily Journal">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="input w-full"
+                    value={selectedJournalDate}
+                    onChange={(e) => {
+                      const date = e.target.value;
+                      setSelectedJournalDate(date);
+                      const entry = journalEntries.find((entry) => entry.date === date);
+                      setTodayJournal(entry?.entry || "");
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    How was your day? (You can write in English, Bangla, or Banglish)
+                  </label>
+                  <textarea
+                    className="input w-full h-64"
+                    placeholder="Write about your day, what you ate, how you're feeling, any symptoms, activities, etc..."
+                    value={todayJournal}
+                    onChange={(e) => setTodayJournal(e.target.value)}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    💡 Tip: Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.
+                  </p>
+                </div>
+                <button
+                  className="btn-primary w-full"
+                  onClick={saveJournalEntry}
+                  disabled={loading || !todayJournal.trim()}
+                >
+                  {loading ? "Saving..." : "💾 Save Journal Entry"}
+                </button>
+              </div>
+            </DashboardCard>
+
+            <DashboardCard title="📚 Journal History">
+              {journalEntries.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p>No journal entries yet. Start writing your daily journal!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {journalEntries
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedJournalDate(entry.date);
+                          setTodayJournal(entry.entry);
+                        }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-semibold text-slate-800">
+                            {new Date(entry.date).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </p>
+                          <span className="text-xs text-slate-500">
+                            {new Date(entry.updatedAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 line-clamp-3">
+                          {entry.entry}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </DashboardCard>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === "notifications" && (
+          <DashboardCard title="🔔 Notifications">
+            {notifications.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <p>No notifications yet. You'll receive recommendations and daily task reminders here!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`rounded-lg border p-4 transition-colors ${
+                      notification.read
+                        ? "border-slate-200 bg-slate-50"
+                        : "border-pink-200 bg-pink-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold text-slate-800">{notification.title}</h4>
+                      {!notification.read && (
+                        <button
+                          className="text-xs text-pink-600 hover:text-pink-700"
+                          onClick={() => markNotificationAsRead(notification.id)}
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardCard>
         )}
       </div>
     </Layout>

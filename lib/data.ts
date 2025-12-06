@@ -9,8 +9,11 @@ export type MotherProfile = {
   phone?: string;
   address?: string;
   bloodGroup?: string;
-  weeksPregnant?: number;
+  weeksPregnant?: number; // Kept for backward compatibility
+  daysPregnant?: number; // New: Days since LMP (Last Menstrual Period)
   dueDate?: string;
+  lastPregnancyDayUpdate?: string; // ISO date of last auto-increment
+  timezone?: string; // User's timezone (e.g., "Asia/Dhaka", "America/New_York")
   conditions?: string;
   medications?: string;
   emergencyContact?: string;
@@ -74,10 +77,31 @@ export type ChatHistory = {
   updatedAt: string;
 };
 
+export type DailyJournalEntry = {
+  id: string;
+  motherId: string;
+  date: string; // YYYY-MM-DD format
+  entry: string; // Mother's daily journal entry (English, Bangla, or Banglish)
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Notification = {
+  id: string;
+  motherId: string;
+  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general";
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+};
+
 const motherKey = (id: string) => `mothers/${id}.json`;
 const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
 const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
+const journalEntryKey = (motherId: string, date: string) => `journals/${motherId}/${date}.json`;
+const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
@@ -217,5 +241,52 @@ export async function updateChatHistory(motherId: string, messages: ChatMessage[
     updatedAt: new Date().toISOString(),
   };
   return saveChatHistory(history);
+}
+
+// Daily Journal Functions
+export async function getJournalEntry(motherId: string, date: string): Promise<DailyJournalEntry | null> {
+  try {
+    return await getJson<DailyJournalEntry>(journalEntryKey(motherId, date));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveJournalEntry(entry: DailyJournalEntry) {
+  return putJson(journalEntryKey(entry.motherId, entry.date), entry);
+}
+
+export async function listJournalEntries(motherId: string): Promise<DailyJournalEntry[]> {
+  try {
+    return await listJson<DailyJournalEntry>(`journals/${motherId}/`);
+  } catch (err) {
+    return [];
+  }
+}
+
+// Notification Functions
+export async function getNotifications(motherId: string): Promise<Notification[]> {
+  try {
+    return await listJson<Notification>(`notifications/${motherId}/`);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function saveNotification(notification: Notification) {
+  return putJson(notificationKey(notification.motherId, notification.id), notification);
+}
+
+export async function markNotificationAsRead(motherId: string, notificationId: string) {
+  try {
+    const notifications = await getNotifications(motherId);
+    const notification = notifications.find((n) => n.id === notificationId);
+    if (notification) {
+      notification.read = true;
+      await saveNotification(notification);
+    }
+  } catch (err) {
+    console.error("Error marking notification as read:", err);
+  }
 }
 
