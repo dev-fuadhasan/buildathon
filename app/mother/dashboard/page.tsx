@@ -528,7 +528,7 @@ export default function MotherDashboard() {
             { id: "prescriptions", label: `📄 ${t.mother.prescriptions}`, icon: "📄" },
             { id: "questions", label: `❓ ${t.mother.questions}`, icon: "❓" },
             { id: "progress", label: `📊 ${t.mother.progress}`, icon: "📊" },
-            { id: "journal", label: `📝 Journal`, icon: "📝" },
+            { id: "journal", label: `📝 Daily Entry`, icon: "📝" },
             { id: "notifications", label: `🔔 Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: "🔔" },
           ].map((tab) => (
             <button
