@@ -109,13 +109,13 @@ export async function GET(req: NextRequest) {
       mothers.map(async (m) => {
         try {
           const history = await getChatHistory(m.id);
-          return history?.messages.length > 1 ? 1 : 0;
+          return history?.messages && history.messages.length > 1 ? 1 : 0;
         } catch {
           return 0;
         }
       })
     );
-    const activeChatUsers = totalChatSessions.reduce((a, b) => a + b, 0);
+    const activeChatUsers = totalChatSessions.reduce((a: number, b: number) => a + b, 0);
 
     // Question Response Time (if answered)
     const answeredQuestions = questions.filter((q) => q.answer && q.answeredAt && q.createdAt);

@@ -8,7 +8,7 @@ import { MotherProfile } from "./data";
 export type RiskFactor = {
   category: string;
   factor: string;
-  severity: "low" | "medium" | "high";
+  severity: "critical" | "low" | "medium" | "high";
   recommendation: string;
 };
 

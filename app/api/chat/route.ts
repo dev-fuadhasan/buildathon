@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
 
     let profileContext: string | undefined = body.profileContext;
     let prescriptionUrls: string[] = [];
+    let weeksPregnant: number | undefined;
     
     if (user?.role === "mother") {
       try {
         const mother = await getMother(user.id);
-        let weeksPregnant: number | undefined;
         if (mother) {
           profileContext = `
 Name: ${mother.name || "N/A"}

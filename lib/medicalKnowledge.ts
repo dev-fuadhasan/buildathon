@@ -11,7 +11,7 @@ export type MedicalGuideline = {
   content: string;
   source: "WHO" | "DGHS" | "Evidence-Based";
   trimester?: "first" | "second" | "third" | "all";
-  priority: "high" | "medium" | "low";
+  priority: "critical" | "high" | "medium" | "low";
 };
 
 /**

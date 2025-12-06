@@ -6,27 +6,61 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const bucket = process.env.CF_R2_BUCKET;
+// Lazy initialization to avoid build-time errors
+let r2Instance: S3Client | null = null;
+let bucketName: string | null = null;
 
-if (!process.env.CF_R2_ENDPOINT) {
-  throw new Error("Missing CF_R2_ENDPOINT");
-}
-if (!process.env.CF_ACCESS_KEY_ID) {
-  throw new Error("Missing CF_ACCESS_KEY_ID");
-}
-if (!process.env.CF_SECRET_ACCESS_KEY) {
-  throw new Error("Missing CF_SECRET_ACCESS_KEY");
-}
-if (!bucket) {
-  throw new Error("Missing CF_R2_BUCKET");
+function getR2Client(): S3Client {
+  if (!r2Instance) {
+    const endpoint = process.env.CF_R2_ENDPOINT;
+    const accessKeyId = process.env.CF_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.CF_SECRET_ACCESS_KEY;
+    const bucket = process.env.CF_R2_BUCKET;
+
+    // During build, env vars may not be available - create dummy client
+    // This will fail at runtime if actually used, which is expected
+    if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
+      if (process.env.NODE_ENV === "production" && !process.env.VERCEL && !process.env.NETLIFY) {
+        // Only throw in production if not in a build environment
+        throw new Error("Missing R2 configuration");
+      }
+      // Create dummy client for build time
+      r2Instance = new S3Client({
+        region: "auto",
+        endpoint: endpoint || "https://dummy.endpoint",
+        credentials: {
+          accessKeyId: accessKeyId || "dummy-key",
+          secretAccessKey: secretAccessKey || "dummy-secret",
+        },
+      });
+      bucketName = bucket || "dummy-bucket";
+      return r2Instance;
+    }
+
+    r2Instance = new S3Client({
+      region: "auto",
+      endpoint,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+    bucketName = bucket;
+  }
+  return r2Instance;
 }
 
-export const r2 = new S3Client({
-  region: "auto",
-  endpoint: process.env.CF_R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.CF_ACCESS_KEY_ID,
-    secretAccessKey: process.env.CF_SECRET_ACCESS_KEY,
+function getBucket(): string {
+  if (!bucketName) {
+    bucketName = process.env.CF_R2_BUCKET || "dummy-bucket";
+  }
+  return bucketName;
+}
+
+// Export a getter that initializes lazily
+export const r2 = new Proxy({} as S3Client, {
+  get(_target, prop) {
+    return getR2Client()[prop as keyof S3Client];
   },
 });
 
@@ -36,19 +70,19 @@ export async function uploadFile(params: {
   contentType: string;
 }) {
   const command = new PutObjectCommand({
-    Bucket: bucket,
+    Bucket: getBucket(),
     Key: params.key,
     Body: params.body,
     ContentType: params.contentType,
   });
-  await r2.send(command);
+  await getR2Client().send(command);
   return { key: params.key };
 }
 
 export async function getJson<T>(key: string): Promise<T | null> {
   try {
-    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-    const res = await r2.send(command);
+    const command = new GetObjectCommand({ Bucket: getBucket(), Key: key });
+    const res = await getR2Client().send(command);
     const body = await res.Body?.transformToString();
     return body ? (JSON.parse(body) as T) : null;
   } catch (err: any) {
@@ -59,12 +93,12 @@ export async function getJson<T>(key: string): Promise<T | null> {
 
 export async function putJson(key: string, data: unknown) {
   const command = new PutObjectCommand({
-    Bucket: bucket,
+    Bucket: getBucket(),
     Key: key,
     Body: JSON.stringify(data, null, 2),
     ContentType: "application/json",
   });
-  await r2.send(command);
+  await getR2Client().send(command);
   return { key };
 }
 
@@ -72,10 +106,10 @@ export async function listObjects(prefix: string) {
   try {
     const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
     const command = new ListObjectsV2Command({
-      Bucket: bucket,
+      Bucket: getBucket(),
       Prefix: prefix,
     });
-    const res = await r2.send(command);
+    const res = await getR2Client().send(command);
     return res.Contents ?? [];
   } catch (err: any) {
     console.error(`Error listing objects with prefix ${prefix}:`, err);
@@ -89,15 +123,15 @@ export async function listObjects(prefix: string) {
 }
 
 export async function signedUrl(key: string, expiresIn = 3600) {
-  const command = new GetObjectCommand({ Bucket: bucket, Key: key });
-  return getSignedUrl(r2, command, { expiresIn });
+  const command = new GetObjectCommand({ Bucket: getBucket(), Key: key });
+  return getSignedUrl(getR2Client(), command, { expiresIn });
 }
 
 export async function deleteObject(key: string) {
   const command = new DeleteObjectCommand({
-    Bucket: bucket,
+    Bucket: getBucket(),
     Key: key,
   });
-  await r2.send(command);
+  await getR2Client().send(command);
 }
 
