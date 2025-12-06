@@ -344,15 +344,19 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-8">
+        {/* Header - Redesigned */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-purple-600">Admin Dashboard</h1>
-            <p className="text-slate-600 mt-2">Full access to manage MomsCare platform</p>
+            <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-3">
+              Admin Dashboard
+            </h1>
+            <p className="text-lg text-neutral-600">
+              Full access to manage MomsCare platform
+            </p>
           </div>
           <button
-            className="btn-secondary"
+            className="btn-ghost"
             onClick={() => {
               localStorage.removeItem("adminToken");
               location.href = "/";
@@ -362,19 +366,30 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* Message Alert */}
+        {/* Message Alert - Redesigned */}
         {message && (
-          <div className={`rounded-lg p-4 ${
+          <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
-              ? "bg-green-50 text-green-800 border border-green-200" 
-              : "bg-red-50 text-red-800 border border-red-200"
+              ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 
+              : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-red-200"
           }`}>
-            {message}
+            <Icon 
+              name={message.includes("successfully") || message.includes("Success") ? "success" : "error"} 
+              size={24} 
+              className="flex-shrink-0 mt-0.5"
+            />
+            <p className="flex-1 font-medium">{message}</p>
+            <button
+              onClick={() => setMessage("")}
+              className="flex-shrink-0 text-neutral-400 hover:text-neutral-600"
+            >
+              <Icon name="close" size={20} />
+            </button>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
+        {/* Tabs - Redesigned */}
+        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2">
           {[
             { id: "overview", label: "Overview", icon: "overview" },
             { id: "analytics", label: "Analytics", icon: "progress" },
@@ -385,14 +400,17 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? "border-b-2 border-purple-600 text-purple-600"
-                  : "text-slate-600 hover:text-purple-600"
+              className={`tab flex items-center gap-2 px-6 py-3.5 ${
+                activeTab === tab.id ? "tab-active" : "tab-inactive"
               }`}
             >
               {tab.icon && <Icon name={tab.icon} size={20} />}
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.id === "reports" && reports.length > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {reports.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -402,21 +420,56 @@ export default function AdminDashboard() {
           <>
             {overview && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-                <DashboardCard title="Total Mothers">
-                  <div className="text-4xl font-bold text-pink-600">{overview.mothers}</div>
+                <DashboardCard title={
+                  <span className="flex items-center gap-2">
+                    <Icon name="mom" size={20} />
+                    Total Mothers
+                  </span>
+                }>
+                  <div className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+                    {overview.mothers}
+                  </div>
                 </DashboardCard>
-                <DashboardCard title="Approved Doctors">
-                  <div className="text-4xl font-bold text-green-600">{overview.doctors}</div>
+                <DashboardCard title={
+                  <span className="flex items-center gap-2">
+                    <Icon name="doctor" size={20} />
+                    Approved Doctors
+                  </span>
+                }>
+                  <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    {overview.doctors}
+                  </div>
                 </DashboardCard>
-                <DashboardCard title="Pending Doctors">
-                  <div className="text-4xl font-bold text-yellow-600">{overview.pendingDoctors}</div>
+                <DashboardCard title={
+                  <span className="flex items-center gap-2">
+                    <Icon name="pending" size={20} />
+                    Pending Doctors
+                  </span>
+                }>
+                  <div className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                    {overview.pendingDoctors}
+                  </div>
                 </DashboardCard>
-                <DashboardCard title="Total Questions">
-                  <div className="text-4xl font-bold text-blue-600">{overview.questions}</div>
+                <DashboardCard title={
+                  <span className="flex items-center gap-2">
+                    <Icon name="question" size={20} />
+                    Total Questions
+                  </span>
+                }>
+                  <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    {overview.questions}
+                  </div>
                 </DashboardCard>
-                <DashboardCard title="Answered">
-                  <div className="text-4xl font-bold text-purple-600">{overview.answered}</div>
-                  <p className="text-sm text-slate-500 mt-2">
+                <DashboardCard title={
+                  <span className="flex items-center gap-2">
+                    <Icon name="success" size={20} />
+                    Answered
+                  </span>
+                }>
+                  <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {overview.answered}
+                  </div>
+                  <p className="text-sm text-neutral-500 mt-2">
                     {overview.questions > 0 
                       ? Math.round((overview.answered / overview.questions) * 100) 
                       : 0}% response rate
@@ -438,7 +491,7 @@ export default function AdminDashboard() {
                   pending.map((d) => (
                     <div
                       key={d.id}
-                      className="flex flex-col gap-3 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 md:flex-row md:items-center md:justify-between"
+                      className="flex flex-col gap-3 rounded-xl border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50 p-5 shadow-md hover:shadow-lg transition-all md:flex-row md:items-center md:justify-between"
                     >
                       <div className="flex items-center gap-4 flex-1">
                         {d.profilePicture ? (

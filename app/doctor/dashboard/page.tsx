@@ -137,22 +137,24 @@ export default function DoctorDashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-8">
+        {/* Header - Redesigned */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-blue-600">Doctor Dashboard</h1>
-            <p className="text-slate-600 mt-1">
+            <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-3">
+              Doctor Dashboard
+            </h1>
+            <p className="text-lg text-neutral-600">
               Answer questions from mothers with care and expertise.
             </p>
           </div>
           <div className="flex gap-3">
-            <Link href="/doctor/profile" className="btn-secondary text-sm flex items-center gap-2">
-              <Icon name="profile" size={18} />
+            <Link href="/doctor/profile" className="btn-secondary flex items-center gap-2">
+              <Icon name="profile" size={20} />
               My Profile
             </Link>
             <button
-              className="btn-secondary text-sm"
+              className="btn-ghost text-sm"
               onClick={() => {
                 localStorage.removeItem("doctorToken");
                 location.href = "/";
@@ -163,35 +165,69 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Message Alert */}
+        {/* Message Alert - Redesigned */}
         {message && (
-          <div className={`rounded-lg p-4 ${
+          <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
-              ? "bg-green-50 text-green-800 border border-green-200" 
-              : "bg-red-50 text-red-800 border border-red-200"
+              ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 
+              : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-red-200"
           }`}>
-            {message}
+            <Icon 
+              name={message.includes("successfully") || message.includes("Success") ? "success" : "error"} 
+              size={24} 
+              className="flex-shrink-0 mt-0.5"
+            />
+            <p className="flex-1 font-medium">{message}</p>
+            <button
+              onClick={() => setMessage("")}
+              className="flex-shrink-0 text-neutral-400 hover:text-neutral-600"
+            >
+              <Icon name="close" size={20} />
+            </button>
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <DashboardCard title="Total Questions">
-            <div className="text-3xl font-bold text-blue-600">{questions.length}</div>
+        {/* Stats - Redesigned */}
+        <div className="grid gap-6 md:grid-cols-3">
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="question" size={20} />
+              Total Questions
+            </span>
+          }>
+            <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              {questions.length}
+            </div>
           </DashboardCard>
-          <DashboardCard title="Pending">
-            <div className="text-3xl font-bold text-yellow-600">{unansweredQuestions.length}</div>
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="pending" size={20} />
+              Pending
+            </span>
+          }>
+            <div className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              {unansweredQuestions.length}
+            </div>
           </DashboardCard>
-          <DashboardCard title="Answered">
-            <div className="text-3xl font-bold text-green-600">{answeredQuestions.length}</div>
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="success" size={20} />
+              Answered
+            </span>
+          }>
+            <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              {answeredQuestions.length}
+            </div>
           </DashboardCard>
         </div>
 
-        {/* Unanswered Questions */}
+        {/* Unanswered Questions - Redesigned */}
         {unansweredQuestions.length > 0 && (
           <div>
-            <h2 className="text-2xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-              <Icon name="pending" size={24} />
+            <h2 className="text-2xl font-bold mb-6 text-neutral-800 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg">
+                <Icon name="pending" size={24} className="text-white" />
+              </div>
               Pending Questions ({unansweredQuestions.length})
             </h2>
             <div className="space-y-3">
@@ -236,14 +272,15 @@ export default function DoctorDashboard() {
         >
           {selectedQuestion && !selectedQuestion.answer && (
             <div className="space-y-6">
-              {/* Question */}
-              <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-                <p className="font-medium text-slate-800 mb-2 flex items-center gap-2">
-                  <Icon name="question" size={18} />
+              {/* Question - Redesigned */}
+              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 p-5 border-2 border-blue-200 shadow-sm">
+                <p className="font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                  <Icon name="question" size={20} />
                   Question:
                 </p>
-                <p className="text-slate-700">{selectedQuestion.question}</p>
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-neutral-700 text-base leading-relaxed">{selectedQuestion.question}</p>
+                <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1">
+                  <Icon name="calendar" size={14} />
                   Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
                 </p>
               </div>
@@ -359,10 +396,12 @@ export default function DoctorDashboard() {
                 </div>
               )}
 
-              {/* Answer Form */}
-              <div className="rounded-lg border border-slate-200 bg-white p-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
-                  <Icon name="chat" size={18} />
+              {/* Answer Form - Redesigned */}
+              <div className="rounded-xl border-2 border-neutral-200 bg-white p-6 shadow-sm">
+                <label className="block text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                    <Icon name="chat" size={18} className="text-white" />
+                  </div>
                   Your Answer:
                 </label>
                 <textarea
@@ -415,14 +454,14 @@ export default function DoctorDashboard() {
           )}
         </DetailModal>
 
-        {/* Answered Questions - Minimal List */}
+        {/* Answered Questions - Redesigned */}
         {answeredQuestions.length > 0 && (
           <div>
-            <h2 className="text-2xl font-bold mb-4 text-slate-800">
-              <span className="flex items-center gap-2">
-                <Icon name="success" size={20} />
-                Answered Questions ({answeredQuestions.length})
-              </span>
+            <h2 className="text-2xl font-bold mb-6 text-neutral-800 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <Icon name="success" size={24} className="text-white" />
+              </div>
+              Answered Questions ({answeredQuestions.length})
             </h2>
             <div className="space-y-3">
               {answeredQuestions.map((q) => (
@@ -466,50 +505,57 @@ export default function DoctorDashboard() {
         >
           {selectedQuestion && selectedQuestion.answer && (
             <div className="space-y-4">
-              <div className="rounded-lg bg-blue-50 p-3 border border-blue-200">
-                <p className="font-medium text-slate-800 mb-1">❓ Question:</p>
-                <p className="text-sm text-slate-700">{selectedQuestion.question}</p>
-                <p className="text-xs text-slate-500 mt-2">
+              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 p-5 border-2 border-blue-200 shadow-sm">
+                <p className="font-semibold text-neutral-800 mb-2 flex items-center gap-2">
+                  <Icon name="question" size={20} />
+                  Question:
+                </p>
+                <p className="text-base text-neutral-700 leading-relaxed">{selectedQuestion.question}</p>
+                <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1">
+                  <Icon name="calendar" size={14} />
                   Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
                 </p>
               </div>
-              <div className="rounded-lg bg-green-50 p-3 border border-green-200">
-                <p className="font-medium text-green-800 mb-1 flex items-center gap-2">
-                  <Icon name="success" size={16} />
+              <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 p-5 border-2 border-green-200 shadow-sm">
+                <p className="font-semibold text-green-800 mb-2 flex items-center gap-2">
+                  <Icon name="success" size={20} />
                   Your Answer:
                 </p>
-                <p className="text-sm text-slate-700">{selectedQuestion.answer}</p>
+                <p className="text-base text-neutral-700 leading-relaxed">{selectedQuestion.answer}</p>
                 {selectedQuestion.answeredAt && (
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1">
+                    <Icon name="calendar" size={14} />
                     Answered on {new Date(selectedQuestion.answeredAt).toLocaleString()}
                   </p>
                 )}
               </div>
 
-              {/* Patient Details - Always Visible */}
+              {/* Patient Details - Redesigned */}
               {selectedQuestion.mother && (
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <Icon name="profile" size={20} />
+                <div className="rounded-xl border-2 border-neutral-200 bg-white p-6 shadow-sm">
+                  <h4 className="font-bold text-xl text-neutral-800 mb-5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                      <Icon name="profile" size={20} className="text-white" />
+                    </div>
                     Complete Patient Information
                   </h4>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-xl border-2 border-neutral-200 bg-gradient-to-br from-neutral-50 to-white p-5">
                     <div className="grid gap-3 md:grid-cols-2 text-sm">
                       <div>
-                        <span className="font-medium text-slate-600">Name:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.name || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Name:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.name || "N/A"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-600">Email:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.email}</span>
+                        <span className="font-medium text-neutral-600">Email:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.email}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-600">Age:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.age || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Age:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.age || "N/A"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-600">Phone:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.phone || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Phone:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.phone || "N/A"}</span>
                       </div>
                       {(() => {
                         const days = selectedQuestion.mother.daysPregnant || (selectedQuestion.mother.weeksPregnant ? selectedQuestion.mother.weeksPregnant * 7 : undefined);
@@ -518,8 +564,8 @@ export default function DoctorDashboard() {
                           const months = Math.floor(days / 30);
                           return (
                             <div>
-                              <span className="font-medium text-slate-600">Pregnancy Progress:</span>
-                              <span className="ml-2 text-slate-800">
+                              <span className="font-medium text-neutral-600">Pregnancy Progress:</span>
+                              <span className="ml-2 text-neutral-800">
                                 {days} days ({weeks} weeks, {months} months)
                               </span>
                             </div>
@@ -528,44 +574,44 @@ export default function DoctorDashboard() {
                         return null;
                       })()}
                       <div>
-                        <span className="font-medium text-slate-600">Blood Group:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.bloodGroup || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Blood Group:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.bloodGroup || "N/A"}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-slate-600">Previous Pregnancies:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.previousPregnancies || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Previous Pregnancies:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.previousPregnancies || "N/A"}</span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Address:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.address || "N/A"}</span>
+                        <span className="font-medium text-neutral-600">Address:</span>
+                        <span className="ml-2 text-neutral-800">{selectedQuestion.mother.address || "N/A"}</span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Medical Conditions:</span>
-                        <span className="ml-2 text-slate-800">
+                        <span className="font-medium text-neutral-600">Medical Conditions:</span>
+                        <span className="ml-2 text-neutral-800">
                           {selectedQuestion.mother.conditions || "None reported"}
                         </span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Medications:</span>
-                        <span className="ml-2 text-slate-800">
+                        <span className="font-medium text-neutral-600">Medications:</span>
+                        <span className="ml-2 text-neutral-800">
                           {selectedQuestion.mother.medications || "None reported"}
                         </span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Allergies:</span>
-                        <span className="ml-2 text-slate-800">
+                        <span className="font-medium text-neutral-600">Allergies:</span>
+                        <span className="ml-2 text-neutral-800">
                           {selectedQuestion.mother.allergies || "None reported"}
                         </span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Emergency Contact:</span>
-                        <span className="ml-2 text-slate-800">
+                        <span className="font-medium text-neutral-600">Emergency Contact:</span>
+                        <span className="ml-2 text-neutral-800">
                           {selectedQuestion.mother.emergencyContact || "N/A"}
                         </span>
                       </div>
                       <div className="md:col-span-2">
-                        <span className="font-medium text-slate-600">Emergency Phone:</span>
-                        <span className="ml-2 text-slate-800">
+                        <span className="font-medium text-neutral-600">Emergency Phone:</span>
+                        <span className="ml-2 text-neutral-800">
                           {selectedQuestion.mother.emergencyPhone || "N/A"}
                         </span>
                       </div>
@@ -574,7 +620,7 @@ export default function DoctorDashboard() {
                     {/* Prescriptions */}
                     {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
                       <div className="mt-4">
-                        <p className="font-medium text-slate-600 mb-2 flex items-center gap-2">
+                        <p className="font-medium text-neutral-600 mb-2 flex items-center gap-2">
                           <Icon name="prescription" size={18} />
                           Prescriptions ({selectedQuestion.prescriptions.length}):
                         </p>
@@ -587,7 +633,7 @@ export default function DoctorDashboard() {
                                 href={p.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+                                className="inline-flex items-center gap-2 rounded-lg bg-white border-2 border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50 transition-colors shadow-sm"
                               >
                                 <Icon name="prescription" size={16} />
                                 {fileName}
@@ -622,14 +668,16 @@ export default function DoctorDashboard() {
           )}
         </DetailModal>
 
-        {/* Empty State */}
+        {/* Empty State - Redesigned */}
         {questions.length === 0 && (
-          <div className="text-center py-12">
-            <div className="mb-4 flex justify-center">
-              <Icon name="doctor" size={96} />
+          <div className="text-center py-16">
+            <div className="mb-6 flex justify-center">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center shadow-lg">
+                <Icon name="doctor" size={64} className="text-blue-600" />
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">No questions yet</h3>
-            <p className="text-slate-600">Questions from mothers will appear here</p>
+            <h3 className="text-2xl font-bold text-neutral-800 mb-3">No questions yet</h3>
+            <p className="text-lg text-neutral-600">Questions from mothers will appear here</p>
           </div>
         )}
       </div>
