@@ -70,7 +70,8 @@ export function calculateDaysPregnant(dueDate?: string, weeksPregnant?: number):
 
 /**
  * Auto-increments pregnancy days if needed
- * Only increments at 12:00 AM local time
+ * Only increments at 12:00 AM local time (midnight)
+ * Checks every 5 minutes like the recommendation system
  */
 export async function updatePregnancyProgress(motherId: string, timezone?: string): Promise<void> {
   try {
@@ -79,17 +80,24 @@ export async function updatePregnancyProgress(motherId: string, timezone?: strin
     
     const tz = timezone || mother.timezone || detectTimezone(mother.address);
     const today = getCurrentDateInTimezone(tz);
-    const { hour, minute } = getCurrentTimeInTimezone(tz);
+    const { hour, minute, second } = getCurrentTimeInTimezone(tz);
+    
+    // Log current time for debugging
+    const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+    console.log(`[Pregnancy Update] Mother: ${motherId}, Timezone: ${tz}, Local Time: ${timeStr}, Date: ${today}, Last Update: ${mother.lastPregnancyDayUpdate}`);
     
     // Only update at 12:00 AM (midnight) - hour 0 and minute 0-5 (5 minute window)
     // This ensures the day increments at the start of the new day
+    // Similar to recommendation system which checks every 5 minutes
     if (hour !== 0 || minute > 5) {
       // Not midnight yet, skip update
+      console.log(`[Pregnancy Update] ⏭️ Skipping - Current time ${timeStr} is not 12:00-12:05 AM`);
       return;
     }
     
     // If we already updated today, skip
     if (mother.lastPregnancyDayUpdate === today) {
+      console.log(`[Pregnancy Update] ⏭️ Already updated today (${today})`);
       return;
     }
     
@@ -103,19 +111,24 @@ export async function updatePregnancyProgress(motherId: string, timezone?: strin
     
     if (daysPregnant !== undefined && daysPregnant < 280) {
       // Increment by 1 day
-      daysPregnant += 1;
+      const newDaysPregnant = daysPregnant + 1;
+      
+      console.log(`[Pregnancy Update] ✅ Updating pregnancy day from ${daysPregnant} to ${newDaysPregnant} at ${timeStr} (${tz})`);
       
       // Update profile
       const updated: MotherProfile = {
         ...mother,
-        daysPregnant,
-        weeksPregnant: Math.floor(daysPregnant / 7), // Keep weeks for compatibility
+        daysPregnant: newDaysPregnant,
+        weeksPregnant: Math.floor(newDaysPregnant / 7), // Keep weeks for compatibility
         lastPregnancyDayUpdate: today,
         timezone: tz,
         updatedAt: new Date().toISOString(),
       };
       
       await saveMother(updated);
+      console.log(`[Pregnancy Update] ✅ Successfully updated to ${newDaysPregnant} days (${Math.floor(newDaysPregnant / 7)} weeks)`);
+    } else if (daysPregnant !== undefined && daysPregnant >= 280) {
+      console.log(`[Pregnancy Update] ⏭️ Pregnancy already at full term (${daysPregnant} days)`);
     }
   } catch (err) {
     console.error("Error updating pregnancy progress:", err);

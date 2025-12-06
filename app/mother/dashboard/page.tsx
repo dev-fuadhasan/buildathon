@@ -157,6 +157,8 @@ export default function MotherDashboard() {
   };
 
   const updatePregnancyProgress = async (t = token) => {
+    // Call API endpoint which handles timezone detection and updates pregnancy day
+    // This is called every 5 minutes to check if it's midnight in mother's timezone
     try {
       await fetch("/api/mother/update-progress", {
         method: "POST",

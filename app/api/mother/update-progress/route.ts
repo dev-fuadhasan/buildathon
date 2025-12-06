@@ -6,8 +6,9 @@ import { getMother } from "@/lib/data";
 
 /**
  * Updates pregnancy progress (auto-increments days)
- * Should be called when mother dashboard loads
- * Only increments at 12:00 AM local time
+ * Should be called every 5 minutes (like recommendation system)
+ * Only increments at 12:00 AM (midnight) local time in mother's timezone
+ * This endpoint checks if it's midnight and updates the pregnancy day if needed
  */
 export async function POST(req: NextRequest) {
   try {
@@ -19,21 +20,33 @@ export async function POST(req: NextRequest) {
     // Detect timezone from IP
     const ip = getClientIP(req);
     const mother = await getMother(user.id);
-    const timezone = await detectTimezoneFromIP(ip, mother?.address);
+    if (!mother) {
+      return NextResponse.json({ error: "Mother not found" }, { status: 404 });
+    }
+    
+    const timezone = await detectTimezoneFromIP(ip, mother.address);
+    
+    console.log(`[Update Progress] Mother: ${user.id}, IP: ${ip}, Detected Timezone: ${timezone}, Mother Address: ${mother.address}`);
     
     // Update timezone in profile if not set or different
-    if (mother && mother.timezone !== timezone) {
+    if (mother.timezone !== timezone) {
       const { saveMother } = await import("@/lib/data");
       await saveMother({
         ...mother,
         timezone,
         updatedAt: new Date().toISOString(),
       });
+      console.log(`[Update Progress] Updated timezone from ${mother.timezone} to ${timezone}`);
     }
 
+    // This will check if it's midnight and update if needed
     await updatePregnancyProgress(user.id, timezone);
 
-    return NextResponse.json({ success: true, timezone });
+    return NextResponse.json({ 
+      success: true, 
+      timezone,
+      message: "Pregnancy progress check completed"
+    });
   } catch (error: any) {
     console.error("Update progress error:", error);
     return NextResponse.json(
@@ -42,4 +55,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
