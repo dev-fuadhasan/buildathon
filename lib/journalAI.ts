@@ -30,11 +30,14 @@ export async function generateJournalRecommendation(
       .join("\n\n---\n\n");
     
     // Build profile context
+    const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+    const weeksPregnant = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+    const monthsPregnant = daysPregnant ? Math.floor(daysPregnant / 30) : undefined;
+    
     const profileContext = `
 Name: ${mother.name || "N/A"}
 Age: ${mother.age || "N/A"}
-Days Pregnant: ${mother.daysPregnant || "N/A"} (${Math.floor((mother.daysPregnant || 0) / 7)} weeks)
-Due Date: ${mother.dueDate || "N/A"}
+Days Pregnant: ${daysPregnant || "N/A"} (${weeksPregnant || "N/A"} weeks${monthsPregnant ? `, ${monthsPregnant} months` : ""})
 Medical Conditions: ${mother.conditions || "None"}
 Medications: ${mother.medications || "None"}
 Allergies: ${mother.allergies || "None"}

@@ -56,16 +56,18 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
     }
   }
   
-  // Weeks pregnant analysis
-  if (profile.weeksPregnant) {
-    if (profile.weeksPregnant < 12) {
+  // Pregnancy stage analysis (using days, convert to weeks for trimester calculation)
+  const daysPregnant = profile.daysPregnant || (profile.weeksPregnant ? profile.weeksPregnant * 7 : undefined);
+  if (daysPregnant) {
+    const weeksPregnant = Math.floor(daysPregnant / 7);
+    if (weeksPregnant < 12) {
       riskFactors.push({
         category: "Pregnancy Stage",
         factor: "Early pregnancy (first trimester)",
         severity: "low",
         recommendation: "Focus on folic acid, avoid harmful substances, and early prenatal care.",
       });
-    } else if (profile.weeksPregnant >= 37) {
+    } else if (weeksPregnant >= 37) {
       riskFactors.push({
         category: "Pregnancy Stage",
         factor: "Full-term pregnancy (≥37 weeks)",

@@ -33,7 +33,7 @@ type Mother = {
   address?: string;
   bloodGroup?: string;
   weeksPregnant?: number;
-  dueDate?: string;
+  daysPregnant?: number;
   conditions?: string;
   medications?: string;
   emergencyContact?: string;
@@ -619,11 +619,18 @@ export default function AdminDashboard() {
                     subtitle={m.email}
                     onClick={() => loadMotherDetails(m.id)}
                   >
-                    {m.weeksPregnant && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        {m.weeksPregnant} weeks pregnant
-                      </p>
-                    )}
+                    {(() => {
+                      const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
+                      if (days) {
+                        const weeks = Math.floor(days / 7);
+                        return (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {days} days ({weeks} weeks) pregnant
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </ListCard>
                 ))
               )}
@@ -744,15 +751,15 @@ export default function AdminDashboard() {
                   <p className="text-lg font-semibold">{selectedMother.age || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.weeksPregnant}</p>
-                  <p className="text-lg font-semibold">{selectedMother.weeksPregnant || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.dueDate}</p>
+                  <p className="text-sm font-medium text-slate-600">Pregnancy Progress</p>
                   <p className="text-lg font-semibold">
-                    {selectedMother.dueDate
-                      ? new Date(selectedMother.dueDate).toLocaleDateString()
-                      : "N/A"}
+                    {(() => {
+                      const days = selectedMother.daysPregnant || (selectedMother.weeksPregnant ? selectedMother.weeksPregnant * 7 : undefined);
+                      if (!days) return "N/A";
+                      const weeks = Math.floor(days / 7);
+                      const months = Math.floor(days / 30);
+                      return `${days} days (${weeks} weeks, ${months} months)`;
+                    })()}
                   </p>
                 </div>
                 <div>

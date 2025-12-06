@@ -33,7 +33,7 @@ type QuestionItem = {
     address?: string;
     bloodGroup?: string;
     weeksPregnant?: number;
-    dueDate?: string;
+    daysPregnant?: number;
     conditions?: string;
     medications?: string;
     allergies?: string;
@@ -247,17 +247,17 @@ export default function DoctorDashboard() {
                           <span className="ml-2 text-slate-800">{selectedQuestion.mother.phone || "N/A"}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-slate-600">Weeks Pregnant:</span>
-                          <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant || "N/A"}</span>
+                          <span className="font-medium text-slate-600">Pregnancy Progress:</span>
+                          <span className="ml-2 text-slate-800">
+                            {(() => {
+                              const days = selectedQuestion.mother.daysPregnant || (selectedQuestion.mother.weeksPregnant ? selectedQuestion.mother.weeksPregnant * 7 : undefined);
+                              if (!days) return "N/A";
+                              const weeks = Math.floor(days / 7);
+                              const months = Math.floor(days / 30);
+                              return `${days} days (${weeks} weeks, ${months} months)`;
+                            })()}
+                          </span>
                         </div>
-                        {selectedQuestion.mother.dueDate && (
-                          <div>
-                            <span className="font-medium text-slate-600">Due Date:</span>
-                            <span className="ml-2 text-slate-800">
-                              {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
                         <div>
                           <span className="font-medium text-slate-600">Blood Group:</span>
                           <span className="ml-2 text-slate-800">{selectedQuestion.mother.bloodGroup || "N/A"}</span>
@@ -449,18 +449,22 @@ export default function DoctorDashboard() {
                         <span className="font-medium text-slate-600">Phone:</span>
                         <span className="ml-2 text-slate-800">{selectedQuestion.mother.phone || "N/A"}</span>
                       </div>
-                      <div>
-                        <span className="font-medium text-slate-600">Weeks Pregnant:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant || "N/A"}</span>
-                      </div>
-                      {selectedQuestion.mother.dueDate && (
-                        <div>
-                          <span className="font-medium text-slate-600">Due Date:</span>
-                          <span className="ml-2 text-slate-800">
-                            {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        const days = selectedQuestion.mother.daysPregnant || (selectedQuestion.mother.weeksPregnant ? selectedQuestion.mother.weeksPregnant * 7 : undefined);
+                        if (days) {
+                          const weeks = Math.floor(days / 7);
+                          const months = Math.floor(days / 30);
+                          return (
+                            <div>
+                              <span className="font-medium text-slate-600">Pregnancy Progress:</span>
+                              <span className="ml-2 text-slate-800">
+                                {days} days ({weeks} weeks, {months} months)
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                       <div>
                         <span className="font-medium text-slate-600">Blood Group:</span>
                         <span className="ml-2 text-slate-800">{selectedQuestion.mother.bloodGroup || "N/A"}</span>

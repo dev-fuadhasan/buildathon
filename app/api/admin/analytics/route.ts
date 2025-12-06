@@ -55,14 +55,19 @@ export async function GET(req: NextRequest) {
     };
 
     mothers.forEach((mother) => {
-      if (!mother.weeksPregnant) {
+      // Use daysPregnant if available, otherwise calculate from weeksPregnant
+      const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+      if (!daysPregnant) {
         trimesterDistribution.unknown++;
-      } else if (mother.weeksPregnant <= 12) {
-        trimesterDistribution.first++;
-      } else if (mother.weeksPregnant <= 27) {
-        trimesterDistribution.second++;
       } else {
-        trimesterDistribution.third++;
+        const weeksPregnant = Math.floor(daysPregnant / 7);
+        if (weeksPregnant <= 12) {
+          trimesterDistribution.first++;
+        } else if (weeksPregnant <= 27) {
+          trimesterDistribution.second++;
+        } else {
+          trimesterDistribution.third++;
+        }
       }
     });
 

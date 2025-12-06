@@ -27,13 +27,16 @@ export async function POST(req: NextRequest) {
       try {
         const mother = await getMother(user.id);
         if (mother) {
+          // Use daysPregnant if available, otherwise calculate from weeksPregnant
+          const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+          const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+          
           profileContext = `
 Name: ${mother.name || "N/A"}
-Weeks pregnant: ${mother.weeksPregnant || "N/A"}
-Due date: ${mother.dueDate || "N/A"}
+Days pregnant: ${daysPregnant || "N/A"} (${weeks || "N/A"} weeks)
 Conditions: ${mother.conditions || "N/A"}
 Medications: ${mother.medications || "N/A"}`;
-          weeksPregnant = mother.weeksPregnant;
+          weeksPregnant = weeks;
           
           // Fetch prescription URLs for image analysis
           try {
