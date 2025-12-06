@@ -224,22 +224,11 @@ export default function DoctorDashboard() {
                 </p>
               </div>
 
-              {/* Patient Details Button */}
+              {/* Patient Details - Always Visible */}
               {selectedQuestion.mother && (
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <button
-                    onClick={() => setShowPatientDetails({
-                      ...showPatientDetails,
-                      [selectedQuestion.id]: !showPatientDetails[selectedQuestion.id]
-                    })}
-                    className="w-full btn-secondary flex items-center justify-center gap-2"
-                  >
-                    {showPatientDetails[selectedQuestion.id] ? "👁️ Hide" : "👁️ View"} Full Patient Details
-                  </button>
-                  
-                  {showPatientDetails[selectedQuestion.id] && (
-                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                      <h4 className="font-semibold text-slate-800 mb-4">👤 Complete Patient Information</h4>
+                  <h4 className="font-semibold text-slate-800 mb-4">👤 Complete Patient Information</h4>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="grid gap-3 md:grid-cols-2 text-sm">
                         <div>
                           <span className="font-medium text-slate-600">Name:</span>
@@ -336,7 +325,6 @@ export default function DoctorDashboard() {
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               )}
 
@@ -439,75 +427,107 @@ export default function DoctorDashboard() {
                 )}
               </div>
 
-              {/* Patient Details */}
+              {/* Patient Details - Always Visible */}
               {selectedQuestion.mother && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <h4 className="font-semibold text-slate-800 mb-3">👤 Patient Information</h4>
-                  <div className="grid gap-3 md:grid-cols-2 text-sm">
-                    <div>
-                      <span className="font-medium text-slate-600">Name:</span>
-                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.name || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-600">Email:</span>
-                      <span className="ml-2 text-slate-800">{selectedQuestion.mother.email}</span>
-                    </div>
-                    {selectedQuestion.mother.age && (
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <h4 className="font-semibold text-slate-800 mb-4">👤 Complete Patient Information</h4>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="grid gap-3 md:grid-cols-2 text-sm">
+                      <div>
+                        <span className="font-medium text-slate-600">Name:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.name || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Email:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.email}</span>
+                      </div>
                       <div>
                         <span className="font-medium text-slate-600">Age:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.age}</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.age || "N/A"}</span>
                       </div>
-                    )}
-                    {selectedQuestion.mother.weeksPregnant && (
+                      <div>
+                        <span className="font-medium text-slate-600">Phone:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.phone || "N/A"}</span>
+                      </div>
                       <div>
                         <span className="font-medium text-slate-600">Weeks Pregnant:</span>
-                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant}</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.weeksPregnant || "N/A"}</span>
                       </div>
-                    )}
-                    {selectedQuestion.mother.dueDate && (
+                      {selectedQuestion.mother.dueDate && (
+                        <div>
+                          <span className="font-medium text-slate-600">Due Date:</span>
+                          <span className="ml-2 text-slate-800">
+                            {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
                       <div>
-                        <span className="font-medium text-slate-600">Due Date:</span>
+                        <span className="font-medium text-slate-600">Blood Group:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.bloodGroup || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-slate-600">Previous Pregnancies:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.previousPregnancies || "N/A"}</span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Address:</span>
+                        <span className="ml-2 text-slate-800">{selectedQuestion.mother.address || "N/A"}</span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Medical Conditions:</span>
                         <span className="ml-2 text-slate-800">
-                          {new Date(selectedQuestion.mother.dueDate).toLocaleDateString()}
+                          {selectedQuestion.mother.conditions || "None reported"}
                         </span>
                       </div>
-                    )}
-                    <div className="md:col-span-2">
-                      <span className="font-medium text-slate-600">Medical Conditions:</span>
-                      <span className="ml-2 text-slate-800">
-                        {selectedQuestion.mother.conditions || "None reported"}
-                      </span>
-                    </div>
-                    <div className="md:col-span-2">
-                      <span className="font-medium text-slate-600">Medications:</span>
-                      <span className="ml-2 text-slate-800">
-                        {selectedQuestion.mother.medications || "None reported"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Prescriptions */}
-                  {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
-                    <div className="mt-4">
-                      <p className="font-medium text-slate-600 mb-2">📄 Prescriptions:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedQuestion.prescriptions.map((p) => {
-                          const fileName = p.key.split("/").pop() || "prescription";
-                          return (
-                            <a
-                              key={p.key}
-                              href={p.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
-                            >
-                              📄 {fileName}
-                            </a>
-                          );
-                        })}
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Medications:</span>
+                        <span className="ml-2 text-slate-800">
+                          {selectedQuestion.mother.medications || "None reported"}
+                        </span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Allergies:</span>
+                        <span className="ml-2 text-slate-800">
+                          {selectedQuestion.mother.allergies || "None reported"}
+                        </span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Emergency Contact:</span>
+                        <span className="ml-2 text-slate-800">
+                          {selectedQuestion.mother.emergencyContact || "N/A"}
+                        </span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-slate-600">Emergency Phone:</span>
+                        <span className="ml-2 text-slate-800">
+                          {selectedQuestion.mother.emergencyPhone || "N/A"}
+                        </span>
                       </div>
                     </div>
-                  )}
+
+                    {/* Prescriptions */}
+                    {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
+                      <div className="mt-4">
+                        <p className="font-medium text-slate-600 mb-2">📄 Prescriptions ({selectedQuestion.prescriptions.length}):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedQuestion.prescriptions.map((p) => {
+                            const fileName = p.key.split("/").pop() || "prescription";
+                            return (
+                              <a
+                                key={p.key}
+                                href={p.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
+                              >
+                                📄 {fileName}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

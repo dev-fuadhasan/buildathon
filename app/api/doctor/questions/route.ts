@@ -9,9 +9,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const questions = await listAllQuestions();
+  const allQuestions = await listAllQuestions();
+  
+  // Filter: Only show unanswered questions OR questions answered by this doctor
+  const filteredQuestions = allQuestions.filter(
+    (q) => !q.answer || q.doctorId === user.id
+  );
+
   const enriched = await Promise.all(
-    questions.map(async (q) => {
+    filteredQuestions.map(async (q) => {
       const mother = await getMother(q.motherId);
       const prefix = `prescriptions/${q.motherId}/`;
       const objects = await listObjects(prefix);
