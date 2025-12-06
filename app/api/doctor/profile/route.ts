@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest } from "@/lib/auth";
-import { getDoctor, saveDoctor } from "@/lib/data";
+import { getUserFromRequest, signAuthToken } from "@/lib/auth";
+import { getDoctor, saveDoctor, findDoctorByEmail } from "@/lib/data";
 import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
@@ -43,9 +43,25 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json();
 
+  // Check if email is being changed
+  const newEmail = body.email?.trim().toLowerCase();
+  const emailChanged = newEmail && newEmail !== doctor.email.toLowerCase();
+
+  if (emailChanged) {
+    // Check if new email is already taken by another doctor
+    const existingDoctor = await findDoctorByEmail(newEmail);
+    if (existingDoctor && existingDoctor.id !== doctor.id) {
+      return NextResponse.json(
+        { error: "Email is already registered by another doctor" },
+        { status: 409 }
+      );
+    }
+  }
+
   // When doctor edits profile, it needs re-verification
   const updated = {
     ...doctor,
+    email: emailChanged ? newEmail : doctor.email,
     name: body.name ?? doctor.name,
     phone: body.phone ?? doctor.phone,
     specialty: body.specialty ?? doctor.specialty,
@@ -64,9 +80,23 @@ export async function PUT(req: NextRequest) {
 
   await saveDoctor(updated);
   const { passwordHash, ...safe } = updated;
+  
+  // Generate new token with updated email if email was changed
+  let newToken: string | undefined;
+  if (emailChanged) {
+    newToken = signAuthToken({ 
+      id: updated.id, 
+      email: updated.email, 
+      role: "doctor" 
+    });
+  }
+  
   return NextResponse.json({ 
     profile: safe,
-    message: doctor.status === "approved" 
+    token: newToken, // Return new token if email was changed
+    message: emailChanged
+      ? "Email updated successfully. Your login credentials have been updated. Please use your new email to log in next time."
+      : doctor.status === "approved" 
       ? "Profile updated. Waiting for admin verification." 
       : "Profile updated successfully."
   });

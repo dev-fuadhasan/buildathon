@@ -101,6 +101,13 @@ export default function DoctorProfile() {
       const data = await res.json();
       if (res.ok) {
         setMessage(data.message || "✅ Profile updated successfully!");
+        
+        // If email was changed and new token is provided, update the token
+        if (data.token) {
+          localStorage.setItem("doctorToken", data.token);
+          setMessage("✅ Email updated successfully! Your login credentials have been updated. Please use your new email to log in next time.");
+        }
+        
         setIsEditing(false);
         fetchProfile();
       } else {
@@ -245,9 +252,18 @@ export default function DoctorProfile() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Email
+                    Email *
                   </label>
-                  <input className="input w-full" value={profile.email} disabled />
+                  <input
+                    className="input w-full"
+                    type="email"
+                    value={editForm.email || ""}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    ⚠️ Changing your email will update your login credentials. You'll need to log in again with the new email.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
