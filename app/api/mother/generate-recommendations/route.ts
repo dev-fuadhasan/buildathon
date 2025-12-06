@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
     const ip = getClientIP(req);
     const timezone = await detectTimezoneFromIP(ip, mother.address);
     
+    console.log(`[Timezone Detection] IP: ${ip}, Detected Timezone: ${timezone}, Mother Address: ${mother.address}`);
+    
     // Update timezone in profile if not set or different
     if (mother.timezone !== timezone) {
       const { saveMother } = await import("@/lib/data");
@@ -36,41 +38,32 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    const { hour, minute } = getCurrentTimeInTimezone(timezone);
+    const { hour, minute, second } = getCurrentTimeInTimezone(timezone);
     const today = getCurrentDateInTimezone(timezone);
     
+    // Log current time for debugging
+    const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+    console.log(`[Recommendation Check] Timezone: ${timezone}, Local Time: ${timeStr}, Date: ${today}, Last Morning: ${mother.lastMorningAdviceDate}, Last Evening: ${mother.lastNightAdviceDate}`);
+    
     // Determine which recommendation should be sent
-    // Morning recommendation: should be sent if it's 8 AM (with 30 minute window) and hasn't been sent today
-    // Evening recommendation: should be sent if it's 8 PM (with 30 minute window) and hasn't been sent today
+    // STRICT TIMING: Only send at exactly 8:00 AM and 8:00 PM (with 5 minute window for checking)
+    // Morning recommendation: ONLY at 8:00-8:05 AM
+    // Evening recommendation: ONLY at 8:00-8:05 PM (20:00-20:05)
     let timeOfDay: "morning" | "evening" | null = null;
     
-    // Check if it's around 8 AM (8:00 - 8:30) and morning recommendation hasn't been sent today
-    if (hour === 8 && minute <= 30 && mother.lastMorningAdviceDate !== today) {
+    // Check if it's exactly 8:00-8:05 AM and morning recommendation hasn't been sent today
+    if (hour === 8 && minute >= 0 && minute <= 5 && mother.lastMorningAdviceDate !== today) {
       timeOfDay = "morning";
+      console.log(`[Recommendation] ✅ Sending morning recommendation at ${timeStr} (${timezone})`);
     }
-    // Check if it's around 8 PM (20:00 - 20:30) and evening recommendation hasn't been sent today
-    else if (hour === 20 && minute <= 30 && mother.lastNightAdviceDate !== today) {
+    // Check if it's exactly 8:00-8:05 PM (20:00-20:05) and evening recommendation hasn't been sent today
+    else if (hour === 20 && minute >= 0 && minute <= 5 && mother.lastNightAdviceDate !== today) {
       timeOfDay = "evening";
+      console.log(`[Recommendation] ✅ Sending evening recommendation at ${timeStr} (${timezone})`);
     }
-    // If it's after 8:30 AM and before 8 PM, check if morning recommendation was missed
-    else if (hour > 8 && hour < 20 && mother.lastMorningAdviceDate !== today) {
-      timeOfDay = "morning"; // Send missed morning recommendation
-    }
-    // If it's after 8:30 PM, check if evening recommendation was missed
-    else if (hour > 20 && mother.lastNightAdviceDate !== today) {
-      timeOfDay = "evening"; // Send missed evening recommendation
-    }
-    // If it's before 8 AM, check if yesterday's evening recommendation was missed
-    else if (hour < 8) {
-      // Check if yesterday's evening recommendation was missed
-      // Calculate yesterday's date in the user's timezone
-      const now = new Date();
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: timezone });
-      if (mother.lastNightAdviceDate !== yesterdayStr) {
-        timeOfDay = "evening"; // Send yesterday's evening recommendation
-      }
+    // DO NOT send recommendations at any other time - only at 8 AM and 8 PM
+    else {
+      console.log(`[Recommendation] ⏭️ Skipping - Current time ${timeStr} is not 8:00-8:05 AM or 8:00-8:05 PM`);
     }
 
     if (!timeOfDay) {
@@ -134,7 +127,7 @@ export async function POST(req: NextRequest) {
       id: uuid(),
       motherId: user.id,
       type: timeOfDay === "morning" ? "morning_recommendation" : "evening_recommendation",
-      title: timeOfDay === "morning" ? "🌅 Morning Recommendation" : "🌙 Evening Recommendation",
+      title: timeOfDay === "morning" ? "Morning Recommendation" : "Evening Recommendation",
       message: recommendation,
       read: false,
       createdAt: new Date().toISOString(),

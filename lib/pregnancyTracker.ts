@@ -32,18 +32,20 @@ export function getCurrentDateInTimezone(timezone: string): string {
 /**
  * Gets current time in a specific timezone
  */
-export function getCurrentTimeInTimezone(timezone: string): { hour: number; minute: number } {
+export function getCurrentTimeInTimezone(timezone: string): { hour: number; minute: number; second: number } {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "numeric",
     minute: "numeric",
+    second: "numeric",
     hour12: false,
   });
   const parts = formatter.formatToParts(now);
   const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
   const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
-  return { hour, minute };
+  const second = parseInt(parts.find((p) => p.type === "second")?.value || "0", 10);
+  return { hour, minute, second };
 }
 
 /**
