@@ -940,15 +940,46 @@ export default function MotherDashboard() {
                             {q.hasNewActivity && (
                               <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
                             )}
-                            <div className="flex items-start justify-between">
+                            <div className="flex items-start justify-between mb-2">
                               <p className="font-medium text-slate-700 flex-1">{q.question}</p>
                               <span className="text-xs text-slate-500 ml-2">
                                 {new Date(q.createdAt).toLocaleDateString()}
                               </span>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-sm text-yellow-700">
-                              <span>⏳</span>
-                              <span>{t.mother.waiting}</span>
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-sm text-yellow-700">
+                                <span>⏳</span>
+                                <span>{t.mother.waiting}</span>
+                              </div>
+                              <button
+                                className="btn-secondary text-sm px-3 py-1"
+                                onClick={() => {
+                                  // Mark as seen
+                                  fetch(`/api/mother/questions/${q.id}/mark-seen`, {
+                                    method: "POST",
+                                    headers: authHeaders(),
+                                  });
+                                  // Show full details in modal
+                                  setSelectedQuestion(q);
+                                  // Force refresh comments after a short delay to ensure they load
+                                  setTimeout(() => {
+                                    if (q.id) {
+                                      fetch(`/api/questions/comments?questionId=${q.id}`, { 
+                                        headers: authHeaders() 
+                                      })
+                                        .then(r => r.json())
+                                        .then(d => {
+                                          if (d.comments) {
+                                            setSelectedQuestion({ ...q, comments: d.comments });
+                                          }
+                                        })
+                                        .catch(err => console.error("Failed to load comments:", err));
+                                    }
+                                  }, 100);
+                                }}
+                              >
+                                👁️ View Details
+                              </button>
                             </div>
                           </div>
                         ))}
