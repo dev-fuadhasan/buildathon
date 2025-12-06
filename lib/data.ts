@@ -99,11 +99,11 @@ export type ChatHistory = {
   updatedAt: string;
 };
 
-export type DailyJournalEntry = {
+export type DailyEntry = {
   id: string;
   motherId: string;
   date: string; // YYYY-MM-DD format
-  entry: string; // Mother's daily journal entry (English, Bangla, or Banglish)
+  entry: string; // Mother's daily entry (English, Bangla, or Banglish)
   createdAt: string;
   updatedAt: string;
 };
@@ -125,7 +125,7 @@ const motherKey = (id: string) => `mothers/${id}.json`;
 const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
 const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
-const journalEntryKey = (motherId: string, date: string) => `journals/${motherId}/${date}.json`;
+const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
@@ -317,10 +317,10 @@ export async function deleteMother(motherId: string) {
         // Ignore errors
       }
     }
-    // Delete journal entries
-    const journalPrefix = `journal/${motherId}/`;
-    const journalObjects = await listObjects(journalPrefix);
-    for (const obj of journalObjects) {
+    // Delete daily entries
+    const dailyEntriesPrefix = `daily-entries/${motherId}/`;
+    const dailyEntryObjects = await listObjects(dailyEntriesPrefix);
+    for (const obj of dailyEntryObjects) {
       try {
         await deleteObject(obj.Key!);
       } catch (err) {
@@ -413,24 +413,42 @@ export async function updateChatHistory(motherId: string, messages: ChatMessage[
   return saveChatHistory(history);
 }
 
-// Daily Journal Functions
-export async function getJournalEntry(motherId: string, date: string): Promise<DailyJournalEntry | null> {
+// Daily Entry Functions
+export async function getDailyEntry(motherId: string, entryId: string): Promise<DailyEntry | null> {
   try {
-    return await getJson<DailyJournalEntry>(journalEntryKey(motherId, date));
+    return await getJson<DailyEntry>(dailyEntryKey(motherId, entryId));
   } catch (err) {
     return null;
   }
 }
 
-export async function saveJournalEntry(entry: DailyJournalEntry) {
-  return putJson(journalEntryKey(entry.motherId, entry.date), entry);
+export async function saveDailyEntry(entry: DailyEntry) {
+  return putJson(dailyEntryKey(entry.motherId, entry.id), entry);
 }
 
-export async function listJournalEntries(motherId: string): Promise<DailyJournalEntry[]> {
+export async function listDailyEntries(motherId: string): Promise<DailyEntry[]> {
   try {
-    return await listJson<DailyJournalEntry>(`journals/${motherId}/`);
+    return await listJson<DailyEntry>(`daily-entries/${motherId}/`);
   } catch (err) {
     return [];
+  }
+}
+
+export async function listDailyEntriesByDate(motherId: string, date: string): Promise<DailyEntry[]> {
+  try {
+    const allEntries = await listDailyEntries(motherId);
+    return allEntries.filter(entry => entry.date === date);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function deleteDailyEntry(motherId: string, entryId: string): Promise<void> {
+  try {
+    const { deleteObject } = await import("./r2Client");
+    await deleteObject(dailyEntryKey(motherId, entryId));
+  } catch (err) {
+    console.error("Error deleting daily entry:", err);
   }
 }
 

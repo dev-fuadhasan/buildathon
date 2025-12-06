@@ -3,7 +3,7 @@
  * Analyzes journal entries and provides personalized recommendations
  */
 
-import { MotherProfile, DailyJournalEntry, listJournalEntries, listMotherQuestions } from "./data";
+import { MotherProfile, DailyEntry, listDailyEntries, listMotherQuestions } from "./data";
 import { askMomsCare } from "./momsCareChat";
 import { getCurrentTimeInTimezone } from "./pregnancyTracker";
 
@@ -12,22 +12,40 @@ import { getCurrentTimeInTimezone } from "./pregnancyTracker";
  */
 export async function generateJournalRecommendation(
   mother: MotherProfile,
-  journalEntries: DailyJournalEntry[],
+  dailyEntries: DailyEntry[],
   timeOfDay: "morning" | "evening",
   prescriptionUrls?: string[],
   questionsAndAnswers?: Array<{ question: string; answer?: string }>
 ): Promise<string> {
   try {
-    // Get recent journal entries (last 7 days)
-    const recentEntries = journalEntries
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 7);
+    // Get recent daily entries (last 7 days, sorted by date and creation time)
+    const recentEntries = dailyEntries
+      .sort((a, b) => {
+        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateCompare !== 0) return dateCompare;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, 20); // Get up to 20 most recent entries
     
-    // Build context from journal entries
-    const journalContext = recentEntries
-      .map((entry) => {
-        const date = new Date(entry.date).toLocaleDateString();
-        return `Date: ${date}\nEntry: ${entry.entry}`;
+    // Build context from daily entries, grouping by date
+    const entriesByDate = recentEntries.reduce((acc, entry) => {
+      if (!acc[entry.date]) {
+        acc[entry.date] = [];
+      }
+      acc[entry.date].push(entry);
+      return acc;
+    }, {} as Record<string, DailyEntry[]>);
+    
+    const journalContext = Object.entries(entriesByDate)
+      .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+      .slice(0, 7) // Last 7 days
+      .map(([date, entries]) => {
+        const dateStr = new Date(date).toLocaleDateString();
+        const entriesText = entries
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .map((entry, idx) => `Entry ${idx + 1} (${new Date(entry.createdAt).toLocaleTimeString()}): ${entry.entry}`)
+          .join("\n\n");
+        return `Date: ${dateStr}\n${entriesText}`;
       })
       .join("\n\n---\n\n");
     

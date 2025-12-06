@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, listJournalEntries, saveNotification, Notification } from "@/lib/data";
+import { getMother, listDailyEntries, saveNotification, Notification } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get journal entries
-    const journalEntries = await listJournalEntries(user.id);
+    // Get daily entries
+    const dailyEntries = await listDailyEntries(user.id);
     
     // Get prescriptions
     const { listObjects, signedUrl } = await import("@/lib/r2Client");
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Generate recommendation
     const recommendation = await generateJournalRecommendation(
       mother,
-      journalEntries,
+      dailyEntries,
       timeOfDay,
       prescriptionUrls,
       questionsAndAnswers

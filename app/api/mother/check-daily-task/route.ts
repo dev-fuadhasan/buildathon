@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, getJournalEntry, saveNotification, Notification } from "@/lib/data";
+import { getMother, listDailyEntriesByDate, saveNotification, Notification } from "@/lib/data";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
 import { v4 as uuid } from "uuid";
@@ -47,21 +47,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Check if today's journal entry already exists
-    const todayEntry = await getJournalEntry(user.id, today);
+    // Check if today's daily entries exist
+    const todayEntries = await listDailyEntriesByDate(user.id, today);
     
     // Check if we already sent a notification today
     // (In a real system, you'd check notification history)
-    // For now, we'll create the notification if entry doesn't exist
+    // For now, we'll create the notification if no entries exist
 
-    if (!todayEntry) {
+    if (todayEntries.length === 0) {
       // Create daily task notification
       const notification: Notification = {
         id: uuid(),
         motherId: user.id,
         type: "daily_task",
-        title: "📝 Daily Journal Task",
-        message: "It's time to write your daily journal! Share how your day went, what you ate, and how you're feeling. You can write in English, Bangla, or Banglish.",
+        title: "📝 Daily Entry Task",
+        message: "It's time to write your daily entry! Share how your day went, what you ate, and how you're feeling. You can write in English, Bangla, or Banglish. You can add multiple entries for the same day.",
         read: false,
         createdAt: new Date().toISOString(),
       };
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       hasEntry: true,
-      message: "Journal entry already exists for today",
+      message: "Daily entries already exist for today",
     });
   } catch (error: any) {
     console.error("Check daily task error:", error);

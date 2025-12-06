@@ -27,7 +27,7 @@ type Profile = {
   allergies?: string;
 };
 
-type JournalEntry = {
+type DailyEntry = {
   id: string;
   date: string;
   entry: string;
@@ -77,9 +77,10 @@ export default function MotherDashboard() {
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications">("profile");
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [todayJournal, setTodayJournal] = useState("");
-  const [selectedJournalDate, setSelectedJournalDate] = useState<string>("");
+  const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
+  const [newEntryText, setNewEntryText] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -98,7 +99,7 @@ export default function MotherDashboard() {
     fetchProfile(t);
     fetchPrescriptions(t);
     fetchQuestions(t);
-    fetchJournalEntries(t);
+    fetchDailyEntries(t);
     fetchNotifications(t);
     // Update pregnancy progress and check for daily tasks/recommendations
     updatePregnancyProgress(t);
@@ -153,30 +154,21 @@ export default function MotherDashboard() {
     }
   };
 
-  const fetchJournalEntries = async (t = token) => {
+  const fetchDailyEntries = async (t = token) => {
     try {
       const res = await fetch("/api/mother/journal", { headers: authHeaders(t) });
       if (res.ok) {
         const data = await res.json();
-        setJournalEntries(data.entries || []);
+        setDailyEntries(data.entries || []);
         
-        // Set today's date but don't auto-load entry - let user select date first
+        // Set today's date if not already selected
         const today = new Date().toISOString().split("T")[0];
-        if (!selectedJournalDate) {
-          setSelectedJournalDate(today);
-          setTodayJournal(""); // Always start with empty textarea - don't auto-load
-        } else {
-          // If date is already selected, only load entry if it exists for that date
-          const entry = data.entries?.find((e: JournalEntry) => e.date === selectedJournalDate);
-          if (entry) {
-            setTodayJournal(entry.entry);
-          } else {
-            setTodayJournal(""); // Clear if no entry for selected date
-          }
+        if (!selectedDate) {
+          setSelectedDate(today);
         }
       }
     } catch (err) {
-      console.error("Failed to fetch journal entries:", err);
+      console.error("Failed to fetch daily entries:", err);
     }
   };
 
@@ -217,35 +209,94 @@ export default function MotherDashboard() {
     }
   };
 
-  const saveJournalEntry = async () => {
-    if (!selectedJournalDate || !todayJournal.trim()) {
-      setMessage("Please write something in your journal");
+  const saveDailyEntry = async () => {
+    if (!selectedDate || !newEntryText.trim()) {
+      setMessage("Please write something in your daily entry");
       return;
     }
 
     setLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const existing = journalEntries.find((e) => e.date === selectedJournalDate);
-      
       const res = await fetch("/api/mother/journal", {
-        method: existing ? "PUT" : "POST",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...authHeaders(),
         },
         body: JSON.stringify({
-          date: selectedJournalDate,
-          entry: todayJournal.trim(),
+          date: selectedDate,
+          entry: newEntryText.trim(),
         }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Journal entry saved successfully!");
-        fetchJournalEntries();
+        setMessage("✅ Daily entry saved successfully!");
+        setNewEntryText("");
+        fetchDailyEntries();
       } else {
-        setMessage(`❌ ${data.error || "Failed to save journal entry"}`);
+        setMessage(`❌ ${data.error || "Failed to save daily entry"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateDailyEntry = async (entryId: string, entryText: string) => {
+    if (!entryText.trim()) {
+      setMessage("Please write something in your daily entry");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/mother/journal", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          entryId,
+          entry: entryText.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Daily entry updated successfully!");
+        setEditingEntryId(null);
+        fetchDailyEntries();
+      } else {
+        setMessage(`❌ ${data.error || "Failed to update daily entry"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteDailyEntry = async (entryId: string) => {
+    if (!confirm("Are you sure you want to delete this entry?")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/mother/journal?entryId=${entryId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      if (res.ok) {
+        setMessage("✅ Daily entry deleted successfully!");
+        fetchDailyEntries();
+      } else {
+        const data = await res.json();
+        setMessage(`❌ ${data.error || "Failed to delete daily entry"}`);
       }
     } catch (err) {
       setMessage("❌ Network error. Please try again.");
@@ -1189,10 +1240,10 @@ export default function MotherDashboard() {
           </div>
         )}
 
-        {/* Journal Tab */}
+        {/* Daily Entry Tab */}
         {activeTab === "journal" && (
           <div className="space-y-6">
-            <DashboardCard title="📝 Daily Journal">
+            <DashboardCard title="📝 Daily Entry">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1201,13 +1252,11 @@ export default function MotherDashboard() {
                   <input
                     type="date"
                     className="input w-full"
-                    value={selectedJournalDate}
+                    value={selectedDate}
                     onChange={(e) => {
-                      const date = e.target.value;
-                      setSelectedJournalDate(date);
-                      const entry = journalEntries.find((entry) => entry.date === date);
-                      // Only load entry if it exists, otherwise start with empty textarea
-                      setTodayJournal(entry?.entry || "");
+                      setSelectedDate(e.target.value);
+                      setNewEntryText("");
+                      setEditingEntryId(null);
                     }}
                   />
                 </div>
@@ -1218,57 +1267,118 @@ export default function MotherDashboard() {
                   <textarea
                     className="input w-full h-64"
                     placeholder="Write about your day, what you ate, how you're feeling, any symptoms, activities, etc..."
-                    value={todayJournal}
-                    onChange={(e) => setTodayJournal(e.target.value)}
+                    value={newEntryText}
+                    onChange={(e) => setNewEntryText(e.target.value)}
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    💡 Tip: Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.
+                    💡 Tip: You can add multiple entries for the same day. Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.
                   </p>
                 </div>
                 <button
                   className="btn-primary w-full"
-                  onClick={saveJournalEntry}
-                  disabled={loading || !todayJournal.trim()}
+                  onClick={saveDailyEntry}
+                  disabled={loading || !newEntryText.trim()}
                 >
-                  {loading ? "Saving..." : "💾 Save Journal Entry"}
+                  {loading ? "Saving..." : "💾 Add Daily Entry"}
                 </button>
               </div>
             </DashboardCard>
 
-            <DashboardCard title="📚 Journal History">
-              {journalEntries.length === 0 ? (
+            <DashboardCard title="📚 Daily Entries">
+              {dailyEntries.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
-                  <p>No journal entries yet. Start writing your daily journal!</p>
+                  <p>No daily entries yet. Start writing your daily entries!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {journalEntries
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedJournalDate(entry.date);
-                          setTodayJournal(entry.entry);
-                        }}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-semibold text-slate-800">
-                            {new Date(entry.date).toLocaleDateString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </p>
-                          <span className="text-xs text-slate-500">
-                            {new Date(entry.updatedAt).toLocaleTimeString()}
-                          </span>
+                <div className="space-y-4">
+                  {/* Group entries by date */}
+                  {Object.entries(
+                    dailyEntries.reduce((acc, entry) => {
+                      if (!acc[entry.date]) {
+                        acc[entry.date] = [];
+                      }
+                      acc[entry.date].push(entry);
+                      return acc;
+                    }, {} as Record<string, DailyEntry[]>)
+                  )
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, entries]) => (
+                      <div key={date} className="border-b border-slate-200 pb-4 last:border-b-0">
+                        <h3 className="font-semibold text-slate-800 mb-3">
+                          {new Date(date).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </h3>
+                        <div className="space-y-3">
+                          {entries
+                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                            .map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="rounded-lg border border-slate-200 p-4 bg-slate-50"
+                              >
+                                {editingEntryId === entry.id ? (
+                                  <div className="space-y-3">
+                                    <textarea
+                                      className="input w-full h-32"
+                                      value={newEntryText}
+                                      onChange={(e) => setNewEntryText(e.target.value)}
+                                    />
+                                    <div className="flex gap-2">
+                                      <button
+                                        className="btn-primary text-sm"
+                                        onClick={() => updateDailyEntry(entry.id, newEntryText)}
+                                        disabled={loading || !newEntryText.trim()}
+                                      >
+                                        {loading ? "Saving..." : "💾 Save"}
+                                      </button>
+                                      <button
+                                        className="btn-secondary text-sm"
+                                        onClick={() => {
+                                          setEditingEntryId(null);
+                                          setNewEntryText("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between items-start mb-2">
+                                      <span className="text-xs text-slate-500">
+                                        {new Date(entry.createdAt).toLocaleTimeString()}
+                                      </span>
+                                      <div className="flex gap-2">
+                                        <button
+                                          className="text-xs text-blue-600 hover:text-blue-700"
+                                          onClick={() => {
+                                            setEditingEntryId(entry.id);
+                                            setNewEntryText(entry.entry);
+                                          }}
+                                        >
+                                          ✏️ Edit
+                                        </button>
+                                        <button
+                                          className="text-xs text-red-600 hover:text-red-700"
+                                          onClick={() => deleteDailyEntry(entry.id)}
+                                          disabled={loading}
+                                        >
+                                          🗑️ Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                      {entry.entry}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            ))}
                         </div>
-                        <p className="text-sm text-slate-700 line-clamp-3">
-                          {entry.entry}
-                        </p>
                       </div>
                     ))}
                 </div>
