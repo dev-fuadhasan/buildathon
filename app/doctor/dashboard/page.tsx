@@ -286,8 +286,7 @@ export default function DoctorDashboard() {
                   Question:
                 </p>
                 <p className="text-neutral-700 text-base leading-relaxed">{selectedQuestion.question}</p>
-                <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1.5">
-                  <Icon name="calendar" size={14} className="text-neutral-400" />
+                <p className="text-xs text-neutral-500 mt-3">
                   Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
                 </p>
               </div>
@@ -518,8 +517,7 @@ export default function DoctorDashboard() {
                   Question:
                 </p>
                 <p className="text-base text-neutral-700 leading-relaxed">{selectedQuestion.question}</p>
-                <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1.5">
-                  <Icon name="calendar" size={14} className="text-neutral-400" />
+                <p className="text-xs text-neutral-500 mt-3">
                   Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
                 </p>
               </div>
