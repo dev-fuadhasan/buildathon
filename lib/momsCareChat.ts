@@ -202,7 +202,7 @@ When answering, provide this specific calculation FIRST, then add context.`;
         ...formattedMessages,
       ],
       temperature: 0.4, // Lower temperature for more accurate, focused answers
-      max_tokens: 2000, // Increased significantly to prevent response cutoff
+      max_tokens: 6000, // Increased to 6000 for longer, more detailed responses
     });
 
     const reply = completion.choices?.[0]?.message?.content;
