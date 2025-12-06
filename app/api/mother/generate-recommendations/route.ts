@@ -40,17 +40,25 @@ export async function POST(req: NextRequest) {
     const today = getCurrentDateInTimezone(timezone);
     
     // Determine which recommendation should be sent
-    // Morning recommendation: should be sent if it's after 8 AM and hasn't been sent today
-    // Evening recommendation: should be sent if it's after 8 PM and hasn't been sent today
+    // Morning recommendation: should be sent if it's 8 AM (with 30 minute window) and hasn't been sent today
+    // Evening recommendation: should be sent if it's 8 PM (with 30 minute window) and hasn't been sent today
     let timeOfDay: "morning" | "evening" | null = null;
     
-    // Check if morning recommendation should be sent (after 8 AM, before 8 PM, and not sent today)
-    if (hour >= 8 && hour < 20 && mother.lastMorningAdviceDate !== today) {
+    // Check if it's around 8 AM (8:00 - 8:30) and morning recommendation hasn't been sent today
+    if (hour === 8 && minute <= 30 && mother.lastMorningAdviceDate !== today) {
       timeOfDay = "morning";
     }
-    // Check if evening recommendation should be sent (after 8 PM and not sent today)
-    else if (hour >= 20 && mother.lastNightAdviceDate !== today) {
+    // Check if it's around 8 PM (20:00 - 20:30) and evening recommendation hasn't been sent today
+    else if (hour === 20 && minute <= 30 && mother.lastNightAdviceDate !== today) {
       timeOfDay = "evening";
+    }
+    // If it's after 8:30 AM and before 8 PM, check if morning recommendation was missed
+    else if (hour > 8 && hour < 20 && mother.lastMorningAdviceDate !== today) {
+      timeOfDay = "morning"; // Send missed morning recommendation
+    }
+    // If it's after 8:30 PM, check if evening recommendation was missed
+    else if (hour > 20 && mother.lastNightAdviceDate !== today) {
+      timeOfDay = "evening"; // Send missed evening recommendation
     }
     // If it's before 8 AM, check if yesterday's evening recommendation was missed
     else if (hour < 8) {

@@ -40,6 +40,8 @@ export default function CommentSection({ questionId, userRole, userId, token, co
     if (initialComments && initialComments.length > 0) {
       setComments(initialComments);
     }
+    // Always reload from API to get latest comments
+    loadComments();
   }, [initialComments]);
 
   const loadComments = async () => {

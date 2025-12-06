@@ -105,11 +105,13 @@ export default function MotherDashboard() {
     checkDailyTask(t);
     checkRecommendations(t);
     
-    // Set up interval to check for daily tasks (every hour)
+    // Set up interval to check for daily tasks and recommendations
+    // Check every 5 minutes to catch 8 AM and 8 PM recommendations
     const interval = setInterval(() => {
+      updatePregnancyProgress(t);
       checkDailyTask(t);
       checkRecommendations(t);
-    }, 60 * 60 * 1000); // Check every hour
+    }, 5 * 60 * 1000); // Check every 5 minutes
     
     return () => clearInterval(interval);
   }, []);
@@ -1026,7 +1028,7 @@ export default function MotherDashboard() {
                           const data = await res.json();
                           const updated = data.questions?.find((q: any) => q.id === selectedQuestion.id);
                           if (updated) {
-                            setSelectedQuestion(updated);
+                            setSelectedQuestion({ ...updated, comments: updated.comments || [] });
                           }
                         } catch (err) {
                           console.error("Failed to refresh question:", err);
