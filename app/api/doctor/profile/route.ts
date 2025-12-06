@@ -81,24 +81,17 @@ export async function PUT(req: NextRequest) {
   await saveDoctor(updated);
   const { passwordHash, ...safe } = updated;
   
-  // Generate new token with updated email if email was changed
-  let newToken: string | undefined;
-  if (emailChanged) {
-    newToken = signAuthToken({ 
-      id: updated.id, 
-      email: updated.email, 
-      role: "doctor" 
-    });
-  }
+  // Always logout after profile edit to ensure they wait for admin approval
+  // This prevents doctors from continuing to use the system after making changes
   
   return NextResponse.json({ 
     profile: safe,
-    token: newToken, // Return new token if email was changed
+    requiresLogout: true, // Always require logout after profile edit
     message: emailChanged
-      ? "Email updated successfully. Your login credentials have been updated. Please use your new email to log in next time."
-      : doctor.status === "approved" 
-      ? "Profile updated. Waiting for admin verification." 
-      : "Profile updated successfully."
+      ? "Profile updated. You have been logged out. Please use your new email to log in after admin approval."
+      : doctor.status === "approved"
+      ? "Profile updated. You have been logged out. Please wait for admin verification before logging in again."
+      : "Profile updated. You have been logged out. Please wait for admin verification before logging in again."
   });
 }
 

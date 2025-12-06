@@ -102,14 +102,14 @@ export default function DoctorProfile() {
       if (res.ok) {
         setMessage(data.message || "✅ Profile updated successfully!");
         
-        // If email was changed and new token is provided, update the token
-        if (data.token) {
-          localStorage.setItem("doctorToken", data.token);
-          setMessage("✅ Email updated successfully! Your login credentials have been updated. Please use your new email to log in next time.");
+        // Always logout after profile edit
+        if (data.requiresLogout) {
+          // Clear token and redirect to login after a short delay
+          setTimeout(() => {
+            localStorage.removeItem("doctorToken");
+            window.location.href = "/doctor/login";
+          }, 2000); // 2 second delay to show the message
         }
-        
-        setIsEditing(false);
-        fetchProfile();
       } else {
         setMessage(`❌ ${data.error || "Could not save profile"}`);
       }

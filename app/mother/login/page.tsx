@@ -1,6 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -60,6 +61,16 @@ export default function MotherLogin() {
             {loading ? "Signing in..." : "Login"}
           </button>
         </form>
+        
+        {/* Registration Link */}
+        <div className="text-center">
+          <p className="text-slate-600">
+            Don't have an account?{" "}
+            <Link href="/mother/register" className="text-pink-600 hover:text-pink-700 font-medium underline">
+              Register as Mother
+            </Link>
+          </p>
+        </div>
       </div>
     </Layout>
   );

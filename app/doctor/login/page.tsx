@@ -1,6 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -62,6 +63,16 @@ export default function DoctorLogin() {
             {loading ? "Signing in..." : "Login"}
           </button>
         </form>
+        
+        {/* Registration Link */}
+        <div className="text-center">
+          <p className="text-slate-600">
+            Don't have an account?{" "}
+            <Link href="/doctor/register" className="text-blue-600 hover:text-blue-700 font-medium underline">
+              Register as Doctor
+            </Link>
+          </p>
+        </div>
       </div>
     </Layout>
   );
