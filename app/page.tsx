@@ -2,12 +2,41 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getTranslations } from "@/lib/i18n";
 import Icon from "@/components/Icon";
 import { Illustration } from "@/components/Icon";
 
 export default function Home() {
   const [t] = useState(getTranslations("en"));
+  const router = useRouter();
+  const [isMother, setIsMother] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+
+  useEffect(() => {
+    const motherToken = localStorage.getItem("motherToken");
+    const doctorToken = localStorage.getItem("doctorToken");
+    setIsMother(!!motherToken);
+    setIsDoctor(!!doctorToken);
+  }, []);
+
+  const handleMotherClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isMother) {
+      router.push("/mother/dashboard");
+    } else {
+      router.push("/mother/login");
+    }
+  };
+
+  const handleDoctorClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isDoctor) {
+      router.push("/doctor/dashboard");
+    } else {
+      router.push("/doctor/login");
+    }
+  };
 
   return (
     <main className="min-h-screen">
@@ -42,16 +71,18 @@ export default function Home() {
                   href="/chat"
                   className="btn-primary inline-flex items-center justify-center gap-3 text-lg px-8 py-4"
                 >
-                  <Icon name="chat" size={24} className="text-white" />
+                  <div className="w-6 h-6 flex items-center justify-center">
+                    <Icon name="chat" size={24} className="brightness-0 invert" />
+                  </div>
                   {t.home.chatButton}
                 </Link>
-                <Link
-                  href="/mother/login"
+                <button
+                  onClick={handleMotherClick}
                   className="btn-secondary inline-flex items-center justify-center gap-3 text-lg px-8 py-4"
                 >
                   <Icon name="mom" size={24} className="text-pink-600" />
-                  I am Mother
-                </Link>
+                  {isMother ? "Go to Dashboard" : "I am Mother"}
+                </button>
               </div>
             </div>
             
@@ -114,18 +145,30 @@ export default function Home() {
                 <h3 className="mb-4 text-3xl font-bold text-neutral-800">{t.home.mothersTitle}</h3>
                 <p className="mb-8 text-neutral-600 leading-relaxed text-lg">{t.home.mothersDesc}</p>
                 <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/mother/register"
-                    className="btn-primary px-6 py-3"
-                  >
-                    {t.common.register}
-                  </Link>
-                  <Link
-                    href="/mother/login"
-                    className="btn-secondary px-6 py-3"
-                  >
-                    {t.common.login}
-                  </Link>
+                  {!isMother && (
+                    <>
+                      <Link
+                        href="/mother/register"
+                        className="btn-primary px-6 py-3"
+                      >
+                        {t.common.register}
+                      </Link>
+                      <button
+                        onClick={handleMotherClick}
+                        className="btn-secondary px-6 py-3"
+                      >
+                        {t.common.login}
+                      </button>
+                    </>
+                  )}
+                  {isMother && (
+                    <button
+                      onClick={handleMotherClick}
+                      className="btn-primary px-6 py-3"
+                    >
+                      Go to Dashboard
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -140,18 +183,30 @@ export default function Home() {
                 <h3 className="mb-4 text-3xl font-bold text-neutral-800">{t.home.doctorsTitle}</h3>
                 <p className="mb-8 text-neutral-600 leading-relaxed text-lg">{t.home.doctorsDesc}</p>
                 <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/doctor/register"
-                    className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:from-blue-600 hover:to-cyan-600 hover:shadow-xl transform hover:scale-105 active:scale-95"
-                  >
-                    Apply
-                  </Link>
-                  <Link
-                    href="/doctor/login"
-                    className="btn-secondary px-6 py-3 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    Doctor {t.common.login}
-                  </Link>
+                  {!isDoctor && (
+                    <>
+                      <Link
+                        href="/doctor/register"
+                        className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:from-blue-600 hover:to-cyan-600 hover:shadow-xl transform hover:scale-105 active:scale-95"
+                      >
+                        Apply
+                      </Link>
+                      <button
+                        onClick={handleDoctorClick}
+                        className="btn-secondary px-6 py-3 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                      >
+                        Doctor {t.common.login}
+                      </button>
+                    </>
+                  )}
+                  {isDoctor && (
+                    <button
+                      onClick={handleDoctorClick}
+                      className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:from-blue-600 hover:to-cyan-600 hover:shadow-xl transform hover:scale-105 active:scale-95"
+                    >
+                      Go to Dashboard
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

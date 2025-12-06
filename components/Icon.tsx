@@ -21,8 +21,12 @@ export default function Icon({ name, size = 24, className = "", alt }: IconProps
       width={size}
       height={size}
       className={className}
-      style={{ display: "inline-block", verticalAlign: "middle" }}
+      style={{ display: "inline-block", verticalAlign: "middle", objectFit: "contain" }}
       unoptimized
+      onError={(e) => {
+        // Fallback if icon doesn't exist
+        console.warn(`Icon not found: ${iconPath}`);
+      }}
     />
   );
 }

@@ -912,9 +912,13 @@ export default function MotherDashboard() {
                                 }
                               }}
                               disabled={deletingPrescription === p.key}
-                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50"
+                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 min-w-[36px] h-[36px]"
                             >
-                              {deletingPrescription === p.key ? "..." : <Icon name="delete" size={18} />}
+                              {deletingPrescription === p.key ? (
+                                "..."
+                              ) : (
+                                <Icon name="delete" size={18} className="flex-shrink-0" />
+                              )}
                             </button>
                           </div>
                         </div>
