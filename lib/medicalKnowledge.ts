@@ -294,6 +294,15 @@ export const MEDICAL_KNOWLEDGE_BASE: MedicalGuideline[] = [
     priority: "high",
   },
   {
+    id: "pregnancy-duration",
+    category: "Pregnancy Duration",
+    topic: "Pregnancy Timeline and Delivery Calculation",
+    content: "Full-term pregnancy is 40 weeks (280 days) from last menstrual period (LMP). Calculation: 1 month = approximately 4.33 weeks. If 7 months pregnant: 7 × 4.33 = ~30 weeks, so approximately 10 weeks (70 days) until delivery. If 5 months: ~22 weeks, so ~18 weeks (126 days) until delivery. Delivery typically occurs between 37-42 weeks. Preterm is before 37 weeks, post-term is after 42 weeks.",
+    source: "WHO",
+    trimester: "all",
+    priority: "high",
+  },
+  {
     id: "labor-2",
     category: "Labor & Delivery",
     topic: "Preterm Labor",
@@ -360,18 +369,51 @@ export function retrieveRelevantGuidelines(
     );
   }
   
+  // Enhanced keyword matching with Bengali support
+  const queryWords = queryLower.split(/\s+/);
+  
+  // Bengali to English keyword mapping for better matching
+  const keywordMap: Record<string, string[]> = {
+    "mas": ["month", "months", "duration", "timeline"],
+    "maser": ["month", "months"],
+    "delivery": ["delivery", "birth", "labor", "deliver"],
+    "kotodin": ["days", "how many days", "when"],
+    "por": ["after", "until", "remaining"],
+    "hote": ["will", "happen", "occur"],
+    "pare": ["can", "possible"],
+    "saptah": ["week", "weeks"],
+    "din": ["day", "days"],
+  };
+  
+  // Expand query with mapped keywords
+  const expandedQuery = [...queryWords];
+  queryWords.forEach((word) => {
+    if (keywordMap[word]) {
+      expandedQuery.push(...keywordMap[word]);
+    }
+  });
+  
   // Simple keyword matching (in production, use vector embeddings)
   const scored = filtered.map((guideline) => {
     const content = `${guideline.category} ${guideline.topic} ${guideline.content}`.toLowerCase();
     let score = 0;
     
-    // Check for keyword matches
-    const keywords = queryLower.split(/\s+/);
-    keywords.forEach((keyword) => {
+    // Check for keyword matches in expanded query
+    expandedQuery.forEach((keyword) => {
       if (content.includes(keyword)) {
         score += 1;
       }
     });
+    
+    // Boost for exact phrase matches
+    if (queryLower.includes("delivery") && content.includes("delivery")) {
+      score += 3;
+    }
+    if (queryLower.includes("month") || queryLower.includes("mas")) {
+      if (content.includes("month") || content.includes("week") || content.includes("duration") || content.includes("timeline")) {
+        score += 2;
+      }
+    }
     
     // Boost priority items
     if (guideline.priority === "critical" || guideline.priority === "high") {
