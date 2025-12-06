@@ -4,7 +4,7 @@ import { getDoctor, saveDoctor, findDoctorByEmail } from "@/lib/data";
 import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "doctor") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "doctor") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

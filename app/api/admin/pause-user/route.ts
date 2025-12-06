@@ -6,7 +6,7 @@ import { getDoctor, saveDoctor, getMother, saveMother } from "@/lib/data";
  * Pause or unpause a user (doctor or mother)
  */
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -34,7 +34,14 @@ export async function POST(req: NextRequest) {
       };
 
       await saveDoctor(updated);
-      return NextResponse.json({ success: true, status: updated.status });
+      
+      // If pausing, invalidate all tokens by returning a flag to logout
+      // The frontend should handle logout when pause is true
+      return NextResponse.json({ 
+        success: true, 
+        status: updated.status,
+        requiresLogout: pause // Signal that user should be logged out
+      });
     } else if (userType === "mother") {
       const mother = await getMother(userId);
       if (!mother) {
@@ -48,7 +55,13 @@ export async function POST(req: NextRequest) {
       };
 
       await saveMother(updated);
-      return NextResponse.json({ success: true, status: updated.status });
+      
+      // If pausing, invalidate all tokens by returning a flag to logout
+      return NextResponse.json({ 
+        success: true, 
+        status: updated.status,
+        requiresLogout: pause // Signal that user should be logged out
+      });
     } else {
       return NextResponse.json(
         { error: "Invalid userType. Must be 'doctor' or 'mother'" },

@@ -10,7 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user || user.role !== "doctor") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

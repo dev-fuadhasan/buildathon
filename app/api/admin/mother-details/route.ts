@@ -3,7 +3,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { getMother } from "@/lib/data";
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

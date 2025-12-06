@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
 
     let profileContext: string | undefined = body.profileContext;
     let prescriptionUrls: string[] = [];

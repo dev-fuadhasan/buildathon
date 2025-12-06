@@ -4,7 +4,7 @@ import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     
     if (!user || user.role !== "mother") {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     
     if (!user || user.role !== "mother") {
       return NextResponse.json(

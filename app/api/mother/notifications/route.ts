@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user || user.role !== "mother") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = getUserFromRequest(req);
+    const user = await getUserFromRequest(req);
     if (!user || user.role !== "mother") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

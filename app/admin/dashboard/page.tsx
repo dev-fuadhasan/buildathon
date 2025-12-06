@@ -87,9 +87,16 @@ export default function AdminDashboard() {
     riskLevel?: "low" | "medium" | "high";
     trimester?: "first" | "second" | "third";
     condition?: string;
+    ageMin?: number;
+    ageMax?: number;
+    daysPregnantMin?: number;
+    daysPregnantMax?: number;
   }>({});
+  const [appliedFilter, setAppliedFilter] = useState<typeof analyticsFilter>({});
   const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedReportStatus, setSelectedReportStatus] = useState<"all" | "pending" | "solved" | "rejected">("all");
+  const [adminDecisionText, setAdminDecisionText] = useState("");
 
   const loadDoctorDetails = async (doctorId: string) => {
     const res = await fetch(`/api/admin/doctor-details?id=${doctorId}`, {
@@ -163,6 +170,37 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setReports(data.reports || []);
+    }
+  };
+
+  const updateReportStatus = async (reportId: string, status: "pending" | "solved" | "rejected", decision?: string) => {
+    try {
+      const res = await fetch("/api/admin/reports/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers(),
+        },
+        body: JSON.stringify({
+          reportId,
+          status,
+          decision,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`✅ Report marked as ${status}`);
+        loadReports();
+        // Refresh selected report
+        const updatedReport = reports.find((r: any) => r.id === reportId);
+        if (updatedReport) {
+          setSelectedReport({ ...updatedReport, reportStatus: status, adminDecision: decision, adminDecisionAt: new Date().toISOString() });
+        }
+      } else {
+        setMessage(`❌ ${data.error || "Failed to update report"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
     }
   };
 
@@ -779,7 +817,7 @@ export default function AdminDashboard() {
               {analytics && (
                 <div className="mb-4 p-3 bg-slate-50 rounded-lg">
                   <p className="text-sm font-medium mb-2">Filter by Analytics:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <select
                       className="input text-sm"
                       value={analyticsFilter.riskLevel || ""}
@@ -796,9 +834,9 @@ export default function AdminDashboard() {
                       onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, trimester: e.target.value as any || undefined })}
                     >
                       <option value="">All Trimesters</option>
-                      <option value="first">First Trimester</option>
-                      <option value="second">Second Trimester</option>
-                      <option value="third">Third Trimester</option>
+                      <option value="first">First Trimester (0-12 weeks)</option>
+                      <option value="second">Second Trimester (13-27 weeks)</option>
+                      <option value="third">Third Trimester (28+ weeks)</option>
                     </select>
                     <select
                       className="input text-sm"
@@ -810,9 +848,52 @@ export default function AdminDashboard() {
                         <option key={condition} value={condition}>{condition}</option>
                       ))}
                     </select>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        className="input text-sm"
+                        placeholder="Min Age"
+                        value={analyticsFilter.ageMin || ""}
+                        onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, ageMin: e.target.value ? parseInt(e.target.value) : undefined })}
+                      />
+                      <input
+                        type="number"
+                        className="input text-sm"
+                        placeholder="Max Age"
+                        value={analyticsFilter.ageMax || ""}
+                        onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, ageMax: e.target.value ? parseInt(e.target.value) : undefined })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        className="input text-sm"
+                        placeholder="Min Days Pregnant"
+                        value={analyticsFilter.daysPregnantMin || ""}
+                        onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, daysPregnantMin: e.target.value ? parseInt(e.target.value) : undefined })}
+                      />
+                      <input
+                        type="number"
+                        className="input text-sm"
+                        placeholder="Max Days Pregnant"
+                        value={analyticsFilter.daysPregnantMax || ""}
+                        onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, daysPregnantMax: e.target.value ? parseInt(e.target.value) : undefined })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      className="btn-primary text-sm"
+                      onClick={() => setAppliedFilter({ ...analyticsFilter })}
+                    >
+                      ✅ Apply Filters
+                    </button>
                     <button
                       className="btn-secondary text-sm"
-                      onClick={() => setAnalyticsFilter({})}
+                      onClick={() => {
+                        setAnalyticsFilter({});
+                        setAppliedFilter({});
+                      }}
                     >
                       Clear Filters
                     </button>
@@ -831,10 +912,61 @@ export default function AdminDashboard() {
                       }
                     }
                     
-                    // Analytics filters
-                    if (analyticsFilter.riskLevel || analyticsFilter.trimester || analyticsFilter.condition) {
-                      // This would require calculating risk for each mother - simplified for now
-                      // In a real implementation, you'd calculate risk on the fly or store it
+                    // Apply filters using appliedFilter (not analyticsFilter)
+                    if (appliedFilter.riskLevel) {
+                      // Calculate risk for this mother
+                      const { assessRisk } = require("@/lib/riskPrediction");
+                      const assessment = assessRisk(m);
+                      if (assessment.overallRisk !== appliedFilter.riskLevel) {
+                        return false;
+                      }
+                    }
+                    
+                    if (appliedFilter.trimester) {
+                      const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
+                      if (days) {
+                        const weeks = Math.floor(days / 7);
+                        let trimester: "first" | "second" | "third" | undefined;
+                        if (weeks < 12) trimester = "first";
+                        else if (weeks < 28) trimester = "second";
+                        else trimester = "third";
+                        if (trimester !== appliedFilter.trimester) {
+                          return false;
+                        }
+                      } else {
+                        return false; // No pregnancy data
+                      }
+                    }
+                    
+                    if (appliedFilter.condition && m.conditions) {
+                      const conditions = m.conditions.toLowerCase();
+                      if (!conditions.includes(appliedFilter.condition.toLowerCase())) {
+                        return false;
+                      }
+                    } else if (appliedFilter.condition && !m.conditions) {
+                      return false; // Condition filter set but mother has no conditions
+                    }
+                    
+                    if (appliedFilter.ageMin !== undefined && (!m.age || m.age < appliedFilter.ageMin)) {
+                      return false;
+                    }
+                    
+                    if (appliedFilter.ageMax !== undefined && (!m.age || m.age > appliedFilter.ageMax)) {
+                      return false;
+                    }
+                    
+                    if (appliedFilter.daysPregnantMin !== undefined) {
+                      const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
+                      if (!days || days < appliedFilter.daysPregnantMin) {
+                        return false;
+                      }
+                    }
+                    
+                    if (appliedFilter.daysPregnantMax !== undefined) {
+                      const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
+                      if (!days || days > appliedFilter.daysPregnantMax) {
+                        return false;
+                      }
                     }
                     
                     return true;
@@ -1045,23 +1177,91 @@ export default function AdminDashboard() {
         {/* Reports Tab */}
         {activeTab === "reports" && (
           <DashboardCard title="🚨 Reported Questions/Answers">
+            <div className="mb-4 flex gap-2">
+              <button
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  !selectedReportStatus || selectedReportStatus === "all"
+                    ? "bg-blue-500 text-white"
+                    : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                }`}
+                onClick={() => setSelectedReportStatus("all")}
+              >
+                All ({reports.length})
+              </button>
+              <button
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedReportStatus === "pending"
+                    ? "bg-yellow-500 text-white"
+                    : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                }`}
+                onClick={() => setSelectedReportStatus("pending")}
+              >
+                Pending ({reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length})
+              </button>
+              <button
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedReportStatus === "solved"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                }`}
+                onClick={() => setSelectedReportStatus("solved")}
+              >
+                Solved ({reports.filter((r: any) => r.reportStatus === "solved").length})
+              </button>
+              <button
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedReportStatus === "rejected"
+                    ? "bg-red-500 text-white"
+                    : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                }`}
+                onClick={() => setSelectedReportStatus("rejected")}
+              >
+                Rejected ({reports.filter((r: any) => r.reportStatus === "rejected").length})
+              </button>
+            </div>
             <div className="space-y-3">
-              {reports.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No reports yet.</p>
+              {reports.filter((r: any) => {
+                if (!selectedReportStatus || selectedReportStatus === "all") return true;
+                return (r.reportStatus || "pending") === selectedReportStatus;
+              }).length === 0 ? (
+                <p className="text-slate-500 text-center py-8">No reports found.</p>
               ) : (
-                reports.map((report) => (
+                reports.filter((r: any) => {
+                  if (!selectedReportStatus || selectedReportStatus === "all") return true;
+                  return (r.reportStatus || "pending") === selectedReportStatus;
+                }).map((report) => (
                   <div
                     key={report.id}
-                    className="rounded-lg border-2 border-red-200 bg-red-50 p-4"
+                    className={`rounded-lg border-2 p-4 ${
+                      report.reportStatus === "solved"
+                        ? "border-green-200 bg-green-50"
+                        : report.reportStatus === "rejected"
+                        ? "border-red-200 bg-red-50"
+                        : "border-yellow-200 bg-yellow-50"
+                    }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <p className="font-semibold text-red-900">Reported Question</p>
-                        <p className="text-sm text-slate-700 mt-1">{report.question}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-slate-900">Reported Question</p>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            report.reportStatus === "solved"
+                              ? "bg-green-100 text-green-700"
+                              : report.reportStatus === "rejected"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}>
+                            {report.reportStatus || "pending"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 mt-1 line-clamp-2">{report.question}</p>
                       </div>
                       <button
-                        className="btn-secondary text-sm"
-                        onClick={() => setSelectedReport(report)}
+                        className="btn-secondary text-sm ml-2"
+                        onClick={() => {
+                          setSelectedReport(report);
+                          setAdminDecisionText(report.adminDecision || "");
+                        }}
                       >
                         👁️ View Details
                       </button>
@@ -1083,9 +1283,23 @@ export default function AdminDashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-red-600">Report Details</h2>
+                <div>
+                  <h2 className="text-2xl font-bold text-red-600">Report Details</h2>
+                  <span className={`inline-block px-3 py-1 rounded text-sm font-medium mt-2 ${
+                    selectedReport.reportStatus === "solved"
+                      ? "bg-green-100 text-green-700"
+                      : selectedReport.reportStatus === "rejected"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}>
+                    Status: {selectedReport.reportStatus || "pending"}
+                  </span>
+                </div>
                 <button
-                  onClick={() => setSelectedReport(null)}
+                  onClick={() => {
+                    setSelectedReport(null);
+                    setAdminDecisionText("");
+                  }}
                   className="text-slate-500 hover:text-slate-700"
                 >
                   ✕
@@ -1100,7 +1314,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <p className="font-semibold mb-2">Question</p>
-                  <p className="text-slate-700">{selectedReport.question}</p>
+                  <p className="text-slate-700 whitespace-pre-wrap">{selectedReport.question}</p>
                   <p className="text-xs text-slate-500 mt-1">
                     Asked on {new Date(selectedReport.createdAt).toLocaleString()}
                   </p>
@@ -1108,7 +1322,7 @@ export default function AdminDashboard() {
                 {selectedReport.answer && (
                   <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
                     <p className="font-semibold mb-2">Doctor's Answer</p>
-                    <p className="text-slate-700">{selectedReport.answer}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap">{selectedReport.answer}</p>
                     {selectedReport.doctor && (
                       <div className="mt-3 pt-3 border-t border-yellow-300">
                         <p className="text-sm"><strong>Answered by:</strong> {selectedReport.doctor.name || selectedReport.doctor.email}</p>
@@ -1122,19 +1336,96 @@ export default function AdminDashboard() {
                 )}
                 {selectedReport.comments && selectedReport.comments.length > 0 && (
                   <div>
-                    <p className="font-semibold mb-2">Comments</p>
-                    <div className="space-y-2">
+                    <p className="font-semibold mb-2">Comments & Replies</p>
+                    <div className="space-y-3">
                       {selectedReport.comments.map((comment: any) => (
                         <div key={comment.id} className="rounded bg-slate-50 p-3">
-                          <p className="text-sm text-slate-700">{comment.content}</p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            By {comment.authorRole === "doctor" ? "Doctor" : "Mother"} on {new Date(comment.createdAt).toLocaleString()}
-                          </p>
+                          <div className="flex items-start justify-between mb-1">
+                            <p className="text-xs font-medium text-slate-600">
+                              {comment.authorRole === "doctor" ? "👨‍⚕️ Doctor" : "👩 Mother"}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{comment.content}</p>
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="mt-3 ml-4 space-y-2 border-l-2 border-slate-300 pl-3">
+                              {comment.replies.map((reply: any) => (
+                                <div key={reply.id} className="rounded bg-white p-2">
+                                  <div className="flex items-start justify-between mb-1">
+                                    <p className="text-xs font-medium text-slate-600">
+                                      {reply.authorRole === "doctor" ? "👨‍⚕️ Doctor" : "👩 Mother"} (Reply)
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      {new Date(reply.createdAt).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{reply.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* Admin Decision Section */}
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                  <p className="font-semibold text-blue-900 mb-3">Admin Decision & Notification</p>
+                  <div className="space-y-3">
+                    {selectedReport.adminDecision && (
+                      <div className="bg-white rounded-lg p-3 mb-3">
+                        <p className="text-sm font-medium text-slate-700 mb-1">Current Decision:</p>
+                        <p className="text-slate-800 whitespace-pre-wrap">{selectedReport.adminDecision}</p>
+                        {selectedReport.adminDecisionAt && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            Decision made on: {new Date(selectedReport.adminDecisionAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <textarea
+                      className="input w-full h-32"
+                      placeholder="Write your decision/response to the mother about this report..."
+                      value={adminDecisionText}
+                      onChange={(e) => setAdminDecisionText(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        className="btn-primary bg-green-500 hover:bg-green-600 flex-1"
+                        onClick={async () => {
+                          await updateReportStatus(selectedReport.id, "solved", adminDecisionText);
+                          setAdminDecisionText("");
+                        }}
+                        disabled={!adminDecisionText.trim()}
+                      >
+                        ✅ Mark as Solved
+                      </button>
+                      <button
+                        className="btn-primary bg-red-500 hover:bg-red-600 flex-1"
+                        onClick={async () => {
+                          await updateReportStatus(selectedReport.id, "rejected", adminDecisionText);
+                          setAdminDecisionText("");
+                        }}
+                        disabled={!adminDecisionText.trim()}
+                      >
+                        ❌ Mark as Rejected
+                      </button>
+                      <button
+                        className="btn-secondary flex-1"
+                        onClick={async () => {
+                          await updateReportStatus(selectedReport.id, "pending", adminDecisionText || undefined);
+                          setAdminDecisionText("");
+                        }}
+                      >
+                        ⏳ Mark as Pending
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -82,6 +82,9 @@ export type Question = {
   reportReason?: string; // Reason for reporting
   reportedBy?: string; // ID of the user who reported
   reportedAt?: string; // When it was reported
+  reportStatus?: "pending" | "solved" | "rejected"; // Report status
+  adminDecision?: string; // Admin's decision/response to the report
+  adminDecisionAt?: string; // When admin made the decision
 };
 
 export type ChatMessage = {
@@ -108,9 +111,12 @@ export type DailyJournalEntry = {
 export type Notification = {
   id: string;
   motherId: string;
-  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general";
+  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general" | "report_decision";
   title: string;
-  message: string;
+  message?: string;
+  content?: string; // Alternative to message for report_decision type
+  date?: string; // YYYY-MM-DD for journal-based notifications
+  time?: "morning" | "night"; // For recommendation notifications
   read: boolean;
   createdAt: string;
 };
@@ -225,11 +231,16 @@ export async function listAllDoctors() {
 }
 
 export async function deleteDoctor(doctorId: string) {
-  const { deleteObject } = await import("./r2Client");
+  const { deleteObject, listObjects } = await import("./r2Client");
   const doctorKey = `doctors/${doctorId}.json`;
-  await deleteObject(doctorKey);
-  // Also delete profile picture if exists
+  
+  // Get doctor data before deletion to clean up related data
   const doctor = await getDoctor(doctorId);
+  
+  // Delete doctor profile
+  await deleteObject(doctorKey);
+  
+  // Delete profile picture if exists
   if (doctor?.profilePicture) {
     try {
       await deleteObject(doctor.profilePicture);
@@ -237,15 +248,65 @@ export async function deleteDoctor(doctorId: string) {
       // Ignore errors if picture doesn't exist
     }
   }
+  
+  // Delete all questions answered by this doctor
+  try {
+    const allQuestions = await listAllQuestions();
+    const doctorQuestions = allQuestions.filter(q => q.doctorId === doctorId);
+    for (const question of doctorQuestions) {
+      // Remove doctor's answer but keep the question
+      const updated = {
+        ...question,
+        answer: undefined,
+        doctorId: undefined,
+        answeredAt: undefined,
+      };
+      await saveQuestion(updated);
+    }
+  } catch (err) {
+    console.error("Error cleaning up doctor questions:", err);
+  }
+  
+  // Delete all comments by this doctor
+  try {
+    const allQuestions = await listAllQuestions();
+    for (const question of allQuestions) {
+      if (question.comments && question.comments.length > 0) {
+        let updated = false;
+        // Remove doctor's top-level comments
+        const filteredComments = question.comments.filter(c => !(c.authorId === doctorId && c.authorRole === "doctor"));
+        
+        // Remove doctor's replies
+        const cleanedComments = filteredComments.map(comment => {
+          if (comment.replies && comment.replies.length > 0) {
+            const filteredReplies = comment.replies.filter(r => !(r.authorId === doctorId && r.authorRole === "doctor"));
+            if (filteredReplies.length !== comment.replies.length) {
+              updated = true;
+              return { ...comment, replies: filteredReplies };
+            }
+          }
+          return comment;
+        });
+        
+        if (filteredComments.length !== question.comments.length || updated) {
+          await saveQuestion({ ...question, comments: cleanedComments });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error cleaning up doctor comments:", err);
+  }
 }
 
 export async function deleteMother(motherId: string) {
-  const { deleteObject } = await import("./r2Client");
+  const { deleteObject, listObjects } = await import("./r2Client");
   const motherKey = `mothers/${motherId}.json`;
+  
+  // Delete mother profile
   await deleteObject(motherKey);
-  // Also delete related data: prescriptions, journal entries, notifications, chat history
+  
+  // Delete all related data: prescriptions, journal entries, notifications, chat history
   try {
-    const { listObjects } = await import("./r2Client");
     // Delete prescriptions
     const prescriptionPrefix = `prescriptions/${motherId}/`;
     const prescriptionObjects = await listObjects(prescriptionPrefix);
@@ -285,6 +346,47 @@ export async function deleteMother(motherId: string) {
   } catch (err) {
     console.error("Error deleting mother related data:", err);
     // Continue even if cleanup fails
+  }
+  
+  // Delete all questions asked by this mother
+  try {
+    const allQuestions = await listAllQuestions();
+    const motherQuestions = allQuestions.filter(q => q.motherId === motherId);
+    for (const question of motherQuestions) {
+      await deleteObject(`questions/${question.id}.json`);
+    }
+  } catch (err) {
+    console.error("Error deleting mother questions:", err);
+  }
+  
+  // Remove mother's comments from all questions
+  try {
+    const allQuestions = await listAllQuestions();
+    for (const question of allQuestions) {
+      if (question.comments && question.comments.length > 0) {
+        let updated = false;
+        // Remove mother's top-level comments
+        const filteredComments = question.comments.filter(c => !(c.authorId === motherId && c.authorRole === "mother"));
+        
+        // Remove mother's replies
+        const cleanedComments = filteredComments.map(comment => {
+          if (comment.replies && comment.replies.length > 0) {
+            const filteredReplies = comment.replies.filter(r => !(r.authorId === motherId && r.authorRole === "mother"));
+            if (filteredReplies.length !== comment.replies.length) {
+              updated = true;
+              return { ...comment, replies: filteredReplies };
+            }
+          }
+          return comment;
+        });
+        
+        if (filteredComments.length !== question.comments.length || updated) {
+          await saveQuestion({ ...question, comments: cleanedComments });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error cleaning up mother comments:", err);
   }
 }
 

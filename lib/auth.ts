@@ -44,10 +44,34 @@ export function verifyAuthToken(token: string): AuthPayload | null {
   }
 }
 
-export function getUserFromRequest(req: NextRequest): AuthPayload | null {
+export async function getUserFromRequest(req: NextRequest): Promise<AuthPayload | null> {
   const header = req.headers.get("authorization") || "";
   const [, token] = header.split(" ");
   if (!token) return null;
-  return verifyAuthToken(token);
+  
+  const payload = verifyAuthToken(token);
+  if (!payload) return null;
+  
+  // Check if user account is paused - this will effectively log them out
+  try {
+    if (payload.role === "doctor") {
+      const { getDoctor } = await import("./data");
+      const doctor = await getDoctor(payload.id);
+      if (doctor && doctor.status === "paused") {
+        return null; // Invalid token - account is paused
+      }
+    } else if (payload.role === "mother") {
+      const { getMother } = await import("./data");
+      const mother = await getMother(payload.id);
+      if (mother && mother.status === "paused") {
+        return null; // Invalid token - account is paused
+      }
+    }
+  } catch (err) {
+    // If we can't check status, allow the request (fail open for availability)
+    console.error("Error checking user status:", err);
+  }
+  
+  return payload;
 }
 

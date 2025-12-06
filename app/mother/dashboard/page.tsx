@@ -37,9 +37,10 @@ type JournalEntry = {
 
 type Notification = {
   id: string;
-  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general";
-  title: string;
-  message: string;
+  type?: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general" | "report_decision";
+  title?: string;
+  message?: string;
+  content?: string;
   read: boolean;
   createdAt: string;
 };
@@ -1204,7 +1205,7 @@ export default function MotherDashboard() {
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-slate-800">{notification.title}</h4>
+                      <h4 className="font-semibold text-slate-800">{notification.title || (notification.type === "report_decision" ? "Report Decision" : "Notification")}</h4>
                       {!notification.read && (
                         <button
                           className="text-xs text-pink-600 hover:text-pink-700"
@@ -1215,7 +1216,7 @@ export default function MotherDashboard() {
                       )}
                     </div>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                      {notification.message}
+                      {notification.content || notification.message || ""}
                     </p>
                     <p className="text-xs text-slate-500 mt-2">
                       {new Date(notification.createdAt).toLocaleString()}

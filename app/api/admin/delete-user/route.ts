@@ -6,7 +6,7 @@ import { deleteDoctor, getMother, deleteMother } from "@/lib/data";
  * Delete a user (doctor or mother)
  */
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

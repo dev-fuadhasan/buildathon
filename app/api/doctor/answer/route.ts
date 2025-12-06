@@ -3,7 +3,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { getQuestion, saveQuestion } from "@/lib/data";
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "doctor") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

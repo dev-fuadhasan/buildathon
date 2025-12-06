@@ -3,7 +3,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { getMother, saveMother } from "@/lib/data";
 
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "mother") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getUserFromRequest(req);
+  const user = await getUserFromRequest(req);
   if (!user || user.role !== "mother") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
