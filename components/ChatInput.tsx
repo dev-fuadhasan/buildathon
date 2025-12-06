@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
+import Icon from "@/components/Icon";
 
 type Props = {
   onSend: (text: string) => Promise<void> | void;
@@ -55,12 +56,12 @@ export default function ChatInput({ onSend, disabled }: Props) {
       >
         {sending ? (
           <span className="flex items-center gap-2">
-            <span className="animate-spin text-xl">⏳</span>
+            <Icon name="pending" size={20} className="animate-spin" />
             <span className="font-semibold">{lang === "bn" ? "প্রেরণ..." : "Sending..."}</span>
           </span>
         ) : (
           <span className="flex items-center gap-2">
-            <span className="text-xl">📤</span>
+            <Icon name="upload" size={20} />
             <span className="font-semibold">{t.chat.send}</span>
           </span>
         )}

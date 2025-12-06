@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getLanguage, getTranslations } from "@/lib/i18n";
 import LanguageSelector from "@/components/LanguageSelector";
+import Icon from "@/components/Icon";
+import { Illustration } from "@/components/Icon";
 
 export default function Home() {
   const [t, setT] = useState(getTranslations("en"));
@@ -40,35 +42,37 @@ export default function Home() {
                 href="/chat"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-pink-600 hover:to-pink-700 hover:shadow-xl"
               >
-                <span>💬</span>
+                <Icon name="chat" size={24} />
                 {t.home.chatButton}
               </Link>
               <Link
                 href="/mother/register"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-pink-300 bg-white px-8 py-4 text-lg font-semibold text-pink-600 transition-all hover:bg-pink-50"
               >
-                <span>👩</span>
+                <Icon name="mom" size={24} />
                 {t.home.motherButton}
               </Link>
             </div>
           </div>
           <div className="hidden md:block">
-            <div className="text-8xl">🤱</div>
+            <Illustration name="pregnant-woman" width={200} height={200} />
           </div>
         </div>
 
         {/* Features */}
         <div className="grid gap-6 md:grid-cols-3 mt-8">
           {[
-            { icon: "🤖", text: t.home.feature1 },
-            { icon: "👨‍⚕️", text: t.home.feature2 },
-            { icon: "🔒", text: t.home.feature3 },
+            { icon: "ai", text: t.home.feature1 },
+            { icon: "doctor", text: t.home.feature2 },
+            { icon: "secure", text: t.home.feature3 },
           ].map((item, idx) => (
             <div
               key={idx}
               className="rounded-2xl border border-white/60 bg-white/80 p-6 shadow-lg backdrop-blur transition-all hover:shadow-xl hover:scale-105"
             >
-              <div className="mb-3 text-4xl">{item.icon}</div>
+              <div className="mb-3">
+                <Icon name={item.icon} size={48} />
+              </div>
               <p className="text-sm font-semibold text-pink-600 mb-2">Feature</p>
               <p className="text-base font-medium text-slate-700 leading-relaxed">{item.text}</p>
             </div>
@@ -80,7 +84,9 @@ export default function Home() {
       <section className="grid gap-8 md:grid-cols-2">
         {/* Mothers Section */}
         <div className="group rounded-3xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white p-8 shadow-xl transition-all hover:shadow-2xl hover:scale-[1.02]">
-          <div className="mb-4 text-5xl">👩‍👶</div>
+          <div className="mb-4">
+            <Icon name="mom" size={64} />
+          </div>
           <h3 className="mb-3 text-2xl font-bold text-slate-900">{t.home.mothersTitle}</h3>
           <p className="mb-6 text-slate-600 leading-relaxed">{t.home.mothersDesc}</p>
           <div className="flex flex-wrap gap-3">
@@ -101,7 +107,9 @@ export default function Home() {
 
         {/* Doctors Section */}
         <div className="group rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-8 shadow-xl transition-all hover:shadow-2xl hover:scale-[1.02]">
-          <div className="mb-4 text-5xl">👨‍⚕️</div>
+          <div className="mb-4">
+            <Icon name="doctor" size={64} />
+          </div>
           <h3 className="mb-3 text-2xl font-bold text-slate-900">{t.home.doctorsTitle}</h3>
           <p className="mb-6 text-slate-600 leading-relaxed">{t.home.doctorsDesc}</p>
           <div className="flex flex-wrap gap-3">

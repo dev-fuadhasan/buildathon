@@ -2,6 +2,7 @@
 
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
+import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -164,8 +165,9 @@ export default function DoctorProfile() {
               ← Back to Dashboard
             </Link>
             {!isEditing && (
-              <button onClick={() => setIsEditing(true)} className="btn-primary">
-                ✏️ Edit Profile
+              <button onClick={() => setIsEditing(true)} className="btn-primary flex items-center gap-2">
+                <Icon name="edit" size={18} />
+                Edit Profile
               </button>
             )}
           </div>
@@ -180,7 +182,10 @@ export default function DoctorProfile() {
               </p>
               {profile.pendingVerification && (
                 <p className="text-sm mt-1">
-                  ⚠️ Your profile has been updated and is pending admin verification.
+                  <span className="flex items-center gap-2">
+                    <Icon name="warning" size={16} />
+                    Your profile has been updated and is pending admin verification.
+                  </span>
                 </p>
               )}
               {profile.verificationComment && (
@@ -196,7 +201,7 @@ export default function DoctorProfile() {
         {/* Message Alert */}
         {message && (
           <div className={`rounded-lg p-4 ${
-            message.includes("✅") 
+            message.includes("successfully") || message.includes("Success") 
               ? "bg-green-50 text-green-800 border border-green-200" 
               : "bg-red-50 text-red-800 border border-red-200"
           }`}>
@@ -215,12 +220,17 @@ export default function DoctorProfile() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-4xl text-slate-400">👨‍⚕️</span>
+                <Icon name="doctor" size={64} className="text-slate-400" />
               )}
             </div>
             <div>
               <label className="btn-secondary cursor-pointer inline-block">
-                {uploading ? "Uploading..." : "📤 Change Picture"}
+                {uploading ? "Uploading..." : (
+                  <span className="flex items-center gap-2">
+                    <Icon name="upload" size={18} />
+                    Change Picture
+                  </span>
+                )}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
@@ -262,7 +272,10 @@ export default function DoctorProfile() {
                     required
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    ⚠️ Changing your email will update your login credentials. You'll need to log in again with the new email.
+                    <span className="flex items-start gap-2">
+                      <Icon name="warning" size={16} className="mt-0.5" />
+                      <span>Changing your email will update your login credentials. You'll need to log in again with the new email.</span>
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -348,7 +361,12 @@ export default function DoctorProfile() {
               </div>
               <div className="flex gap-3">
                 <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? "Saving..." : "💾 Save Changes"}
+                  {loading ? "Saving..." : (
+                    <span className="flex items-center gap-2">
+                      <Icon name="save" size={18} />
+                      Save Changes
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -364,7 +382,10 @@ export default function DoctorProfile() {
               {profile.status === "approved" && (
                 <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3">
                   <p className="text-sm text-yellow-800">
-                    ⚠️ Note: Editing your profile will require admin re-verification.
+                    <span className="flex items-start gap-2">
+                      <Icon name="warning" size={16} className="mt-0.5" />
+                      <span>Note: Editing your profile will require admin re-verification.</span>
+                    </span>
                   </p>
                 </div>
               )}

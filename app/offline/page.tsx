@@ -1,6 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
+import Icon from "@/components/Icon";
 import { getLanguage } from "@/lib/i18n";
 import { useState } from "react";
 
@@ -29,8 +30,18 @@ export default function OfflinePage() {
         <div className="mt-8 p-6 bg-yellow-50 rounded-lg border border-yellow-200">
           <p className="text-sm text-yellow-900">
             {isBn
-              ? "💡 টিপ: কিছু বৈশিষ্ট্য অফলাইনেও কাজ করতে পারে যদি আপনি আগে সাইটটি পরিদর্শন করে থাকেন।"
-              : "💡 Tip: Some features may work offline if you've visited the site before."}
+              ? (
+                <span className="flex items-start gap-2">
+                  <Icon name="info" size={16} className="mt-0.5" />
+                  <span>টিপ: কিছু বৈশিষ্ট্য অফলাইনেও কাজ করতে পারে যদি আপনি আগে সাইটটি পরিদর্শন করে থাকেন।</span>
+                </span>
+              )
+              : (
+                <span className="flex items-start gap-2">
+                  <Icon name="info" size={16} className="mt-0.5" />
+                  <span>Tip: Some features may work offline if you've visited the site before.</span>
+                </span>
+              )}
           </p>
         </div>
       </div>

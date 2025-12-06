@@ -4,6 +4,7 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
+import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -364,7 +365,7 @@ export default function AdminDashboard() {
         {/* Message Alert */}
         {message && (
           <div className={`rounded-lg p-4 ${
-            message.includes("✅") 
+            message.includes("successfully") || message.includes("Success") 
               ? "bg-green-50 text-green-800 border border-green-200" 
               : "bg-red-50 text-red-800 border border-red-200"
           }`}>
@@ -375,21 +376,22 @@ export default function AdminDashboard() {
         {/* Tabs */}
         <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
           {[
-            { id: "overview", label: "📊 Overview" },
-            { id: "analytics", label: "📈 Analytics" },
-            { id: "doctors", label: "👨‍⚕️ Doctors" },
-            { id: "mothers", label: "👩 Mothers" },
-            { id: "reports", label: `🚨 Reports${reports.length > 0 ? ` (${reports.length})` : ""}` },
+            { id: "overview", label: "Overview", icon: "overview" },
+            { id: "analytics", label: "Analytics", icon: "progress" },
+            { id: "doctors", label: "Doctors", icon: "doctor" },
+            { id: "mothers", label: "Mothers", icon: "mom" },
+            { id: "reports", label: `Reports${reports.length > 0 ? ` (${reports.length})` : ""}`, icon: "reports" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 font-medium transition-colors ${
+              className={`px-6 py-3 font-medium transition-colors flex items-center gap-2 ${
                 activeTab === tab.id
                   ? "border-b-2 border-purple-600 text-purple-600"
                   : "text-slate-600 hover:text-purple-600"
               }`}
             >
+              {tab.icon && <Icon name={tab.icon} size={20} />}
               {tab.label}
             </button>
           ))}
@@ -423,7 +425,12 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <DashboardCard title="⏳ Pending Doctor Approvals">
+            <DashboardCard title={
+              <span className="flex items-center gap-2">
+                <Icon name="pending" size={20} />
+                Pending Doctor Approvals
+              </span>
+            }>
               <div className="space-y-3">
                 {pending.length === 0 ? (
                   <p className="text-slate-500 text-center py-8">No pending applications.</p>
@@ -468,19 +475,28 @@ export default function AdminDashboard() {
                           className="btn-secondary text-sm"
                           onClick={() => loadDoctorDetails(d.id)}
                         >
-                          👁️ Show Details
+                          <span className="flex items-center gap-1">
+                            <Icon name="view" size={16} />
+                            Show Details
+                          </span>
                         </button>
                         <button
                           className="btn-primary text-sm"
                           onClick={() => openActionModal(d.id, "approve")}
                         >
-                          ✅ Approve
+                          <span className="flex items-center gap-1">
+                            <Icon name="approve" size={16} />
+                            Approve
+                          </span>
                         </button>
                         <button
                           className="btn-secondary text-sm"
                           onClick={() => openActionModal(d.id, "reject")}
                         >
-                          ❌ Reject
+                          <span className="flex items-center gap-1">
+                            <Icon name="reject" size={16} />
+                            Reject
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -650,7 +666,12 @@ export default function AdminDashboard() {
 
                 {/* High-Risk Mothers */}
                 {analytics.highRiskMothers && analytics.highRiskMothers.length > 0 && (
-                  <DashboardCard title="🚨 High-Risk Mothers Needing Attention">
+                  <DashboardCard title={
+                    <span className="flex items-center gap-2">
+                      <Icon name="reports" size={20} />
+                      High-Risk Mothers Needing Attention
+                    </span>
+                  }>
                     <div className="space-y-3">
                       {analytics.highRiskMothers.map((mother: any) => (
                         <div
@@ -788,7 +809,10 @@ export default function AdminDashboard() {
                           openActionModal(d.id, "delete");
                         }}
                       >
-                        🗑️ Delete
+                        <span className="flex items-center gap-1">
+                          <Icon name="delete" size={16} />
+                          Delete
+                        </span>
                       </button>
                     </div>
                   </ListCard>
@@ -886,7 +910,10 @@ export default function AdminDashboard() {
                       className="btn-primary text-sm"
                       onClick={() => setAppliedFilter({ ...analyticsFilter })}
                     >
-                      ✅ Apply Filters
+                      <span className="flex items-center gap-2">
+                        <Icon name="success" size={18} />
+                        Apply Filters
+                      </span>
                     </button>
                     <button
                       className="btn-secondary text-sm"
@@ -1020,7 +1047,10 @@ export default function AdminDashboard() {
                               setMotherActionModal({ motherId: m.id, action: "delete" });
                             }}
                           >
-                            🗑️ Delete
+                            <span className="flex items-center gap-1">
+                          <Icon name="delete" size={16} />
+                          Delete
+                        </span>
                           </button>
                         </div>
                       </ListCard>
@@ -1064,7 +1094,10 @@ export default function AdminDashboard() {
               {selectedDoctor.changes && selectedDoctor.changes.length > 0 && (
                 <div className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 mb-4">
                   <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
-                    📝 Profile Changes Pending Review
+                    <span className="flex items-center gap-2">
+                      <Icon name="daily-entry" size={18} />
+                      Profile Changes Pending Review
+                    </span>
                   </h3>
                   <div className="space-y-3">
                     {selectedDoctor.changes.map((change, idx) => {
@@ -1176,7 +1209,12 @@ export default function AdminDashboard() {
 
         {/* Reports Tab */}
         {activeTab === "reports" && (
-          <DashboardCard title="🚨 Reported Questions/Answers">
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="reports" size={20} />
+              Reported Questions/Answers
+            </span>
+          }>
             <div className="mb-4 flex gap-2">
               <button
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -1263,7 +1301,10 @@ export default function AdminDashboard() {
                           setAdminDecisionText(report.adminDecision || "");
                         }}
                       >
-                        👁️ View Details
+                        <span className="flex items-center gap-1">
+                          <Icon name="view" size={16} />
+                          View Details
+                        </span>
                       </button>
                     </div>
                     <div className="text-xs text-slate-600 mt-2">
@@ -1342,7 +1383,10 @@ export default function AdminDashboard() {
                         <div key={comment.id} className="rounded bg-slate-50 p-3">
                           <div className="flex items-start justify-between mb-1">
                             <p className="text-xs font-medium text-slate-600">
-                              {comment.authorRole === "doctor" ? "👨‍⚕️ Doctor" : "👩 Mother"}
+                              <span className="flex items-center gap-1">
+                                <Icon name={comment.authorRole === "doctor" ? "doctor" : "mom"} size={16} />
+                                {comment.authorRole === "doctor" ? "Doctor" : "Mother"}
+                              </span>
                             </p>
                             <p className="text-xs text-slate-500">
                               {new Date(comment.createdAt).toLocaleString()}
@@ -1402,7 +1446,10 @@ export default function AdminDashboard() {
                         }}
                         disabled={!adminDecisionText.trim()}
                       >
-                        ✅ Mark as Solved
+                        <span className="flex items-center gap-2">
+                          <Icon name="success" size={18} />
+                          Mark as Solved
+                        </span>
                       </button>
                       <button
                         className="btn-primary bg-red-500 hover:bg-red-600 flex-1"
@@ -1412,7 +1459,10 @@ export default function AdminDashboard() {
                         }}
                         disabled={!adminDecisionText.trim()}
                       >
-                        ❌ Mark as Rejected
+                        <span className="flex items-center gap-2">
+                          <Icon name="reject" size={18} />
+                          Mark as Rejected
+                        </span>
                       </button>
                       <button
                         className="btn-secondary flex-1"
@@ -1421,7 +1471,10 @@ export default function AdminDashboard() {
                           setAdminDecisionText("");
                         }}
                       >
-                        ⏳ Mark as Pending
+                        <span className="flex items-center gap-2">
+                          <Icon name="pending" size={18} />
+                          Mark as Pending
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -1523,15 +1576,33 @@ export default function AdminDashboard() {
             <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
               <h2 className="text-2xl font-bold text-slate-800 mb-4">
                 {actionModal.action === "approve" 
-                  ? "✅ Approve Doctor" 
+                  ? (
+                    <span className="flex items-center gap-2">
+                      <Icon name="approve" size={18} />
+                      Approve Doctor
+                    </span>
+                  )
                   : actionModal.action === "reject"
-                  ? "❌ Reject Doctor"
-                  : "🗑️ Delete Doctor"}
+                  ? (
+                    <span className="flex items-center gap-2">
+                      <Icon name="reject" size={18} />
+                      Reject Doctor
+                    </span>
+                  )
+                  : (
+                    <span className="flex items-center gap-2">
+                      <Icon name="delete" size={18} />
+                      Delete Doctor
+                    </span>
+                  )}
               </h2>
               {actionModal.action === "delete" ? (
                 <>
                   <p className="text-red-600 font-semibold mb-4">
-                    ⚠️ Are you sure you want to delete this doctor? This action cannot be undone.
+                    <span className="flex items-start gap-2">
+                      <Icon name="warning" size={20} className="mt-0.5" />
+                      <span>Are you sure you want to delete this doctor? This action cannot be undone.</span>
+                    </span>
                   </p>
                   <div className="flex gap-3">
                     <button

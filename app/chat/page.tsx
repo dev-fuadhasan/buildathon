@@ -5,6 +5,7 @@ import ChatBubble from "@/components/ChatBubble";
 import ChatInput from "@/components/ChatInput";
 import ChatPrescriptionUpload from "@/components/ChatPrescriptionUpload";
 import Layout from "@/components/Layout";
+import Icon from "@/components/Icon";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
@@ -186,7 +187,10 @@ export default function ChatPage() {
               {t.chat.title}
             </h1>
             <p className="text-sm text-slate-600 mt-0.5">
-              {isMother ? `✨ ${t.chat.personalized}` : `💬 ${t.chat.public}`}
+              <span className="flex items-center gap-2">
+                <Icon name={isMother ? "ai" : "chat"} size={20} />
+                {isMother ? t.chat.personalized : t.chat.public}
+              </span>
             </p>
           </div>
           {!isMother && (
@@ -199,7 +203,12 @@ export default function ChatPage() {
         {/* Safety Disclaimer - Compact */}
         <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 p-2.5 shadow-sm flex-shrink-0">
           <p className="text-xs text-yellow-900 font-medium">
-            ⚠️ <strong>{lang === "bn" ? "গুরুত্বপূর্ণ:" : "Important:"}</strong> {t.chat.disclaimer}
+            <span className="flex items-start gap-2">
+              <Icon name="warning" size={20} className="mt-0.5" />
+              <span>
+                <strong>{lang === "bn" ? "গুরুত্বপূর্ণ:" : "Important:"}</strong> {t.chat.disclaimer}
+              </span>
+            </span>
           </p>
         </div>
 
@@ -224,7 +233,7 @@ export default function ChatPage() {
           {/* Upload Message */}
           {uploadMessage && (
             <div className={`mx-4 mb-2 rounded-lg p-3 ${
-              uploadMessage.includes("✅") 
+              uploadMessage.includes("successfully") || uploadMessage.includes("Success") 
                 ? "bg-green-50 text-green-800 border border-green-200" 
                 : "bg-red-50 text-red-800 border border-red-200"
             }`}>

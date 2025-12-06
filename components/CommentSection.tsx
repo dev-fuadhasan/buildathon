@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
+import Icon from "@/components/Icon";
 
 type Comment = {
   id: string;
@@ -120,8 +121,9 @@ export default function CommentSection({ questionId, userRole, userId, token, co
 
   return (
     <div className="space-y-4">
-      <h4 className="font-semibold text-slate-800">
-        {lang === "bn" ? "💬 মন্তব্য" : "💬 Comments"}
+      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+        <Icon name="comments" size={20} />
+        {lang === "bn" ? "মন্তব্য" : "Comments"}
       </h4>
 
       {/* Add Comment */}
@@ -154,7 +156,10 @@ export default function CommentSection({ questionId, userRole, userId, token, co
               <div className="bg-slate-50 rounded-lg p-3">
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-xs font-medium text-slate-600">
-                    {comment.authorRole === "doctor" ? "👨‍⚕️ Doctor" : "👩 Mother"}
+                    <span className="flex items-center gap-1">
+                      <Icon name={comment.authorRole === "doctor" ? "doctor" : "mom"} size={14} />
+                      {comment.authorRole === "doctor" ? "Doctor" : "Mother"}
+                    </span>
                   </span>
                   <span className="text-xs text-slate-500">
                     {new Date(comment.createdAt).toLocaleDateString()}
@@ -169,7 +174,12 @@ export default function CommentSection({ questionId, userRole, userId, token, co
                   >
                     {replyingTo === comment.id 
                       ? (lang === "bn" ? "বাতিল" : "Cancel")
-                      : (lang === "bn" ? "↩️ উত্তর দিন" : "↩️ Reply")
+                      : (
+                        <span className="flex items-center gap-1">
+                          <Icon name="reply" size={14} />
+                          {lang === "bn" ? "উত্তর দিন" : "Reply"}
+                        </span>
+                      )
                     }
                   </button>
                 ) : null}
@@ -229,7 +239,12 @@ export default function CommentSection({ questionId, userRole, userId, token, co
                         >
                           {replyingTo === reply.id 
                             ? (lang === "bn" ? "বাতিল" : "Cancel")
-                            : (lang === "bn" ? "↩️ উত্তর দিন" : "↩️ Reply")
+                            : (
+                        <span className="flex items-center gap-1">
+                          <Icon name="reply" size={14} />
+                          {lang === "bn" ? "উত্তর দিন" : "Reply"}
+                        </span>
+                      )
                           }
                         </button>
                       ) : null}

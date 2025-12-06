@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
+import Icon from "@/components/Icon";
 
 type Props = {
   onUpload: (file: File) => Promise<void>;
@@ -49,7 +50,10 @@ export default function ChatPrescriptionUpload({ onUpload, disabled }: Props) {
   return (
     <div className="flex items-center gap-2">
       <label htmlFor="chat-prescription-input" className="text-xs font-medium text-slate-600 cursor-pointer hover:text-pink-600 transition-colors">
-        {lang === "bn" ? "📄 প্রেসক্রিপশন" : "📄 Prescription"}
+        <span className="flex items-center gap-1">
+          <Icon name="prescription" size={16} />
+          {lang === "bn" ? "প্রেসক্রিপশন" : "Prescription"}
+        </span>
       </label>
       <input
         id="chat-prescription-input"

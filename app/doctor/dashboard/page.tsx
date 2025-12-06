@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import CommentSection from "@/components/CommentSection";
+import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -146,8 +147,9 @@ export default function DoctorDashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Link href="/doctor/profile" className="btn-secondary text-sm">
-              👤 My Profile
+            <Link href="/doctor/profile" className="btn-secondary text-sm flex items-center gap-2">
+              <Icon name="profile" size={18} />
+              My Profile
             </Link>
             <button
               className="btn-secondary text-sm"
@@ -164,7 +166,7 @@ export default function DoctorDashboard() {
         {/* Message Alert */}
         {message && (
           <div className={`rounded-lg p-4 ${
-            message.includes("✅") 
+            message.includes("successfully") || message.includes("Success") 
               ? "bg-green-50 text-green-800 border border-green-200" 
               : "bg-red-50 text-red-800 border border-red-200"
           }`}>
@@ -188,8 +190,9 @@ export default function DoctorDashboard() {
         {/* Unanswered Questions */}
         {unansweredQuestions.length > 0 && (
           <div>
-            <h2 className="text-2xl font-bold mb-4 text-slate-800">
-              ⏳ Pending Questions ({unansweredQuestions.length})
+            <h2 className="text-2xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+              <Icon name="pending" size={24} />
+              Pending Questions ({unansweredQuestions.length})
             </h2>
             <div className="space-y-3">
               {unansweredQuestions.map((q) => (
@@ -235,7 +238,10 @@ export default function DoctorDashboard() {
             <div className="space-y-6">
               {/* Question */}
               <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-                <p className="font-medium text-slate-800 mb-2">❓ Question:</p>
+                <p className="font-medium text-slate-800 mb-2 flex items-center gap-2">
+                  <Icon name="question" size={18} />
+                  Question:
+                </p>
                 <p className="text-slate-700">{selectedQuestion.question}</p>
                 <p className="text-xs text-slate-500 mt-2">
                   Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
@@ -245,7 +251,10 @@ export default function DoctorDashboard() {
               {/* Patient Details - Always Visible */}
               {selectedQuestion.mother && (
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h4 className="font-semibold text-slate-800 mb-4">👤 Complete Patient Information</h4>
+                  <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <Icon name="profile" size={20} />
+                    Complete Patient Information
+                  </h4>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="grid gap-3 md:grid-cols-2 text-sm">
                         <div>
@@ -323,7 +332,10 @@ export default function DoctorDashboard() {
                       {/* Prescriptions */}
                       {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
                         <div className="mt-4">
-                          <p className="font-medium text-slate-600 mb-2">📄 Prescriptions ({selectedQuestion.prescriptions.length}):</p>
+                          <p className="font-medium text-slate-600 mb-2 flex items-center gap-2">
+                            <Icon name="prescription" size={18} />
+                            Prescriptions ({selectedQuestion.prescriptions.length}):
+                          </p>
                           <div className="flex flex-wrap gap-2">
                             {selectedQuestion.prescriptions.map((p) => {
                               const fileName = p.key.split("/").pop() || "prescription";
@@ -335,7 +347,8 @@ export default function DoctorDashboard() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
                                 >
-                                  📄 {fileName}
+                                  <Icon name="prescription" size={16} />
+                                  {fileName}
                                 </a>
                               );
                             })}
@@ -348,8 +361,9 @@ export default function DoctorDashboard() {
 
               {/* Answer Form */}
               <div className="rounded-lg border border-slate-200 bg-white p-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  💬 Your Answer:
+                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                  <Icon name="chat" size={18} />
+                  Your Answer:
                 </label>
                 <textarea
                   className="input w-full h-32"
@@ -369,7 +383,12 @@ export default function DoctorDashboard() {
                     }}
                     disabled={loading || !answerTexts[selectedQuestion.id]?.trim()}
                   >
-                    {loading ? "Submitting..." : "✅ Submit Answer"}
+                    {loading ? "Submitting..." : (
+                      <span className="flex items-center gap-2">
+                        <Icon name="submit" size={18} />
+                        Submit Answer
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -400,7 +419,10 @@ export default function DoctorDashboard() {
         {answeredQuestions.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold mb-4 text-slate-800">
-              ✅ Answered Questions ({answeredQuestions.length})
+              <span className="flex items-center gap-2">
+                <Icon name="success" size={20} />
+                Answered Questions ({answeredQuestions.length})
+              </span>
             </h2>
             <div className="space-y-3">
               {answeredQuestions.map((q) => (
@@ -452,7 +474,10 @@ export default function DoctorDashboard() {
                 </p>
               </div>
               <div className="rounded-lg bg-green-50 p-3 border border-green-200">
-                <p className="font-medium text-green-800 mb-1">✅ Your Answer:</p>
+                <p className="font-medium text-green-800 mb-1 flex items-center gap-2">
+                  <Icon name="success" size={16} />
+                  Your Answer:
+                </p>
                 <p className="text-sm text-slate-700">{selectedQuestion.answer}</p>
                 {selectedQuestion.answeredAt && (
                   <p className="text-xs text-slate-500 mt-2">
@@ -464,7 +489,10 @@ export default function DoctorDashboard() {
               {/* Patient Details - Always Visible */}
               {selectedQuestion.mother && (
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h4 className="font-semibold text-slate-800 mb-4">👤 Complete Patient Information</h4>
+                  <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <Icon name="profile" size={20} />
+                    Complete Patient Information
+                  </h4>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <div className="grid gap-3 md:grid-cols-2 text-sm">
                       <div>
@@ -546,7 +574,10 @@ export default function DoctorDashboard() {
                     {/* Prescriptions */}
                     {selectedQuestion.prescriptions && selectedQuestion.prescriptions.length > 0 && (
                       <div className="mt-4">
-                        <p className="font-medium text-slate-600 mb-2">📄 Prescriptions ({selectedQuestion.prescriptions.length}):</p>
+                        <p className="font-medium text-slate-600 mb-2 flex items-center gap-2">
+                          <Icon name="prescription" size={18} />
+                          Prescriptions ({selectedQuestion.prescriptions.length}):
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {selectedQuestion.prescriptions.map((p) => {
                             const fileName = p.key.split("/").pop() || "prescription";
@@ -558,7 +589,8 @@ export default function DoctorDashboard() {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
                               >
-                                📄 {fileName}
+                                <Icon name="prescription" size={16} />
+                                {fileName}
                               </a>
                             );
                           })}
@@ -593,7 +625,9 @@ export default function DoctorDashboard() {
         {/* Empty State */}
         {questions.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">👨‍⚕️</div>
+            <div className="mb-4 flex justify-center">
+              <Icon name="doctor" size={96} />
+            </div>
             <h3 className="text-xl font-semibold text-slate-800 mb-2">No questions yet</h3>
             <p className="text-slate-600">Questions from mothers will appear here</p>
           </div>

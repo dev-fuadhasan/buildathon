@@ -3,6 +3,7 @@
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
+import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -495,8 +496,9 @@ export default function MotherDashboard() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Link href="/chat" className="btn-secondary">
-              💬 {t.chat.title}
+            <Link href="/chat" className="btn-secondary flex items-center gap-2">
+              <Icon name="chat" size={20} />
+              {t.chat.title}
             </Link>
             <button
               className="btn-secondary text-sm"
@@ -513,7 +515,7 @@ export default function MotherDashboard() {
         {/* Message Alert */}
         {message && (
           <div className={`rounded-lg p-4 ${
-            message.includes("✅") 
+            message.includes("successfully") || message.includes("Success") 
               ? "bg-green-50 text-green-800 border border-green-200" 
               : "bg-red-50 text-red-800 border border-red-200"
           }`}>
@@ -524,22 +526,23 @@ export default function MotherDashboard() {
         {/* Tabs */}
         <div className="flex gap-2 border-b-2 border-slate-200 mb-6 overflow-x-auto">
           {[
-            { id: "profile", label: `👤 ${t.mother.profile}`, icon: "👤" },
-            { id: "prescriptions", label: `📄 ${t.mother.prescriptions}`, icon: "📄" },
-            { id: "questions", label: `❓ ${t.mother.questions}`, icon: "❓" },
-            { id: "progress", label: `📊 ${t.mother.progress}`, icon: "📊" },
-            { id: "journal", label: `📝 Daily Entry`, icon: "📝" },
-            { id: "notifications", label: `🔔 Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: "🔔" },
+            { id: "profile", label: t.mother.profile, icon: "profile" },
+            { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
+            { id: "questions", label: t.mother.questions, icon: "question" },
+            { id: "progress", label: t.mother.progress, icon: "progress" },
+            { id: "journal", label: "Daily Entry", icon: "daily-entry" },
+            { id: "notifications", label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: "notifications" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 font-semibold transition-all duration-200 rounded-t-lg ${
+              className={`px-6 py-3 font-semibold transition-all duration-200 rounded-t-lg flex items-center gap-2 ${
                 activeTab === tab.id
                   ? "bg-gradient-to-b from-pink-50 to-white border-t-2 border-l-2 border-r-2 border-pink-600 text-pink-600 shadow-sm"
                   : "text-slate-600 hover:text-pink-600 hover:bg-pink-50/50"
               }`}
             >
+              <Icon name={tab.icon} size={20} />
               {tab.label}
             </button>
           ))}
@@ -744,8 +747,13 @@ export default function MotherDashboard() {
                     </div>
                   </div>
                 </div>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? t.common.loading : `💾 ${t.common.save} ${t.mother.profile}`}
+                <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading}>
+                  {loading ? t.common.loading : (
+                    <>
+                      <Icon name="save" size={18} />
+                      {t.common.save} {t.mother.profile}
+                    </>
+                  )}
                 </button>
               </form>
             )}
@@ -770,8 +778,18 @@ export default function MotherDashboard() {
                       disabled={uploading}
                     />
                   </div>
-                  <button type="submit" className="btn-primary" disabled={uploading}>
-                    {uploading ? `⏳ ${t.common.loading}` : `📤 ${t.mother.uploadPrescription}`}
+                  <button type="submit" className="btn-primary flex items-center gap-2" disabled={uploading}>
+                    {uploading ? (
+                      <>
+                        <Icon name="pending" size={18} />
+                        {t.common.loading}
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="upload" size={18} />
+                        {t.mother.uploadPrescription}
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
@@ -795,7 +813,7 @@ export default function MotherDashboard() {
                           className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="text-2xl">📄</div>
+                            <Icon name="prescription" size={32} />
                             <div>
                               <p className="font-medium text-slate-700">{fileName}</p>
                               <p className="text-xs text-slate-500">Click to view</p>
@@ -842,7 +860,7 @@ export default function MotherDashboard() {
                               disabled={deletingPrescription === p.key}
                               className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50"
                             >
-                              {deletingPrescription === p.key ? "..." : "🗑️"}
+                              {deletingPrescription === p.key ? "..." : <Icon name="delete" size={18} />}
                             </button>
                           </div>
                         </div>
@@ -867,11 +885,17 @@ export default function MotherDashboard() {
                   onChange={(e) => setQuestionText(e.target.value)}
                   disabled={loading}
                 />
-                <button className="btn-primary w-full" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
-                  {loading ? t.common.loading : `📤 ${t.common.submit} ${t.mother.questions.split(" ")[0]}`}
+                <button className="btn-primary w-full flex items-center gap-2 justify-center" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
+                  {loading ? t.common.loading : (
+                    <>
+                      <Icon name="submit" size={18} />
+                      {t.common.submit} {t.mother.questions.split(" ")[0]}
+                    </>
+                  )}
                 </button>
-                <p className="text-xs text-slate-500">
-                  💡 Tip: Include details about symptoms, timing, and any concerns you have.
+                <p className="text-xs text-slate-500 flex items-start gap-2">
+                  <Icon name="info" size={16} className="mt-0.5" />
+                  <span>Tip: Include details about symptoms, timing, and any concerns you have.</span>
                 </p>
               </div>
             </DashboardCard>
@@ -887,7 +911,10 @@ export default function MotherDashboard() {
                   {/* Answered Questions - Grid View */}
                   {questions.filter(q => q.answer).length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-green-700 mb-3">✅ Answered Questions</h3>
+                      <h3 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
+                        <Icon name="success" size={20} />
+                        Answered Questions
+                      </h3>
                       <div className="grid gap-4 md:grid-cols-2">
                         {questions.filter(q => q.answer).map((q) => (
                           <div
@@ -905,7 +932,10 @@ export default function MotherDashboard() {
                               {new Date(q.createdAt).toLocaleDateString()}
                             </p>
                             <div className="mt-2 rounded bg-white p-2 mb-3">
-                              <p className="text-xs font-medium text-green-700 mb-1">👨‍⚕️ Answer:</p>
+                              <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                                <Icon name="doctor" size={14} />
+                                Answer:
+                              </p>
                               <p className="text-sm text-slate-700 line-clamp-2">{q.answer}</p>
                             </div>
                             <div className="flex gap-2">
@@ -937,7 +967,10 @@ export default function MotherDashboard() {
                                 }, 100);
                                 }}
                               >
-                                👁️ View Full Details
+                                <span className="flex items-center gap-1">
+                                  <Icon name="view" size={16} />
+                                  View Full Details
+                                </span>
                               </button>
                               {q.answer && (
                                 <button
@@ -967,7 +1000,10 @@ export default function MotherDashboard() {
                                     }
                                   }}
                                 >
-                                  🚨 Report
+                                  <span className="flex items-center gap-1">
+                                    <Icon name="report" size={16} />
+                                    Report
+                                  </span>
                                 </button>
                               )}
                             </div>
@@ -980,7 +1016,10 @@ export default function MotherDashboard() {
                   {/* Unanswered Questions - List View */}
                   {questions.filter(q => !q.answer).length > 0 && (
                     <div className="mt-6">
-                      <h3 className="font-semibold text-yellow-700 mb-3">⏳ Pending Questions</h3>
+                      <h3 className="font-semibold text-yellow-700 mb-3 flex items-center gap-2">
+                        <Icon name="pending" size={20} />
+                        Pending Questions
+                      </h3>
                       <div className="space-y-3">
                         {questions.filter(q => !q.answer).map((q) => (
                           <div
@@ -999,7 +1038,7 @@ export default function MotherDashboard() {
                             </div>
                             <div className="mt-2 flex items-center justify-between">
                               <div className="flex items-center gap-2 text-sm text-yellow-700">
-                                <span>⏳</span>
+                                <Icon name="pending" size={20} />
                                 <span>{t.mother.waiting}</span>
                               </div>
                               <button
@@ -1029,7 +1068,10 @@ export default function MotherDashboard() {
                                   }, 100);
                                 }}
                               >
-                                👁️ View Details
+                                <span className="flex items-center gap-1">
+                                  <Icon name="view" size={16} />
+                                  View Details
+                                </span>
                               </button>
                             </div>
                           </div>
@@ -1070,7 +1112,10 @@ export default function MotherDashboard() {
                 {selectedQuestion.answer && (
                   <div className="rounded-lg bg-green-50 border border-green-200 p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="text-sm font-medium text-green-700">👨‍⚕️ Doctor's Answer</p>
+                      <p className="text-sm font-medium text-green-700 flex items-center gap-1">
+                        <Icon name="doctor" size={16} />
+                        Doctor's Answer
+                      </p>
                       <button
                         className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
                         onClick={async () => {
@@ -1165,7 +1210,10 @@ export default function MotherDashboard() {
                   </div>
                   {profile?.daysPregnant && (
                     <div className="rounded-lg bg-pink-50 p-4">
-                      <p className="text-sm font-medium text-pink-700 mb-1">📊 Pregnancy Progress</p>
+                      <p className="text-sm font-medium text-pink-700 mb-1 flex items-center gap-1">
+                        <Icon name="pregnancy-progress" size={16} />
+                        Pregnancy Progress
+                      </p>
                       <p className="text-lg font-semibold text-pink-900">
                         {Math.floor((profile.daysPregnant || 0) / 7)} weeks, {Math.floor((profile.daysPregnant || 0) / 30)} months
                       </p>
@@ -1185,7 +1233,10 @@ export default function MotherDashboard() {
                     const riskLevel = riskAssessment.overallRisk as "low" | "medium" | "high";
                     return (
                       <div className={`rounded-lg border-2 p-4 ${riskColors[riskLevel]}`}>
-                        <p className="text-sm font-medium mb-1">⚠️ Risk Level</p>
+                        <p className="text-sm font-medium mb-1 flex items-center gap-1">
+                          <Icon name="warning" size={16} />
+                          Risk Level
+                        </p>
                         <p className="text-lg font-semibold capitalize">
                           {riskAssessment.overallRisk} Risk
                         </p>
@@ -1243,7 +1294,12 @@ export default function MotherDashboard() {
         {/* Daily Entry Tab */}
         {activeTab === "journal" && (
           <div className="space-y-6">
-            <DashboardCard title="📝 Daily Entry">
+            <DashboardCard title={
+              <span className="flex items-center gap-2">
+                <Icon name="daily-entry" size={20} />
+                Daily Entry
+              </span>
+            }>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1270,8 +1326,9 @@ export default function MotherDashboard() {
                     value={newEntryText}
                     onChange={(e) => setNewEntryText(e.target.value)}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    💡 Tip: You can add multiple entries for the same day. Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.
+                  <p className="text-xs text-slate-500 mt-1 flex items-start gap-2">
+                    <Icon name="info" size={16} className="mt-0.5" />
+                    <span>Tip: You can add multiple entries for the same day. Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.</span>
                   </p>
                 </div>
                 <button
@@ -1279,12 +1336,22 @@ export default function MotherDashboard() {
                   onClick={saveDailyEntry}
                   disabled={loading || !newEntryText.trim()}
                 >
-                  {loading ? "Saving..." : "💾 Add Daily Entry"}
+                  {loading ? "Saving..." : (
+                    <span className="flex items-center gap-2">
+                      <Icon name="save" size={18} />
+                      Add Daily Entry
+                    </span>
+                  )}
                 </button>
               </div>
             </DashboardCard>
 
-            <DashboardCard title="📚 Daily Entries">
+            <DashboardCard title={
+              <span className="flex items-center gap-2">
+                <Icon name="daily-entries" size={20} />
+                Daily Entries
+              </span>
+            }>
               {dailyEntries.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <p>No daily entries yet. Start writing your daily entries!</p>
@@ -1333,7 +1400,12 @@ export default function MotherDashboard() {
                                         onClick={() => updateDailyEntry(entry.id, newEntryText)}
                                         disabled={loading || !newEntryText.trim()}
                                       >
-                                        {loading ? "Saving..." : "💾 Save"}
+                                        {loading ? "Saving..." : (
+                                          <span className="flex items-center gap-1">
+                                            <Icon name="save" size={16} />
+                                            Save
+                                          </span>
+                                        )}
                                       </button>
                                       <button
                                         className="btn-secondary text-sm"
@@ -1360,14 +1432,20 @@ export default function MotherDashboard() {
                                             setNewEntryText(entry.entry);
                                           }}
                                         >
-                                          ✏️ Edit
+                                          <span className="flex items-center gap-1">
+                                            <Icon name="edit" size={14} />
+                                            Edit
+                                          </span>
                                         </button>
                                         <button
                                           className="text-xs text-red-600 hover:text-red-700"
                                           onClick={() => deleteDailyEntry(entry.id)}
                                           disabled={loading}
                                         >
-                                          🗑️ Delete
+                                          <span className="flex items-center gap-1">
+                                            <Icon name="delete" size={14} />
+                                            Delete
+                                          </span>
                                         </button>
                                       </div>
                                     </div>
@@ -1389,7 +1467,12 @@ export default function MotherDashboard() {
 
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
-          <DashboardCard title="🔔 Notifications">
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="notifications" size={20} />
+              Notifications
+            </span>
+          }>
             {notifications.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <p>No notifications yet. You'll receive recommendations and daily task reminders here!</p>
