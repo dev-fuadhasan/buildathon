@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { updatePregnancyProgress } from "@/lib/pregnancyTracker";
+import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
+import { getMother } from "@/lib/data";
 
 /**
  * Updates pregnancy progress (auto-increments days)
  * Should be called when mother dashboard loads
+ * Only increments at 12:00 AM local time
  */
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +16,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await updatePregnancyProgress(user.id);
+    // Detect timezone from IP
+    const ip = getClientIP(req);
+    const mother = await getMother(user.id);
+    const timezone = await detectTimezoneFromIP(ip, mother?.address);
+    
+    // Update timezone in profile if not set or different
+    if (mother && mother.timezone !== timezone) {
+      const { saveMother } = await import("@/lib/data");
+      await saveMother({
+        ...mother,
+        timezone,
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
-    return NextResponse.json({ success: true });
+    await updatePregnancyProgress(user.id, timezone);
+
+    return NextResponse.json({ success: true, timezone });
   } catch (error: any) {
     console.error("Update progress error:", error);
     return NextResponse.json(

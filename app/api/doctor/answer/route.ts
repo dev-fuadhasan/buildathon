@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     answer,
     doctorId: user.id,
     answeredAt: new Date().toISOString(),
+    hasNewActivity: true, // Mark as having new activity for mother
   };
 
   await saveQuestion(updated);

@@ -28,6 +28,17 @@ export async function GET(req: NextRequest) {
         })));
 
       const { passwordHash, ...motherSafe } = mother || ({} as any);
+      
+      // Check for new activity
+      const lastSeen = q.lastSeenByDoctor ? new Date(q.lastSeenByDoctor).getTime() : 0;
+      const answerTime = q.answeredAt ? new Date(q.answeredAt).getTime() : 0;
+      const latestCommentTime = q.comments && q.comments.length > 0
+        ? Math.max(...q.comments.map(c => new Date(c.createdAt).getTime()))
+        : 0;
+      
+      const hasNewActivity = (answerTime > lastSeen && q.doctorId !== user.id) || 
+                            (latestCommentTime > lastSeen && q.comments?.some(c => c.authorRole === "mother"));
+      
       return {
         ...q,
         mother: mother ? {
@@ -43,6 +54,7 @@ export async function GET(req: NextRequest) {
         } : undefined,
         prescriptions,
         comments: q.comments || [],
+        hasNewActivity,
       };
     }),
   );

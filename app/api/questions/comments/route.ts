@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
     question.comments.push(comment);
   }
 
+  // Mark question as having new activity for the other party
+  // If doctor commented, mother should see notification
+  // If mother commented, doctor should see notification
+  question.hasNewActivity = true;
+  
   await saveQuestion(question);
   return NextResponse.json({ comment });
 }

@@ -18,12 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  // Only allow approved doctors to login
+  // Only allow approved doctors to login (not pending, rejected, or paused)
   if (doctor.status !== "approved") {
     const statusMessage = doctor.status === "pending" 
       ? "Your account is pending admin approval. Please wait for approval before logging in."
       : doctor.status === "rejected"
       ? `Your account has been rejected. ${doctor.verificationComment ? `Reason: ${doctor.verificationComment}` : ""}`
+      : doctor.status === "paused"
+      ? "Your account has been paused by admin. Please contact admin for more information."
       : "Your account is not approved. Please contact admin.";
     
     return NextResponse.json({ 

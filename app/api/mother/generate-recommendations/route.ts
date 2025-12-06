@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { getMother, listJournalEntries, saveNotification, Notification } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
-import { detectTimezone, getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
+import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
+import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
 import { v4 as uuid } from "uuid";
 
 /**
@@ -21,14 +22,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mother not found" }, { status: 404 });
     }
 
-    const timezone = mother.timezone || detectTimezone(mother.address);
-    const { hour } = getCurrentTimeInTimezone(timezone);
+    // Detect timezone from IP
+    const ip = getClientIP(req);
+    const timezone = await detectTimezoneFromIP(ip, mother.address);
     
-    // Determine time of day
+    // Update timezone in profile if not set or different
+    if (mother.timezone !== timezone) {
+      const { saveMother } = await import("@/lib/data");
+      await saveMother({
+        ...mother,
+        timezone,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    
+    const { hour, minute } = getCurrentTimeInTimezone(timezone);
+    
+    // Determine time of day - exactly at 8 AM or 8 PM (with 5 minute window)
     let timeOfDay: "morning" | "evening" | null = null;
-    if (hour >= 7 && hour <= 9) {
+    if (hour === 8 && minute <= 5) {
       timeOfDay = "morning";
-    } else if (hour >= 19 && hour <= 21) {
+    } else if (hour === 20 && minute <= 5) {
       timeOfDay = "evening";
     }
 
@@ -36,6 +50,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         message: "Not the right time for recommendations",
         currentHour: hour,
+        currentMinute: minute,
+        timezone,
+      });
+    }
+    
+    // Check if we already generated recommendation for this time today
+    const today = getCurrentDateInTimezone(timezone);
+    const lastNotificationKey = timeOfDay === "morning" ? "lastMorningAdviceDate" : "lastNightAdviceDate";
+    if (mother[lastNotificationKey] === today) {
+      return NextResponse.json({
+        message: "Recommendation already generated for this time today",
+        timeOfDay,
       });
     }
 
@@ -61,6 +87,14 @@ export async function POST(req: NextRequest) {
     };
 
     await saveNotification(notification);
+    
+    // Update last notification date
+    const { saveMother } = await import("@/lib/data");
+    await saveMother({
+      ...mother,
+      [lastNotificationKey]: today,
+      updatedAt: new Date().toISOString(),
+    });
 
     return NextResponse.json({
       success: true,

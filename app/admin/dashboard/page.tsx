@@ -25,7 +25,7 @@ type Doctor = {
   qualification?: string;
   experience?: string;
   profilePicture?: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "paused";
   verificationComment?: string;
   previousValues?: Partial<Doctor>;
   changes?: ProfileChange[];
@@ -48,6 +48,7 @@ type Mother = {
   emergencyPhone?: string;
   previousPregnancies?: number;
   allergies?: string;
+  status?: "active" | "paused";
   createdAt: string;
 };
 
@@ -67,7 +68,7 @@ export default function AdminDashboard() {
   const [allMothers, setAllMothers] = useState<Mother[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports">("overview");
   const [analytics, setAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
@@ -76,6 +77,19 @@ export default function AdminDashboard() {
     action: "approve" | "reject" | "delete";
     comment: string;
   } | null>(null);
+  const [motherActionModal, setMotherActionModal] = useState<{
+    motherId: string;
+    action: "delete" | "pause";
+  } | null>(null);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [motherSearch, setMotherSearch] = useState("");
+  const [analyticsFilter, setAnalyticsFilter] = useState<{
+    riskLevel?: "low" | "medium" | "high";
+    trimester?: "first" | "second" | "third";
+    condition?: string;
+  }>({});
+  const [reports, setReports] = useState<any[]>([]);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
 
   const loadDoctorDetails = async (doctorId: string) => {
     const res = await fetch(`/api/admin/doctor-details?id=${doctorId}`, {
@@ -106,6 +120,7 @@ export default function AdminDashboard() {
       loadAllDoctors(t);
       loadAllMothers(t);
       loadAnalytics(t);
+      loadReports(t);
     }
   }, []);
 
@@ -143,6 +158,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadReports = async (t = token) => {
+    const res = await fetch("/api/admin/reports", { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setReports(data.reports || []);
+    }
+  };
+
   const loadOverview = async (t = token) => {
     const res = await fetch("/api/admin/overview", { headers: headers(t) });
     if (res.ok) {
@@ -151,8 +174,72 @@ export default function AdminDashboard() {
     }
   };
 
+  const pauseUser = async (userId: string, userType: "doctor" | "mother", pause: boolean) => {
+    try {
+      const res = await fetch("/api/admin/pause-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers(),
+        },
+        body: JSON.stringify({ userId, userType, pause }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`✅ User ${pause ? "paused" : "unpaused"} successfully`);
+        if (userType === "doctor") {
+          loadAllDoctors();
+        } else {
+          loadAllMothers();
+        }
+      } else {
+        setMessage(`❌ ${data.error || "Failed to update user"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    }
+  };
+
+  const deleteUser = async (userId: string, userType: "doctor" | "mother") => {
+    try {
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers(),
+        },
+        body: JSON.stringify({ userId, userType }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(`✅ User deleted successfully`);
+        if (userType === "doctor") {
+          loadAllDoctors();
+          setSelectedDoctor(null);
+        } else {
+          loadAllMothers();
+          setSelectedMother(null);
+        }
+      } else {
+        setMessage(`❌ ${data.error || "Failed to delete user"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    }
+  };
+
   const openActionModal = (doctorId: string, action: "approve" | "reject" | "delete") => {
     setActionModal({ doctorId, action, comment: "" });
+  };
+
+  const handleDeleteUser = async () => {
+    if (actionModal) {
+      await deleteUser(actionModal.doctorId, "doctor");
+      setActionModal(null);
+    } else if (motherActionModal) {
+      await deleteUser(motherActionModal.motherId, "mother");
+      setMotherActionModal(null);
+    }
   };
 
   const closeActionModal = () => {
@@ -248,12 +335,13 @@ export default function AdminDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-200">
+        <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
           {[
             { id: "overview", label: "📊 Overview" },
             { id: "analytics", label: "📈 Analytics" },
             { id: "doctors", label: "👨‍⚕️ Doctors" },
             { id: "mothers", label: "👩 Mothers" },
+            { id: "reports", label: `🚨 Reports${reports.length > 0 ? ` (${reports.length})` : ""}` },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -571,11 +659,41 @@ export default function AdminDashboard() {
         {/* Doctors Tab */}
         {activeTab === "doctors" && (
           <DashboardCard title="All Doctors">
+            {/* Search Bar */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="🔍 Search doctors by name, email, specialty..."
+                className="input w-full"
+                value={doctorSearch}
+                onChange={(e) => setDoctorSearch(e.target.value)}
+              />
+            </div>
             <div className="space-y-3">
-              {allDoctors.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No doctors registered yet.</p>
+              {allDoctors.filter(d => {
+                if (!doctorSearch) return true;
+                const search = doctorSearch.toLowerCase();
+                return (
+                  d.name?.toLowerCase().includes(search) ||
+                  d.email.toLowerCase().includes(search) ||
+                  d.specialty?.toLowerCase().includes(search) ||
+                  d.bmdcNumber?.toLowerCase().includes(search)
+                );
+              }).length === 0 ? (
+                <p className="text-slate-500 text-center py-8">
+                  {doctorSearch ? "No doctors found matching your search." : "No doctors registered yet."}
+                </p>
               ) : (
-                allDoctors.map((d) => (
+                allDoctors.filter(d => {
+                  if (!doctorSearch) return true;
+                  const search = doctorSearch.toLowerCase();
+                  return (
+                    d.name?.toLowerCase().includes(search) ||
+                    d.email.toLowerCase().includes(search) ||
+                    d.specialty?.toLowerCase().includes(search) ||
+                    d.bmdcNumber?.toLowerCase().includes(search)
+                  );
+                }).map((d) => (
                   <ListCard
                     key={d.id}
                     title={d.name || "Unnamed doctor"}
@@ -617,6 +735,15 @@ export default function AdminDashboard() {
                         </>
                       )}
                       <button
+                        className="bg-orange-500 hover:bg-orange-600 text-white text-xs py-1 px-3 rounded transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          pauseUser(d.id, "doctor", d.status !== "paused");
+                        }}
+                      >
+                        {d.status === "paused" ? "▶️ Resume" : "⏸️ Pause"}
+                      </button>
+                      <button
                         className="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-3 rounded transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -635,35 +762,142 @@ export default function AdminDashboard() {
 
         {/* Mothers Tab */}
         {activeTab === "mothers" && (
-          <DashboardCard title="All Mothers">
-            <div className="space-y-3">
-              {allMothers.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No mothers registered yet.</p>
-              ) : (
-                allMothers.map((m) => (
-                  <ListCard
-                    key={m.id}
-                    title={m.name || "Unnamed mother"}
-                    subtitle={m.email}
-                    onClick={() => loadMotherDetails(m.id)}
-                  >
-                    {(() => {
-                      const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
-                      if (days) {
-                        const weeks = Math.floor(days / 7);
-                        return (
-                          <p className="text-xs text-slate-500 mt-1">
-                            {days} days ({weeks} weeks) pregnant
-                          </p>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </ListCard>
-                ))
+          <div className="space-y-4">
+            <DashboardCard title="All Mothers">
+              {/* Search Bar */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="🔍 Search mothers by name, email..."
+                  className="input w-full"
+                  value={motherSearch}
+                  onChange={(e) => setMotherSearch(e.target.value)}
+                />
+              </div>
+              
+              {/* Analytics Filters */}
+              {analytics && (
+                <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Filter by Analytics:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className="input text-sm"
+                      value={analyticsFilter.riskLevel || ""}
+                      onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, riskLevel: e.target.value as any || undefined })}
+                    >
+                      <option value="">All Risk Levels</option>
+                      <option value="low">Low Risk</option>
+                      <option value="medium">Medium Risk</option>
+                      <option value="high">High Risk</option>
+                    </select>
+                    <select
+                      className="input text-sm"
+                      value={analyticsFilter.trimester || ""}
+                      onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, trimester: e.target.value as any || undefined })}
+                    >
+                      <option value="">All Trimesters</option>
+                      <option value="first">First Trimester</option>
+                      <option value="second">Second Trimester</option>
+                      <option value="third">Third Trimester</option>
+                    </select>
+                    <select
+                      className="input text-sm"
+                      value={analyticsFilter.condition || ""}
+                      onChange={(e) => setAnalyticsFilter({ ...analyticsFilter, condition: e.target.value || undefined })}
+                    >
+                      <option value="">All Conditions</option>
+                      {Object.keys(analytics.conditionPrevalence || {}).map(condition => (
+                        <option key={condition} value={condition}>{condition}</option>
+                      ))}
+                    </select>
+                    <button
+                      className="btn-secondary text-sm"
+                      onClick={() => setAnalyticsFilter({})}
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
               )}
-            </div>
-          </DashboardCard>
+
+              <div className="space-y-3">
+                {(() => {
+                  let filtered = allMothers.filter(m => {
+                    // Search filter
+                    if (motherSearch) {
+                      const search = motherSearch.toLowerCase();
+                      if (!m.name?.toLowerCase().includes(search) && !m.email.toLowerCase().includes(search)) {
+                        return false;
+                      }
+                    }
+                    
+                    // Analytics filters
+                    if (analyticsFilter.riskLevel || analyticsFilter.trimester || analyticsFilter.condition) {
+                      // This would require calculating risk for each mother - simplified for now
+                      // In a real implementation, you'd calculate risk on the fly or store it
+                    }
+                    
+                    return true;
+                  });
+                  
+                  return filtered.length === 0 ? (
+                    <p className="text-slate-500 text-center py-8">
+                      {motherSearch || Object.keys(analyticsFilter).length > 0 
+                        ? "No mothers found matching your filters." 
+                        : "No mothers registered yet."}
+                    </p>
+                  ) : (
+                    filtered.map((m) => (
+                      <ListCard
+                        key={m.id}
+                        title={m.name || "Unnamed mother"}
+                        subtitle={m.email}
+                        badge={
+                          m.status === "paused" ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">Paused</span>
+                          ) : undefined
+                        }
+                        onClick={() => loadMotherDetails(m.id)}
+                      >
+                        {(() => {
+                          const days = m.daysPregnant || (m.weeksPregnant ? m.weeksPregnant * 7 : undefined);
+                          if (days) {
+                            const weeks = Math.floor(days / 7);
+                            return (
+                              <p className="text-xs text-slate-500 mt-1">
+                                {days} days ({weeks} weeks) pregnant
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                        <div className="flex gap-2 mt-3 flex-wrap">
+                          <button
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-xs py-1 px-3 rounded transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pauseUser(m.id, "mother", m.status !== "paused");
+                            }}
+                          >
+                            {m.status === "paused" ? "▶️ Resume" : "⏸️ Pause"}
+                          </button>
+                          <button
+                            className="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-3 rounded transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMotherActionModal({ motherId: m.id, action: "delete" });
+                            }}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </ListCard>
+                    ))
+                  );
+                })()}
+              </div>
+            </DashboardCard>
+          </div>
         )}
 
         {/* Doctor Details Modal */}
@@ -808,6 +1042,104 @@ export default function AdminDashboard() {
           )}
         </DetailModal>
 
+        {/* Reports Tab */}
+        {activeTab === "reports" && (
+          <DashboardCard title="🚨 Reported Questions/Answers">
+            <div className="space-y-3">
+              {reports.length === 0 ? (
+                <p className="text-slate-500 text-center py-8">No reports yet.</p>
+              ) : (
+                reports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="rounded-lg border-2 border-red-200 bg-red-50 p-4"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900">Reported Question</p>
+                        <p className="text-sm text-slate-700 mt-1">{report.question}</p>
+                      </div>
+                      <button
+                        className="btn-secondary text-sm"
+                        onClick={() => setSelectedReport(report)}
+                      >
+                        👁️ View Details
+                      </button>
+                    </div>
+                    <div className="text-xs text-slate-600 mt-2">
+                      <p>Reported by: {report.mother?.name || report.mother?.email || "Unknown"}</p>
+                      <p>Reported on: {report.reportedAt ? new Date(report.reportedAt).toLocaleString() : "N/A"}</p>
+                      <p>Reason: {report.reportReason || "No reason provided"}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DashboardCard>
+        )}
+
+        {/* Report Details Modal */}
+        {selectedReport && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-red-600">Report Details</h2>
+                <button
+                  onClick={() => setSelectedReport(null)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+                  <p className="font-semibold text-red-900 mb-2">Report Information</p>
+                  <p><strong>Reported by:</strong> {selectedReport.mother?.name || selectedReport.mother?.email || "Unknown"}</p>
+                  <p><strong>Reported on:</strong> {selectedReport.reportedAt ? new Date(selectedReport.reportedAt).toLocaleString() : "N/A"}</p>
+                  <p><strong>Reason:</strong> {selectedReport.reportReason || "No reason provided"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2">Question</p>
+                  <p className="text-slate-700">{selectedReport.question}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Asked on {new Date(selectedReport.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                {selectedReport.answer && (
+                  <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+                    <p className="font-semibold mb-2">Doctor's Answer</p>
+                    <p className="text-slate-700">{selectedReport.answer}</p>
+                    {selectedReport.doctor && (
+                      <div className="mt-3 pt-3 border-t border-yellow-300">
+                        <p className="text-sm"><strong>Answered by:</strong> {selectedReport.doctor.name || selectedReport.doctor.email}</p>
+                        <p className="text-sm"><strong>Specialty:</strong> {selectedReport.doctor.specialty || "N/A"}</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Answered on {selectedReport.answeredAt ? new Date(selectedReport.answeredAt).toLocaleString() : "N/A"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedReport.comments && selectedReport.comments.length > 0 && (
+                  <div>
+                    <p className="font-semibold mb-2">Comments</p>
+                    <div className="space-y-2">
+                      {selectedReport.comments.map((comment: any) => (
+                        <div key={comment.id} className="rounded bg-slate-50 p-3">
+                          <p className="text-sm text-slate-700">{comment.content}</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            By {comment.authorRole === "doctor" ? "Doctor" : "Mother"} on {new Date(comment.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mother Details Modal */}
         <DetailModal
           isOpen={!!selectedMother}
@@ -907,17 +1239,20 @@ export default function AdminDashboard() {
               </h2>
               {actionModal.action === "delete" ? (
                 <>
-                  <p className="text-slate-600 mb-4">
-                    Are you sure you want to delete this doctor? This action cannot be undone.
+                  <p className="text-red-600 font-semibold mb-4">
+                    ⚠️ Are you sure you want to delete this doctor? This action cannot be undone.
                   </p>
                   <div className="flex gap-3">
                     <button
-                      onClick={updateDoctor}
-                      className="bg-red-500 hover:bg-red-600 text-white flex-1 py-2 px-4 rounded-lg font-medium transition-colors"
+                      className="btn-primary bg-red-500 hover:bg-red-600"
+                      onClick={handleDeleteUser}
                     >
-                      Delete Doctor
+                      Yes, Delete
                     </button>
-                    <button onClick={closeActionModal} className="btn-secondary">
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setActionModal(null)}
+                    >
                       Cancel
                     </button>
                   </div>

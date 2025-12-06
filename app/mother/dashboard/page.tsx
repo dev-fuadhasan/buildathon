@@ -60,6 +60,7 @@ type Question = {
   createdAt: string; 
   answeredAt?: string;
   comments?: Comment[];
+  hasNewActivity?: boolean;
 };
 
 export default function MotherDashboard() {
@@ -80,6 +81,7 @@ export default function MotherDashboard() {
   const [selectedJournalDate, setSelectedJournalDate] = useState<string>("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
@@ -796,7 +798,7 @@ export default function MotherDashboard() {
 
         {/* Questions Tab */}
         {activeTab === "questions" && (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-6">
             <DashboardCard title={t.mother.askDoctor}>
               <div className="space-y-4">
                 <textarea
@@ -816,63 +818,214 @@ export default function MotherDashboard() {
             </DashboardCard>
 
             <DashboardCard title={t.mother.yourQuestions}>
-              <div className="space-y-4">
-                {questions.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <p>{t.mother.noQuestions}</p>
-                    <p className="text-sm mt-1">{t.mother.askDoctor}</p>
-                  </div>
-                ) : (
-                  questions.map((q) => (
-                    <div
-                      key={q.id}
-                      className={`rounded-lg border p-4 ${
-                        q.answer
-                          ? "border-green-200 bg-green-50"
-                          : "border-yellow-200 bg-yellow-50"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <p className="font-medium text-slate-700">{q.question}</p>
-                        <span className="text-xs text-slate-500">
-                          {new Date(q.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {q.answer ? (
-                        <div className="mt-3 rounded bg-white p-3">
-                          <p className="text-sm font-medium text-green-700 mb-1">👨‍⚕️ {t.mother.answered}:</p>
-                          <p className="text-sm text-slate-700">{q.answer}</p>
-                          {q.answeredAt && (
-                            <p className="text-xs text-slate-500 mt-2">
-                              {t.doctor.answeredOn || "Answered on"} {new Date(q.answeredAt).toLocaleDateString()}
+              {questions.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p>{t.mother.noQuestions}</p>
+                  <p className="text-sm mt-1">{t.mother.askDoctor}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Answered Questions - Grid View */}
+                  {questions.filter(q => q.answer).length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-green-700 mb-3">✅ Answered Questions</h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {questions.filter(q => q.answer).map((q) => (
+                          <div
+                            key={q.id}
+                            className="rounded-lg border-2 border-green-200 bg-green-50 p-4 relative"
+                          >
+                            {/* Notification Badge */}
+                            {q.hasNewActivity && (
+                              <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                            )}
+                            <div className="flex items-start justify-between mb-2">
+                              <p className="font-medium text-slate-700 line-clamp-2 flex-1">{q.question}</p>
+                            </div>
+                            <p className="text-xs text-slate-500 mb-3">
+                              {new Date(q.createdAt).toLocaleDateString()}
                             </p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-2 flex items-center gap-2 text-sm text-yellow-700">
-                          <span>⏳</span>
-                          <span>{t.mother.waiting}</span>
-                        </div>
-                      )}
-                      
-                      {/* Comments Section */}
-                      {motherId && (
-                        <div className="mt-4 border-t border-slate-200 pt-4">
-                          <CommentSection
-                            questionId={q.id}
-                            userRole="mother"
-                            userId={motherId}
-                            token={token}
-                            comments={q.comments}
-                            onCommentAdded={() => fetchQuestions(token)}
-                          />
-                        </div>
-                      )}
+                            <div className="mt-2 rounded bg-white p-2 mb-3">
+                              <p className="text-xs font-medium text-green-700 mb-1">👨‍⚕️ Answer:</p>
+                              <p className="text-sm text-slate-700 line-clamp-2">{q.answer}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                className="btn-secondary flex-1 text-sm"
+                                onClick={() => {
+                                  // Mark as seen
+                                  fetch(`/api/mother/questions/${q.id}/mark-seen`, {
+                                    method: "POST",
+                                    headers: authHeaders(),
+                                  });
+                                  // Show full details in modal
+                                  setSelectedQuestion(q);
+                                }}
+                              >
+                                👁️ View Full Details
+                              </button>
+                              {q.answer && (
+                                <button
+                                  className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-2 rounded transition-colors"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const reason = prompt("Please provide a reason for reporting this answer:");
+                                    if (reason) {
+                                      try {
+                                        const res = await fetch(`/api/mother/questions/${q.id}/report`, {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                            ...authHeaders(),
+                                          },
+                                          body: JSON.stringify({ reason }),
+                                        });
+                                        if (res.ok) {
+                                          alert("Report submitted successfully. Admin will review it.");
+                                          fetchQuestions();
+                                        } else {
+                                          alert("Failed to submit report. Please try again.");
+                                        }
+                                      } catch (err) {
+                                        alert("Network error. Please try again.");
+                                      }
+                                    }
+                                  }}
+                                >
+                                  🚨 Report
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))
+                  )}
+
+                  {/* Unanswered Questions - List View */}
+                  {questions.filter(q => !q.answer).length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold text-yellow-700 mb-3">⏳ Pending Questions</h3>
+                      <div className="space-y-3">
+                        {questions.filter(q => !q.answer).map((q) => (
+                          <div
+                            key={q.id}
+                            className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 relative"
+                          >
+                            {/* Notification Badge */}
+                            {q.hasNewActivity && (
+                              <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                            )}
+                            <div className="flex items-start justify-between">
+                              <p className="font-medium text-slate-700 flex-1">{q.question}</p>
+                              <span className="text-xs text-slate-500 ml-2">
+                                {new Date(q.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2 text-sm text-yellow-700">
+                              <span>⏳</span>
+                              <span>{t.mother.waiting}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DashboardCard>
+          </div>
+        )}
+
+        {/* Question Details Modal */}
+        {selectedQuestion && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold">Question Details</h2>
+                <button
+                  onClick={() => {
+                    setSelectedQuestion(null);
+                    fetchQuestions();
+                  }}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-1">Question</p>
+                  <p className="text-lg text-slate-800">{selectedQuestion.question}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Asked on {new Date(selectedQuestion.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                {selectedQuestion.answer && (
+                  <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-medium text-green-700">👨‍⚕️ Doctor's Answer</p>
+                      <button
+                        className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
+                        onClick={async () => {
+                          const reason = prompt("Please provide a reason for reporting this answer:");
+                          if (reason) {
+                            try {
+                              const res = await fetch(`/api/mother/questions/${selectedQuestion.id}/report`, {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  ...authHeaders(),
+                                },
+                                body: JSON.stringify({ reason }),
+                              });
+                              if (res.ok) {
+                                alert("Report submitted successfully. Admin will review it.");
+                                setSelectedQuestion(null);
+                                fetchQuestions();
+                              } else {
+                                alert("Failed to submit report. Please try again.");
+                              }
+                            } catch (err) {
+                              alert("Network error. Please try again.");
+                            }
+                          }
+                        }}
+                      >
+                        🚨 Report
+                      </button>
+                    </div>
+                    <p className="text-slate-700 whitespace-pre-wrap">{selectedQuestion.answer}</p>
+                    {selectedQuestion.answeredAt && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Answered on {new Date(selectedQuestion.answeredAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {motherId && selectedQuestion.id && (
+                  <div className="border-t border-slate-200 pt-4">
+                    <CommentSection
+                      questionId={selectedQuestion.id}
+                      userRole="mother"
+                      userId={motherId}
+                      token={token}
+                      comments={selectedQuestion.comments}
+                      onCommentAdded={() => {
+                        fetchQuestions(token);
+                        // Refresh selected question
+                        fetch(`/api/mother/questions`, { headers: authHeaders() })
+                          .then(r => r.json())
+                          .then(d => {
+                            const updated = d.questions.find((q: any) => q.id === selectedQuestion.id);
+                            if (updated) setSelectedQuestion(updated);
+                          });
+                      }}
+                    />
+                  </div>
                 )}
               </div>
-            </DashboardCard>
+            </div>
           </div>
         )}
 

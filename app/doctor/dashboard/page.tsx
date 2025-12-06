@@ -25,6 +25,8 @@ type QuestionItem = {
   answeredAt?: string;
   motherId: string;
   comments?: Comment[];
+  hasNewActivity?: boolean;
+  lastSeenByDoctor?: string;
   mother?: {
     name?: string;
     email: string;
@@ -195,8 +197,24 @@ export default function DoctorDashboard() {
                   key={q.id}
                   title={q.mother?.name || q.mother?.email || "Mother"}
                   subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
-                  badge={<span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>}
-                  onClick={() => setSelectedQuestion(q)}
+                  badge={
+                    <div className="flex items-center gap-2">
+                      {q.hasNewActivity && (
+                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                      )}
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>
+                    </div>
+                  }
+                  onClick={() => {
+                    setSelectedQuestion(q);
+                    // Mark as seen
+                    if (q.hasNewActivity) {
+                      fetch(`/api/doctor/questions/${q.id}/mark-seen`, {
+                        method: "POST",
+                        headers: headers(),
+                      }).then(() => loadQuestions());
+                    }
+                  }}
                 >
                   <p className="text-xs text-slate-500 mt-1">
                     {new Date(q.createdAt).toLocaleDateString()}
@@ -390,8 +408,24 @@ export default function DoctorDashboard() {
                   key={q.id}
                   title={q.mother?.name || q.mother?.email || "Mother"}
                   subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
-                  badge={<span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Answered</span>}
-                  onClick={() => setSelectedQuestion(q)}
+                  badge={
+                    <div className="flex items-center gap-2">
+                      {q.hasNewActivity && (
+                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                      )}
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Answered</span>
+                    </div>
+                  }
+                  onClick={() => {
+                    setSelectedQuestion(q);
+                    // Mark as seen
+                    if (q.hasNewActivity) {
+                      fetch(`/api/doctor/questions/${q.id}/mark-seen`, {
+                        method: "POST",
+                        headers: headers(),
+                      }).then(() => loadQuestions());
+                    }
+                  }}
                 >
                   <p className="text-xs text-slate-500 mt-1">
                     {new Date(q.createdAt).toLocaleDateString()}

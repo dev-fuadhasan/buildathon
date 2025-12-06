@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
+  // Check if account is paused
+  if (mother.status === "paused") {
+    return NextResponse.json({ 
+      error: "Your account has been paused by admin. Please contact admin for more information." 
+    }, { status: 403 });
+  }
+
   const token = signAuthToken({ id: mother.id, email: mother.email, role: "mother" });
   const { passwordHash, ...safe } = mother;
 

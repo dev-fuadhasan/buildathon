@@ -5,38 +5,14 @@
 
 import { MotherProfile, getMother, saveMother } from "./data";
 
+import { detectTimezoneFromAddress } from "./timezoneDetector";
+
 /**
  * Detects timezone from address or uses default
+ * @deprecated Use detectTimezoneFromIP for better accuracy
  */
 export function detectTimezone(address?: string): string {
-  if (!address) return "Asia/Dhaka"; // Default to Bangladesh
-  
-  const addr = address.toLowerCase();
-  
-  // Bangladesh
-  if (addr.includes("bangladesh") || addr.includes("bd") || addr.includes("dhaka") || 
-      addr.includes("chittagong") || addr.includes("sylhet")) {
-    return "Asia/Dhaka";
-  }
-  
-  // USA
-  if (addr.includes("usa") || addr.includes("united states") || addr.includes("new york") ||
-      addr.includes("california") || addr.includes("texas")) {
-    return "America/New_York";
-  }
-  
-  // UK
-  if (addr.includes("uk") || addr.includes("united kingdom") || addr.includes("london")) {
-    return "Europe/London";
-  }
-  
-  // India
-  if (addr.includes("india") || addr.includes("delhi") || addr.includes("mumbai")) {
-    return "Asia/Kolkata";
-  }
-  
-  // Default to Bangladesh
-  return "Asia/Dhaka";
+  return detectTimezoneFromAddress(address);
 }
 
 /**
@@ -92,14 +68,23 @@ export function calculateDaysPregnant(dueDate?: string, weeksPregnant?: number):
 
 /**
  * Auto-increments pregnancy days if needed
+ * Only increments at 12:00 AM local time
  */
-export async function updatePregnancyProgress(motherId: string): Promise<void> {
+export async function updatePregnancyProgress(motherId: string, timezone?: string): Promise<void> {
   try {
     const mother = await getMother(motherId);
     if (!mother) return;
     
-    const timezone = mother.timezone || detectTimezone(mother.address);
-    const today = getCurrentDateInTimezone(timezone);
+    const tz = timezone || mother.timezone || detectTimezone(mother.address);
+    const today = getCurrentDateInTimezone(tz);
+    const { hour, minute } = getCurrentTimeInTimezone(tz);
+    
+    // Only update at 12:00 AM (midnight) - hour 0 and minute 0-5 (5 minute window)
+    // This ensures the day increments at the start of the new day
+    if (hour !== 0 || minute > 5) {
+      // Not midnight yet, skip update
+      return;
+    }
     
     // If we already updated today, skip
     if (mother.lastPregnancyDayUpdate === today) {
@@ -124,7 +109,7 @@ export async function updatePregnancyProgress(motherId: string): Promise<void> {
         daysPregnant,
         weeksPregnant: Math.floor(daysPregnant / 7), // Keep weeks for compatibility
         lastPregnancyDayUpdate: today,
-        timezone,
+        timezone: tz,
         updatedAt: new Date().toISOString(),
       };
       

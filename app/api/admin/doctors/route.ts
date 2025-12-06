@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     previousValues: undefined,
     updatedAt: new Date().toISOString(),
   };
+  
   await saveDoctor(updated);
   return NextResponse.json({ doctorId, status: updated.status });
 }

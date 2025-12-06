@@ -20,6 +20,10 @@ export type MotherProfile = {
   emergencyPhone?: string;
   previousPregnancies?: number;
   allergies?: string;
+  status?: "active" | "paused"; // Account status
+  lastJournalEntryDate?: string; // YYYY-MM-DD
+  lastMorningAdviceDate?: string; // YYYY-MM-DD
+  lastNightAdviceDate?: string; // YYYY-MM-DD
   createdAt: string;
   updatedAt: string;
 };
@@ -43,7 +47,7 @@ export type DoctorProfile = {
   profilePicture?: string; // URL to profile picture in R2
   qualification?: string; // Medical qualifications
   experience?: string; // Years of experience
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "paused";
   verificationComment?: string; // Admin's comment on verification
   pendingVerification?: boolean; // True when profile is edited and needs re-verification
   previousValues?: Partial<DoctorProfile>; // Store previous values before changes
@@ -71,6 +75,13 @@ export type Question = {
   createdAt: string;
   answeredAt?: string;
   comments?: Comment[];
+  lastSeenByMother?: string; // ISO timestamp of when mother last viewed this question
+  lastSeenByDoctor?: string; // ISO timestamp of when doctor last viewed this question
+  hasNewActivity?: boolean; // Flag to indicate new comments/answers since last view
+  reported?: boolean; // Flag to indicate if this question/answer was reported
+  reportReason?: string; // Reason for reporting
+  reportedBy?: string; // ID of the user who reported
+  reportedAt?: string; // When it was reported
 };
 
 export type ChatMessage = {
@@ -225,6 +236,55 @@ export async function deleteDoctor(doctorId: string) {
     } catch (err) {
       // Ignore errors if picture doesn't exist
     }
+  }
+}
+
+export async function deleteMother(motherId: string) {
+  const { deleteObject } = await import("./r2Client");
+  const motherKey = `mothers/${motherId}.json`;
+  await deleteObject(motherKey);
+  // Also delete related data: prescriptions, journal entries, notifications, chat history
+  try {
+    const { listObjects } = await import("./r2Client");
+    // Delete prescriptions
+    const prescriptionPrefix = `prescriptions/${motherId}/`;
+    const prescriptionObjects = await listObjects(prescriptionPrefix);
+    for (const obj of prescriptionObjects) {
+      try {
+        await deleteObject(obj.Key!);
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+    // Delete journal entries
+    const journalPrefix = `journal/${motherId}/`;
+    const journalObjects = await listObjects(journalPrefix);
+    for (const obj of journalObjects) {
+      try {
+        await deleteObject(obj.Key!);
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+    // Delete notifications
+    const notificationPrefix = `notifications/${motherId}/`;
+    const notificationObjects = await listObjects(notificationPrefix);
+    for (const obj of notificationObjects) {
+      try {
+        await deleteObject(obj.Key!);
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+    // Delete chat history
+    try {
+      await deleteObject(`chat-history/${motherId}.json`);
+    } catch (err) {
+      // Ignore if doesn't exist
+    }
+  } catch (err) {
+    console.error("Error deleting mother related data:", err);
+    // Continue even if cleanup fails
   }
 }
 
