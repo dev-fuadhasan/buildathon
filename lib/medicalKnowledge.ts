@@ -157,6 +157,182 @@ export const MEDICAL_KNOWLEDGE_BASE: MedicalGuideline[] = [
     trimester: "all",
     priority: "high",
   },
+  
+  // Expanded Ontology: Symptoms
+  {
+    id: "symptom-1",
+    category: "Symptoms",
+    topic: "Morning Sickness",
+    content: "Nausea and vomiting in early pregnancy affects 70-80% of women. Usually peaks at 9-10 weeks, resolves by 14-16 weeks. Management: small frequent meals, ginger, vitamin B6, avoid triggers. Seek help if severe (hyperemesis gravidarum) with weight loss or dehydration.",
+    source: "WHO",
+    trimester: "first",
+    priority: "medium",
+  },
+  {
+    id: "symptom-2",
+    category: "Symptoms",
+    topic: "Back Pain",
+    content: "Lower back pain affects 50-70% of pregnant women, especially in third trimester. Causes: weight gain, posture changes, hormone relaxation. Management: exercise, proper posture, supportive shoes, heat/cold therapy, massage. Avoid heavy lifting.",
+    source: "WHO",
+    trimester: "third",
+    priority: "medium",
+  },
+  {
+    id: "symptom-3",
+    category: "Symptoms",
+    topic: "Swelling (Edema)",
+    content: "Mild swelling in feet/ankles is normal, especially in third trimester. Concerning if: sudden, severe, in face/hands, with headache/vision changes (preeclampsia sign). Management: elevate feet, stay hydrated, avoid standing long, wear compression stockings.",
+    source: "WHO",
+    trimester: "third",
+    priority: "high",
+  },
+  {
+    id: "symptom-4",
+    category: "Symptoms",
+    topic: "Shortness of Breath",
+    content: "Mild breathlessness is common due to diaphragm pressure from growing uterus. Normal if gradual and mild. Seek immediate care if: sudden, severe, with chest pain, or blue lips (emergency).",
+    source: "WHO",
+    trimester: "third",
+    priority: "medium",
+  },
+  
+  // Expanded Ontology: Nutrition by Trimester
+  {
+    id: "nutrition-3",
+    category: "Nutrition",
+    topic: "First Trimester Nutrition",
+    content: "First trimester: Focus on folic acid (600-800 mcg) to prevent neural tube defects. Small frequent meals help with nausea. Key foods: leafy greens, citrus fruits, fortified cereals, lean proteins. Avoid: raw fish, unpasteurized dairy, deli meats, high-mercury fish.",
+    source: "WHO",
+    trimester: "first",
+    priority: "high",
+  },
+  {
+    id: "nutrition-4",
+    category: "Nutrition",
+    topic: "Second Trimester Nutrition",
+    content: "Second trimester: Baby's growth accelerates. Increase protein (71g/day), iron (27mg), calcium (1000mg). Include: lean meats, beans, dairy, whole grains, fruits, vegetables. Continue prenatal vitamins. Monitor weight gain (0.5-1 lb/week).",
+    source: "WHO",
+    trimester: "second",
+    priority: "high",
+  },
+  {
+    id: "nutrition-5",
+    category: "Nutrition",
+    topic: "Third Trimester Nutrition",
+    content: "Third trimester: Baby's brain development peaks. Continue high protein, iron, DHA (omega-3). Small frequent meals help with heartburn. Stay hydrated (8-10 glasses water). Monitor for gestational diabetes symptoms.",
+    source: "WHO",
+    trimester: "third",
+    priority: "high",
+  },
+  
+  // Expanded Ontology: Checkup Schedule
+  {
+    id: "checkup-1",
+    category: "Checkup Schedule",
+    topic: "First Trimester Checkups",
+    content: "First visit (8-12 weeks): Confirm pregnancy, estimate due date, baseline tests (blood, urine, ultrasound), check blood pressure/weight. Screen for genetic conditions if indicated. Discuss lifestyle, nutrition, supplements.",
+    source: "WHO",
+    trimester: "first",
+    priority: "high",
+  },
+  {
+    id: "checkup-2",
+    category: "Checkup Schedule",
+    topic: "Second Trimester Checkups",
+    content: "Second trimester: Monthly visits. Key tests: anatomy scan (18-22 weeks), glucose screening (24-28 weeks), blood pressure monitoring. Check fetal growth, position, heartbeat. Discuss birth plan, breastfeeding preparation.",
+    source: "WHO",
+    trimester: "second",
+    priority: "high",
+  },
+  {
+    id: "checkup-3",
+    category: "Checkup Schedule",
+    topic: "Third Trimester Checkups",
+    content: "Third trimester: Bi-weekly (28-36 weeks), then weekly (36+ weeks). Monitor: blood pressure, fetal growth, position, Group B strep test (35-37 weeks). Check for signs of labor, preeclampsia. Discuss delivery options, pain management.",
+    source: "WHO",
+    trimester: "third",
+    priority: "high",
+  },
+  
+  // Expanded Ontology: Common Concerns
+  {
+    id: "concern-1",
+    category: "Common Concerns",
+    topic: "Sleep Problems",
+    content: "Sleep disturbances common in pregnancy: difficulty finding comfortable position, frequent urination, leg cramps, heartburn, anxiety. Tips: sleep on left side, use pillows, avoid caffeine, establish routine, relaxation techniques.",
+    source: "WHO",
+    trimester: "all",
+    priority: "medium",
+  },
+  {
+    id: "concern-2",
+    category: "Common Concerns",
+    topic: "Constipation",
+    content: "Constipation affects 40% of pregnant women due to hormones and iron supplements. Management: high-fiber diet (fruits, vegetables, whole grains), stay hydrated, exercise, consider stool softeners (consult doctor).",
+    source: "WHO",
+    trimester: "all",
+    priority: "medium",
+  },
+  {
+    id: "concern-3",
+    category: "Common Concerns",
+    topic: "Heartburn",
+    content: "Heartburn/acid reflux common, especially in third trimester. Causes: hormones relax esophageal sphincter, growing uterus presses stomach. Management: small frequent meals, avoid spicy/fatty foods, don't lie down after eating, elevate head while sleeping.",
+    source: "WHO",
+    trimester: "third",
+    priority: "medium",
+  },
+  
+  // Expanded Ontology: Labor & Delivery
+  {
+    id: "labor-1",
+    category: "Labor & Delivery",
+    topic: "Signs of Labor",
+    content: "True labor signs: regular contractions that intensify, water breaking (amniotic fluid), bloody show (mucus plug). False labor: irregular contractions, stop with movement. When to go to hospital: contractions 5 minutes apart, water breaks, or any concerns.",
+    source: "WHO",
+    trimester: "third",
+    priority: "high",
+  },
+  {
+    id: "labor-2",
+    category: "Labor & Delivery",
+    topic: "Preterm Labor",
+    content: "Preterm labor: contractions before 37 weeks. Warning signs: regular contractions, pelvic pressure, backache, cramping, vaginal discharge changes. Seek immediate medical care. Risk factors: previous preterm birth, multiple pregnancy, infections.",
+    source: "WHO",
+    trimester: "third",
+    priority: "critical",
+  },
+  
+  // Expanded Ontology: Postpartum
+  {
+    id: "postpartum-1",
+    category: "Postpartum",
+    topic: "Postpartum Recovery",
+    content: "Postpartum period: first 6 weeks after delivery. Physical recovery: bleeding (lochia) 4-6 weeks, perineal care, C-section wound care, breast care. Emotional: baby blues common, watch for postpartum depression. Rest, nutrition, support essential.",
+    source: "WHO",
+    trimester: "all",
+    priority: "high",
+  },
+  
+  // Expanded: Bangladesh-Specific
+  {
+    id: "bd-2",
+    category: "Bangladesh Context",
+    topic: "Rural Healthcare Access",
+    content: "In rural Bangladesh, utilize: Upazila Health Complex, Union Health Centers, Community Clinics, and Community Health Workers (CHWs). CHWs provide: health education, basic care, referral services. Mobile health services available in some areas.",
+    source: "DGHS",
+    trimester: "all",
+    priority: "high",
+  },
+  {
+    id: "bd-3",
+    category: "Bangladesh Context",
+    topic: "Traditional Practices",
+    content: "Some traditional practices may be harmful. Consult healthcare providers about: dietary restrictions, herbal remedies, home treatments. Safe practices: rest, family support, cultural foods (if nutritionally adequate). Avoid: unproven treatments, delaying medical care.",
+    source: "DGHS",
+    trimester: "all",
+    priority: "medium",
+  },
 ];
 
 /**

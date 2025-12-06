@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MomsCare | Compassionate Pregnancy Support",
-  description: "AI-guided pregnancy support with doctor and mother workflows.",
+  title: "MomsCare - AI-Powered Maternal Health Assistant",
+  description: "Supporting pregnant mothers with AI-powered guidance and medical advice",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -24,10 +17,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-gradient-to-br from-pink-50 via-white to-slate-50 text-slate-900 min-h-screen antialiased`}
-      >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ec4899" />
+      </head>
+      <body className={inter.className}>
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => console.log('Service Worker registered'))
+                    .catch((err) => console.log('Service Worker registration failed:', err));
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

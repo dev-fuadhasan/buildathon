@@ -53,6 +53,11 @@ export default function Layout({ children }: PropsWithChildren) {
         </div>
       </nav>
       <div className="flex-1">{children}</div>
+      <footer className="mt-8 py-4 border-t border-slate-200 text-center text-sm text-slate-600">
+        <Link href="/privacy" className="hover:text-purple-600 transition-colors">
+          Privacy Policy & Data Ethics
+        </Link>
+      </footer>
     </div>
   );
 }

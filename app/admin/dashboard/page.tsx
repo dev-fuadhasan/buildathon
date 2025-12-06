@@ -59,7 +59,8 @@ export default function AdminDashboard() {
   const [allMothers, setAllMothers] = useState<Mother[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "doctors" | "mothers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers">("overview");
+  const [analytics, setAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
   const [actionModal, setActionModal] = useState<{
@@ -96,6 +97,7 @@ export default function AdminDashboard() {
       loadOverview(t);
       loadAllDoctors(t);
       loadAllMothers(t);
+      loadAnalytics(t);
     }
   }, []);
 
@@ -114,6 +116,14 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setAllDoctors(data.doctors || []);
+    }
+  };
+
+  const loadAnalytics = async (t = token) => {
+    const res = await fetch("/api/admin/analytics", { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setAnalytics(data.analytics);
     }
   };
 
@@ -233,6 +243,7 @@ export default function AdminDashboard() {
         <div className="flex gap-2 border-b border-slate-200">
           {[
             { id: "overview", label: "📊 Overview" },
+            { id: "analytics", label: "📈 Analytics" },
             { id: "doctors", label: "👨‍⚕️ Doctors" },
             { id: "mothers", label: "👩 Mothers" },
           ].map((tab) => (
@@ -323,6 +334,209 @@ export default function AdminDashboard() {
                 )}
               </div>
             </DashboardCard>
+          </>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === "analytics" && (
+          <>
+            {analytics ? (
+              <div className="space-y-6">
+                {/* Key Metrics */}
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  <DashboardCard title="Average Risk Score">
+                    <div className="text-4xl font-bold text-orange-600">
+                      {analytics.averageRiskScore}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-2">Out of 100</p>
+                  </DashboardCard>
+                  <DashboardCard title="Active Chat Users">
+                    <div className="text-4xl font-bold text-blue-600">
+                      {analytics.overview.activeChatUsers}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-2">
+                      {analytics.overview.totalMothers > 0
+                        ? Math.round((analytics.overview.activeChatUsers / analytics.overview.totalMothers) * 100)
+                        : 0}% engagement
+                    </p>
+                  </DashboardCard>
+                  <DashboardCard title="Avg Response Time">
+                    <div className="text-4xl font-bold text-green-600">
+                      {analytics.overview.avgResponseTimeHours}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-2">Hours</p>
+                  </DashboardCard>
+                  <DashboardCard title="High-Risk Mothers">
+                    <div className="text-4xl font-bold text-red-600">
+                      {analytics.riskDistribution.high}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-2">Require attention</p>
+                  </DashboardCard>
+                </div>
+
+                {/* Risk Distribution */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <DashboardCard title="Risk Distribution">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-600 font-medium">Low Risk</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-green-500 h-4 rounded-full"
+                              style={{
+                                width: `${(analytics.riskDistribution.low / analytics.overview.totalMothers) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-bold">{analytics.riskDistribution.low}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-yellow-600 font-medium">Medium Risk</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-yellow-500 h-4 rounded-full"
+                              style={{
+                                width: `${(analytics.riskDistribution.medium / analytics.overview.totalMothers) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-bold">{analytics.riskDistribution.medium}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-red-600 font-medium">High Risk</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-red-500 h-4 rounded-full"
+                              style={{
+                                width: `${(analytics.riskDistribution.high / analytics.overview.totalMothers) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-bold">{analytics.riskDistribution.high}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="Trimester Distribution">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span>First Trimester</span>
+                        <span className="font-bold">{analytics.trimesterDistribution.first}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Second Trimester</span>
+                        <span className="font-bold">{analytics.trimesterDistribution.second}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Third Trimester</span>
+                        <span className="font-bold">{analytics.trimesterDistribution.third}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>Unknown</span>
+                        <span className="font-bold">{analytics.trimesterDistribution.unknown}</span>
+                      </div>
+                    </div>
+                  </DashboardCard>
+                </div>
+
+                {/* Age Distribution & Conditions */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <DashboardCard title="Age Distribution">
+                    <div className="space-y-2">
+                      {Object.entries(analytics.ageDistribution).map(([age, count]: [string, any]) => (
+                        <div key={age} className="flex justify-between">
+                          <span>{age}</span>
+                          <span className="font-bold">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </DashboardCard>
+
+                  <DashboardCard title="Condition Prevalence">
+                    {Object.keys(analytics.conditionPrevalence).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(analytics.conditionPrevalence).map(([condition, count]: [string, any]) => (
+                          <div key={condition} className="flex justify-between">
+                            <span>{condition}</span>
+                            <span className="font-bold text-red-600">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-center py-4">No conditions reported</p>
+                    )}
+                  </DashboardCard>
+                </div>
+
+                {/* Geographic Distribution */}
+                {Object.keys(analytics.geographicDistribution).length > 0 && (
+                  <DashboardCard title="Geographic Distribution (Heatmap Data)">
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {Object.entries(analytics.geographicDistribution)
+                        .sort(([, a]: any, [, b]: any) => b - a)
+                        .slice(0, 9)
+                        .map(([location, count]: [string, any]) => (
+                          <div
+                            key={location}
+                            className="flex justify-between p-3 rounded-lg bg-slate-50 border border-slate-200"
+                          >
+                            <span className="font-medium">{location}</span>
+                            <span className="font-bold text-blue-600">{count}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </DashboardCard>
+                )}
+
+                {/* High-Risk Mothers */}
+                {analytics.highRiskMothers && analytics.highRiskMothers.length > 0 && (
+                  <DashboardCard title="🚨 High-Risk Mothers Needing Attention">
+                    <div className="space-y-3">
+                      {analytics.highRiskMothers.map((mother: any) => (
+                        <div
+                          key={mother.id}
+                          className="p-4 rounded-lg border-2 border-red-200 bg-red-50"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-lg">{mother.name}</p>
+                              <p className="text-sm text-slate-600">Risk Score: {mother.riskScore}/100</p>
+                              <div className="mt-2">
+                                <p className="text-xs font-medium text-slate-700">Risk Factors:</p>
+                                <ul className="text-xs text-slate-600 list-disc list-inside">
+                                  {mother.riskFactors.slice(0, 3).map((factor: string, idx: number) => (
+                                    <li key={idx}>{factor}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                            <button
+                              className="btn-primary text-xs"
+                              onClick={() => {
+                                loadMotherDetails(mother.id);
+                                setActiveTab("mothers");
+                              }}
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </DashboardCard>
+                )}
+              </div>
+            ) : (
+              <DashboardCard title="Analytics">
+                <p className="text-slate-500 text-center py-8">Loading analytics...</p>
+              </DashboardCard>
+            )}
           </>
         )}
 
