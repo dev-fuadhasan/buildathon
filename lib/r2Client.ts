@@ -135,3 +135,13 @@ export async function deleteObject(key: string) {
   await getR2Client().send(command);
 }
 
+export async function copyObject(sourceKey: string, destinationKey: string) {
+  const { CopyObjectCommand } = await import("@aws-sdk/client-s3");
+  const command = new CopyObjectCommand({
+    Bucket: getBucket(),
+    CopySource: `${getBucket()}/${sourceKey}`,
+    Key: destinationKey,
+  });
+  await getR2Client().send(command);
+}
+

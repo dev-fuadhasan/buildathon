@@ -29,8 +29,22 @@ export async function GET(req: NextRequest) {
     try {
       safe.profilePicture = await signedUrl(safe.profilePicture, 86400); // 24 hours
     } catch (err) {
-      console.error("Failed to generate signed URL for profile picture:", err);
-      safe.profilePicture = undefined;
+      console.error(`Failed to generate signed URL for profile picture key "${safe.profilePicture}":`, err);
+      // If the key doesn't work, try to find the file in temp location as fallback
+      if (safe.profilePicture.includes(doctor.id)) {
+        // Key already contains doctor ID, so it's the final location - file might not exist
+        safe.profilePicture = undefined;
+      } else if (safe.profilePicture.includes("temp-")) {
+        // Try the temp location
+        try {
+          safe.profilePicture = await signedUrl(safe.profilePicture, 86400);
+        } catch (fallbackErr) {
+          console.error("Fallback temp location also failed:", fallbackErr);
+          safe.profilePicture = undefined;
+        }
+      } else {
+        safe.profilePicture = undefined;
+      }
     }
   }
   

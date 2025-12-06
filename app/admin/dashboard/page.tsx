@@ -299,15 +299,35 @@ export default function AdminDashboard() {
                       key={d.id}
                       className="flex flex-col gap-3 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 md:flex-row md:items-center md:justify-between"
                     >
-                      <div className="flex-1">
-                        <p className="font-semibold text-lg">{d.name || "Unnamed doctor"}</p>
-                        <p className="text-sm text-slate-600">{d.email}</p>
-                        {d.specialty && (
-                          <p className="text-xs text-slate-500 mt-1">Specialty: {d.specialty}</p>
-                        )}
-                        <p className="text-xs text-slate-500 mt-1">
-                          Applied: {new Date(d.createdAt).toLocaleDateString()}
-                        </p>
+                      <div className="flex items-center gap-4 flex-1">
+                        {d.profilePicture ? (
+                          <img
+                            src={d.profilePicture}
+                            alt={d.name || "Doctor"}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-yellow-300"
+                            onError={(e) => {
+                              // Hide image on error, show placeholder
+                              e.currentTarget.style.display = "none";
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (placeholder) placeholder.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl border-2 border-yellow-300 ${d.profilePicture ? "hidden" : ""}`}
+                        >
+                          {d.name ? d.name.charAt(0).toUpperCase() : "D"}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-lg">{d.name || "Unnamed doctor"}</p>
+                          <p className="text-sm text-slate-600">{d.email}</p>
+                          {d.specialty && (
+                            <p className="text-xs text-slate-500 mt-1">Specialty: {d.specialty}</p>
+                          )}
+                          <p className="text-xs text-slate-500 mt-1">
+                            Applied: {new Date(d.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         <button
@@ -646,15 +666,26 @@ export default function AdminDashboard() {
         >
           {selectedDoctor && (
             <div className="space-y-4">
-              {selectedDoctor.profilePicture && (
-                <div className="flex justify-center">
+              <div className="flex justify-center">
+                {selectedDoctor.profilePicture ? (
                   <img
                     src={selectedDoctor.profilePicture}
                     alt="Profile"
                     className="w-32 h-32 rounded-full object-cover border-4 border-blue-200"
+                    onError={(e) => {
+                      // Hide image on error, show placeholder
+                      e.currentTarget.style.display = "none";
+                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (placeholder) placeholder.style.display = "flex";
+                    }}
                   />
+                ) : null}
+                <div
+                  className={`w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-4xl border-4 border-blue-200 ${selectedDoctor.profilePicture ? "hidden" : ""}`}
+                >
+                  {selectedDoctor.name ? selectedDoctor.name.charAt(0).toUpperCase() : "D"}
                 </div>
-              )}
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Name</p>

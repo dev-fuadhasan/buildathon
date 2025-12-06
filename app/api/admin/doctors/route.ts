@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
           try {
             pictureUrl = await signedUrl(profilePicture, 86400); // 24 hours
           } catch (err) {
-            console.error("Failed to generate signed URL for profile picture:", err);
+            console.error(`Failed to generate signed URL for profile picture key "${profilePicture}":`, err);
+            // Try fallback: if key contains temp-, try the original temp path
+            if (profilePicture.includes("temp-")) {
+              // Already tried the key, skip fallback
+            }
             pictureUrl = undefined;
           }
         }

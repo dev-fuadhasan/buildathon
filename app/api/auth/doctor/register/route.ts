@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { hashPassword } from "@/lib/auth";
 import { findDoctorByEmail, saveDoctor } from "@/lib/data";
+import { copyObject, getJson as getR2Json } from "@/lib/r2Client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,16 +66,24 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const doctorId = uuid();
     
-    // If profilePicture is provided and contains a temp path, move it to the doctor's folder
+    // If profilePicture is provided and contains a temp path, copy it to the doctor's folder
     let finalProfilePictureKey = profilePicture || "";
     if (profilePicture && profilePicture.includes("temp-")) {
       // Extract the filename from the temp path
-      const filename = profilePicture.split("/").pop();
-      if (filename) {
-        finalProfilePictureKey = `doctors/${doctorId}/profile-${filename}`;
-        // Note: In a production system, you'd want to copy/move the file here
-        // For now, we'll just update the key - the file will be accessible at the new location
-        // after the doctor uploads a new picture or we implement file migration
+      const parts = profilePicture.split("/");
+      const filename = parts[parts.length - 1];
+      // The filename already includes "profile-", so we just use it as-is
+      finalProfilePictureKey = `doctors/${doctorId}/${filename}`;
+      
+      // Copy the file from temp location to final location
+      try {
+        await copyObject(profilePicture, finalProfilePictureKey);
+        console.log(`[Doctor Register] Copied profile picture from ${profilePicture} to ${finalProfilePictureKey}`);
+      } catch (err) {
+        console.error("Failed to copy profile picture:", err);
+        // If copy fails, try to use the temp path as fallback
+        // The signed URL generation will handle it
+        finalProfilePictureKey = profilePicture;
       }
     }
     
