@@ -1,4 +1,6 @@
 import { groq, isGroqConfigured } from "./groqClient";
+import { getSafetyPrompt } from "./safetyGuardrails";
+import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -12,13 +14,18 @@ export async function askMomsCare(
   messages: Array<{ role: string; content: string }>,
   profileContext?: string,
   prescriptionUrls?: string[],
+  weeksPregnant?: number,
 ): Promise<string> {
   if (!isGroqConfigured()) {
     throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
   }
 
   try {
+    const safetyPrompt = getSafetyPrompt();
+    
     const systemPrompt = `You are MomsCare, a supportive assistant for pregnant mothers.
+
+${safetyPrompt}
 
 CRITICAL RULES - STRICTLY ENFORCE:
 1. You ONLY answer questions related to pregnancy, maternal health, prenatal care, baby development, pregnancy symptoms, prenatal nutrition, labor and delivery, postpartum care, and related medical topics for PREGNANT WOMEN.
@@ -40,6 +47,24 @@ When declining irrelevant questions, use a CONCISE friendly but firm response in
 - English: "I'm here to help with pregnancy and maternal health questions. Please ask me something related to your pregnancy journey, prenatal care, or maternal health, and I'll be happy to help!"
 - Bengali: "আমি গর্ভাবস্থা এবং মাতৃস্বাস্থ্য সম্পর্কিত প্রশ্নে সাহায্য করতে এখানে আছি। অনুগ্রহ করে আপনার গর্ভাবস্থা, প্রসবপূর্ব যত্ন, বা মাতৃস্বাস্থ্য সম্পর্কিত কিছু জিজ্ঞাসা করুন।"`;
 
+    // Extract weeks pregnant from profile context for RAG
+    let trimester: number | undefined;
+    if (weeksPregnant) {
+      trimester = weeksPregnant;
+    } else if (profileContext) {
+      const weeksMatch = profileContext.match(/Weeks pregnant:\s*(\d+)/i);
+      if (weeksMatch) {
+        trimester = parseInt(weeksMatch[1], 10);
+      }
+    }
+    
+    // Retrieve relevant medical guidelines (RAG)
+    const lastUserMessage = messages
+      .filter((m) => m.role === "user")
+      .pop()?.content || "";
+    const relevantGuidelines = retrieveRelevantGuidelines(lastUserMessage, trimester, 3);
+    const guidelinesContext = formatGuidelinesForContext(relevantGuidelines);
+    
     const profileNote = profileContext
       ? `\n\nMother profile context:\n${profileContext}`
       : "";
@@ -104,11 +129,11 @@ When declining irrelevant questions, use a CONCISE friendly but firm response in
     const completion = await groq.chat.completions.create({
       model,
       messages: [
-        { role: "system", content: systemPrompt + profileNote },
+        { role: "system", content: systemPrompt + profileNote + guidelinesContext },
         ...formattedMessages,
       ],
       temperature: 0.6,
-      max_tokens: 800, // Increased to allow complete responses in both English and Bengali
+      max_tokens: 2000, // Increased significantly to prevent response cutoff
     });
 
     const reply = completion.choices?.[0]?.message?.content;

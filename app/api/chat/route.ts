@@ -3,6 +3,7 @@ import { askMomsCare } from "@/lib/momsCareChat";
 import { getUserFromRequest } from "@/lib/auth";
 import { getMother } from "@/lib/data";
 import { listObjects, signedUrl } from "@/lib/r2Client";
+import { checkSafety } from "@/lib/safetyGuardrails";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
     if (user?.role === "mother") {
       try {
         const mother = await getMother(user.id);
+        let weeksPregnant: number | undefined;
         if (mother) {
           profileContext = `
 Name: ${mother.name || "N/A"}
@@ -31,6 +33,7 @@ Weeks pregnant: ${mother.weeksPregnant || "N/A"}
 Due date: ${mother.dueDate || "N/A"}
 Conditions: ${mother.conditions || "N/A"}
 Medications: ${mother.medications || "N/A"}`;
+          weeksPregnant = mother.weeksPregnant;
           
           // Fetch prescription URLs for image analysis
           try {
@@ -49,8 +52,36 @@ Medications: ${mother.medications || "N/A"}`;
       }
     }
 
-    const reply = await askMomsCare(messages, profileContext, prescriptionUrls);
-    return NextResponse.json({ reply });
+    // Safety check: Get the last user message for red flag detection
+    const lastUserMessage = messages
+      .filter((m: any) => m.role === "user")
+      .pop()?.content || "";
+    
+    const safetyCheck = checkSafety(lastUserMessage, profileContext);
+    
+    // If critical emergency, return immediate response without AI processing
+    if (safetyCheck.requiresEmergency) {
+      return NextResponse.json({
+        reply: `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`,
+        safetyWarning: true,
+        riskLevel: safetyCheck.riskLevel,
+      });
+    }
+    
+    // If high risk, prepend warning to AI response
+    let reply = await askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant);
+    
+    if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
+      reply = `${safetyCheck.recommendation}\n\n${reply}`;
+    } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
+      reply = `${safetyCheck.recommendation}\n\n${reply}`;
+    }
+    
+    return NextResponse.json({
+      reply,
+      safetyWarning: safetyCheck.riskLevel !== "low",
+      riskLevel: safetyCheck.riskLevel,
+    });
   } catch (error: any) {
     console.error("Chat API error:", error);
     return NextResponse.json(

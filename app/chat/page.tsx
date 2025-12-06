@@ -19,16 +19,12 @@ export default function ChatPage() {
     ? "হাই! আমি MomsCare, আপনার AI গর্ভাবস্থা সহায়ক। আপনার গর্ভাবস্থার যাত্রা সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন!"
     : "Hi! I'm MomsCare, your AI pregnancy assistant. Ask me anything about your pregnancy journey!";
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: initialMessage,
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMother, setIsMother] = useState(false);
   const [motherToken, setMotherToken] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -39,11 +35,90 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Load chat history for logged-in mothers
   useEffect(() => {
     const token = localStorage.getItem("motherToken") || "";
     setMotherToken(token);
     setIsMother(!!token);
-  }, []);
+    
+    if (token && !historyLoaded) {
+      loadChatHistory(token);
+    } else if (!token && !historyLoaded) {
+      // For non-logged-in users, show initial message
+      setMessages([{
+        role: "assistant",
+        content: initialMessage,
+      }]);
+      setHistoryLoaded(true);
+    }
+  }, [historyLoaded]);
+
+  const loadChatHistory = async (token: string) => {
+    try {
+      const res = await fetch("/api/mother/chat-history", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          // Convert stored messages (with timestamp) to display format
+          setMessages(data.messages.map((m: any) => ({
+            role: m.role,
+            content: m.content,
+          })));
+        } else {
+          // No history, show initial message
+          setMessages([{
+            role: "assistant",
+            content: initialMessage,
+          }]);
+        }
+      } else {
+        // If fetch fails, show initial message
+        setMessages([{
+          role: "assistant",
+          content: initialMessage,
+        }]);
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+      // On error, show initial message
+      setMessages([{
+        role: "assistant",
+        content: initialMessage,
+      }]);
+    } finally {
+      setHistoryLoaded(true);
+    }
+  };
+
+  const saveChatHistory = async (msgs: Message[]) => {
+    if (!isMother || !motherToken) return;
+    
+    try {
+      // Convert to format with timestamps
+      const messagesWithTimestamp = msgs.map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: new Date().toISOString(),
+      }));
+      
+      await fetch("/api/mother/chat-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${motherToken}`,
+        },
+        body: JSON.stringify({ messages: messagesWithTimestamp }),
+      });
+    } catch (err) {
+      console.error("Failed to save chat history:", err);
+      // Don't show error to user, just log it
+    }
+  };
 
   const getToken = () =>
     localStorage.getItem("motherToken") ||
@@ -76,14 +151,26 @@ export default function ChatPage() {
         throw new Error("No reply received from server");
       }
 
-      setMessages([...newMessages, { role: "assistant", content: data.reply }]);
+      const finalMessages = [...newMessages, { role: "assistant" as const, content: data.reply }];
+      setMessages(finalMessages);
+      
+      // Save chat history for logged-in mothers
+      if (isMother) {
+        saveChatHistory(finalMessages);
+      }
     } catch (err: any) {
       console.error("Chat error:", err);
       const errorMessage = err.message || "Sorry, something went wrong. Please try again.";
-      setMessages([
+      const errorMessages = [
         ...newMessages,
-        { role: "assistant", content: `❌ Error: ${errorMessage}` },
-      ]);
+        { role: "assistant" as const, content: `❌ Error: ${errorMessage}` },
+      ];
+      setMessages(errorMessages);
+      
+      // Save error message to history too
+      if (isMother) {
+        saveChatHistory(errorMessages);
+      }
     } finally {
       setLoading(false);
     }

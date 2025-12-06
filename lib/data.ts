@@ -62,9 +62,22 @@ export type Question = {
   comments?: Comment[];
 };
 
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+};
+
+export type ChatHistory = {
+  motherId: string;
+  messages: ChatMessage[];
+  updatedAt: string;
+};
+
 const motherKey = (id: string) => `mothers/${id}.json`;
 const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
+const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
@@ -181,5 +194,28 @@ export async function deleteDoctor(doctorId: string) {
       // Ignore errors if picture doesn't exist
     }
   }
+}
+
+// Chat History Functions
+export async function getChatHistory(motherId: string): Promise<ChatHistory | null> {
+  try {
+    return await getJson<ChatHistory>(chatHistoryKey(motherId));
+  } catch (err) {
+    // Return null if no history exists yet
+    return null;
+  }
+}
+
+export async function saveChatHistory(history: ChatHistory) {
+  return putJson(chatHistoryKey(history.motherId), history);
+}
+
+export async function updateChatHistory(motherId: string, messages: ChatMessage[]) {
+  const history: ChatHistory = {
+    motherId,
+    messages,
+    updatedAt: new Date().toISOString(),
+  };
+  return saveChatHistory(history);
 }
 
