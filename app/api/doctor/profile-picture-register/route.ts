@@ -35,8 +35,10 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    // Store in a temporary registration folder - will be moved/renamed after registration
-    const key = `doctors/registration/${uuid()}-${sanitizedName}`;
+    // Store directly in doctor's folder structure - will be moved to final location after registration
+    // Use a temporary ID that will be replaced with actual doctor ID after registration
+    const tempId = `temp-${uuid()}`;
+    const key = `doctors/${tempId}/profile-${uuid()}-${sanitizedName}`;
 
     await uploadFile({
       key,

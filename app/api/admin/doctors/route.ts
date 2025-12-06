@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { getDoctor, listAllDoctors, saveDoctor } from "@/lib/data";
+import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,9 +13,24 @@ export async function GET(req: NextRequest) {
     const doctors = await listAllDoctors();
     console.log(`[Admin] Found ${doctors.length} total doctors`);
     
-    const pending = doctors
-      .filter((d) => d.status === "pending")
-      .map(({ passwordHash, ...rest }) => rest);
+    const pendingDoctors = doctors.filter((d) => d.status === "pending");
+    
+    // Generate fresh signed URLs for profile pictures
+    const pending = await Promise.all(
+      pendingDoctors.map(async ({ passwordHash, profilePicture, ...rest }) => {
+        let pictureUrl = profilePicture;
+        if (profilePicture && !profilePicture.startsWith("http")) {
+          // It's a key, generate fresh signed URL
+          try {
+            pictureUrl = await signedUrl(profilePicture, 86400); // 24 hours
+          } catch (err) {
+            console.error("Failed to generate signed URL for profile picture:", err);
+            pictureUrl = undefined;
+          }
+        }
+        return { ...rest, profilePicture: pictureUrl };
+      })
+    );
     
     console.log(`[Admin] Found ${pending.length} pending doctors`);
     

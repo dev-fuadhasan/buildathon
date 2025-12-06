@@ -50,12 +50,13 @@ export async function POST(req: NextRequest) {
       contentType: file.type || "image/jpeg",
     });
 
-    const url = await signedUrl(key);
+    // Store the key (not the signed URL) so we can generate fresh URLs on-demand
+    const url = await signedUrl(key, 86400); // 24 hours for immediate use
 
-    // Update doctor profile with new picture URL
+    // Update doctor profile with the key (not the signed URL)
     const updated = {
       ...doctor,
-      profilePicture: url,
+      profilePicture: key, // Store key instead of signed URL
       updatedAt: new Date().toISOString(),
     };
 

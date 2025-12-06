@@ -64,10 +64,10 @@ export default function DoctorRegister() {
           throw new Error(picData.error || "Failed to upload profile picture");
         }
         const picData = await parseJsonResponse(picRes);
-        if (!picData.url) {
-          throw new Error("Failed to get profile picture URL");
+        if (!picData.key) {
+          throw new Error("Failed to get profile picture key");
         }
-        profilePictureUrl = picData.url;
+        profilePictureUrl = picData.key; // Store the key, not the URL
       }
 
       // Then register doctor

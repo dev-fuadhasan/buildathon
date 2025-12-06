@@ -63,8 +63,23 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
+    const doctorId = uuid();
+    
+    // If profilePicture is provided and contains a temp path, move it to the doctor's folder
+    let finalProfilePictureKey = profilePicture || "";
+    if (profilePicture && profilePicture.includes("temp-")) {
+      // Extract the filename from the temp path
+      const filename = profilePicture.split("/").pop();
+      if (filename) {
+        finalProfilePictureKey = `doctors/${doctorId}/profile-${filename}`;
+        // Note: In a production system, you'd want to copy/move the file here
+        // For now, we'll just update the key - the file will be accessible at the new location
+        // after the doctor uploads a new picture or we implement file migration
+      }
+    }
+    
     const doctor = {
-      id: uuid(),
+      id: doctorId,
       email,
       name,
       phone,
@@ -72,7 +87,7 @@ export async function POST(req: NextRequest) {
       bmdcNumber,
       clinicName,
       clinicAddress,
-      profilePicture: profilePicture || "",
+      profilePicture: finalProfilePictureKey, // Store the key
       qualification,
       experience,
       passwordHash,

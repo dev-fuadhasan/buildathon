@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { getDoctor } from "@/lib/data";
+import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
   const user = getUserFromRequest(req);
@@ -21,6 +22,18 @@ export async function GET(req: NextRequest) {
   }
 
   const { passwordHash, ...safe } = doctor;
+  
+  // Generate fresh signed URL for profile picture if it exists
+  if (safe.profilePicture && !safe.profilePicture.startsWith("http")) {
+    // It's a key, generate fresh signed URL
+    try {
+      safe.profilePicture = await signedUrl(safe.profilePicture, 86400); // 24 hours
+    } catch (err) {
+      console.error("Failed to generate signed URL for profile picture:", err);
+      safe.profilePicture = undefined;
+    }
+  }
+  
   return NextResponse.json({ doctor: safe });
 }
 
