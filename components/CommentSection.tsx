@@ -32,17 +32,21 @@ export default function CommentSection({ questionId, userRole, userId, token, co
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadComments();
+    if (questionId) {
+      loadComments();
+    }
   }, [questionId]);
 
   // Sync with initialComments prop when it changes
   useEffect(() => {
-    if (initialComments && initialComments.length > 0) {
+    if (initialComments) {
       setComments(initialComments);
     }
-    // Always reload from API to get latest comments
-    loadComments();
-  }, [initialComments]);
+    // Always reload from API to get latest comments when questionId or initialComments change
+    if (questionId) {
+      loadComments();
+    }
+  }, [initialComments, questionId]);
 
   const loadComments = async () => {
     try {
@@ -216,6 +220,49 @@ export default function CommentSection({ questionId, userRole, userId, token, co
                         </span>
                       </div>
                       <p className="text-xs text-slate-700">{reply.content}</p>
+                      {/* Reply button for replies */}
+                      {(userRole === "mother" && reply.authorRole === "doctor") || 
+                       (userRole === "doctor" && reply.authorRole === "mother") ? (
+                        <button
+                          onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
+                          className="text-xs text-blue-600 hover:text-blue-700 mt-2"
+                        >
+                          {replyingTo === reply.id 
+                            ? (lang === "bn" ? "বাতিল" : "Cancel")
+                            : (lang === "bn" ? "↩️ উত্তর দিন" : "↩️ Reply")
+                          }
+                        </button>
+                      ) : null}
+                      {/* Reply input for replies */}
+                      {replyingTo === reply.id && (
+                        <div className="ml-4 mt-2 space-y-2">
+                          <textarea
+                            className="input w-full h-20 text-sm"
+                            placeholder={lang === "bn" ? "আপনার উত্তর লিখুন..." : "Write your reply..."}
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            disabled={loading}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => submitReply(reply.id)}
+                              disabled={loading || !replyText.trim()}
+                              className="btn-primary text-xs"
+                            >
+                              {loading ? (lang === "bn" ? "জমা দেওয়া হচ্ছে..." : "Submitting...") : (lang === "bn" ? "উত্তর দিন" : "Reply")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyText("");
+                              }}
+                              className="btn-secondary text-xs"
+                            >
+                              {lang === "bn" ? "বাতিল" : "Cancel"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -867,7 +867,23 @@ export default function MotherDashboard() {
                                     headers: authHeaders(),
                                   });
                                   // Show full details in modal
-                                  setSelectedQuestion(q);
+                                  // Load comments when question is selected
+                                setSelectedQuestion(q);
+                                // Force refresh comments after a short delay to ensure they load
+                                setTimeout(() => {
+                                  if (q.id) {
+                                    fetch(`/api/questions/comments?questionId=${q.id}`, { 
+                                      headers: authHeaders() 
+                                    })
+                                      .then(r => r.json())
+                                      .then(d => {
+                                        if (d.comments) {
+                                          setSelectedQuestion({ ...q, comments: d.comments });
+                                        }
+                                      })
+                                      .catch(err => console.error("Failed to load comments:", err));
+                                  }
+                                }, 100);
                                 }}
                               >
                                 👁️ View Full Details
