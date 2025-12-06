@@ -13,7 +13,6 @@ import { getLanguage } from "@/lib/i18n";
 type Message = { role: "user" | "assistant"; content: string };
 
 export default function ChatPage() {
-  const t = useTranslation();
   const [lang] = useState(() => getLanguage());
   
   const initialMessage = lang === "bn" 
@@ -184,18 +183,18 @@ export default function ChatPage() {
         <div className="flex items-center justify-between flex-shrink-0">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
-              {t.chat.title}
+              MomsCare AI Chat
             </h1>
             <p className="text-sm text-slate-600 mt-0.5">
               <span className="flex items-center gap-2">
                 <Icon name={isMother ? "ai" : "chat"} size={20} />
-                {isMother ? t.chat.personalized : t.chat.public}
+                {isMother ? "Personalized" : "Public"}
               </span>
             </p>
           </div>
           {!isMother && (
             <Link href="/mother/login" className="btn-secondary text-sm px-4 py-2">
-              {t.common.login} {lang === "bn" ? "ব্যক্তিগতকৃত" : "Personalized"}
+              Login for Personalized
             </Link>
           )}
         </div>
@@ -206,7 +205,7 @@ export default function ChatPage() {
             <span className="flex items-start gap-2">
               <Icon name="warning" size={20} className="mt-0.5" />
               <span>
-                <strong>{lang === "bn" ? "গুরুত্বপূর্ণ:" : "Important:"}</strong> {t.chat.disclaimer}
+                <strong>Important:</strong> This AI chatbot provides general information and is not a substitute for professional medical advice. For emergencies, contact your healthcare provider immediately.
               </span>
             </span>
           </p>
@@ -242,7 +241,7 @@ export default function ChatPage() {
           )}
 
           {/* Input Section - Compact */}
-          <div className="border-t border-slate-200 bg-white p-4 flex-shrink-0">
+          <div className="border-t border-slate-200 bg-white p-3 flex-shrink-0">
             <ChatInput onSend={sendMessage} disabled={loading} />
             {/* Prescription Upload - Small, Collapsible */}
             {isMother && (

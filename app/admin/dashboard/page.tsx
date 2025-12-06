@@ -62,7 +62,6 @@ type Overview = {
 };
 
 export default function AdminDashboard() {
-  const t = useTranslation();
   const [token, setToken] = useState("");
   const [pending, setPending] = useState<Doctor[]>([]);
   const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
@@ -123,6 +122,12 @@ export default function AdminDashboard() {
     const t = localStorage.getItem("adminToken") || "";
     setToken(t);
     if (t) {
+      // Restore active tab from localStorage
+      const savedTab = localStorage.getItem("adminDashboardTab");
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports"].includes(savedTab)) {
+        setActiveTab(savedTab as any);
+      }
+      
       loadPending(t);
       loadOverview(t);
       loadAllDoctors(t);
@@ -131,6 +136,20 @@ export default function AdminDashboard() {
       loadReports(t);
     }
   }, []);
+  
+  // Save active tab to localStorage when it changes
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("adminDashboardTab", activeTab);
+    }
+  }, [activeTab, token]);
+  
+  // Redirect to dashboard if logged in and on home page
+  useEffect(() => {
+    if (token && window.location.pathname === "/") {
+      window.location.href = "/admin/dashboard";
+    }
+  }, [token]);
 
   const headers = (t = token) => (t ? { Authorization: `Bearer ${t}` } : undefined);
 
@@ -1541,25 +1560,25 @@ export default function AdminDashboard() {
         <DetailModal
           isOpen={!!selectedMother}
           onClose={() => setSelectedMother(null)}
-          title={`${t.admin.motherDetails}: ${selectedMother?.name || "N/A"}`}
+          title={`Mother Details: ${selectedMother?.name || "N/A"}`}
         >
           {selectedMother && (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.name}</p>
+                  <p className="text-sm font-medium text-slate-600">Name</p>
                   <p className="text-lg font-semibold">{selectedMother.name || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.email}</p>
+                  <p className="text-sm font-medium text-slate-600">Email</p>
                   <p className="text-lg font-semibold">{selectedMother.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.phone}</p>
+                  <p className="text-sm font-medium text-slate-600">Phone</p>
                   <p className="text-lg font-semibold">{selectedMother.phone || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.age}</p>
+                  <p className="text-sm font-medium text-slate-600">Age</p>
                   <p className="text-lg font-semibold">{selectedMother.age || "N/A"}</p>
                 </div>
                 <div>
@@ -1575,45 +1594,45 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.bloodGroup}</p>
+                  <p className="text-sm font-medium text-slate-600">Blood Group</p>
                   <p className="text-lg font-semibold">{selectedMother.bloodGroup || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.previousPregnancies}</p>
+                  <p className="text-sm font-medium text-slate-600">Previous Pregnancies</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.previousPregnancies ?? "N/A"}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">{t.mother.address}</p>
+                  <p className="text-sm font-medium text-slate-600">Address</p>
                   <p className="text-lg font-semibold">{selectedMother.address || "N/A"}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">{t.mother.conditions}</p>
-                  <p className="text-lg font-semibold">{selectedMother.conditions || t.admin.none}</p>
+                  <p className="text-sm font-medium text-slate-600">Medical Conditions</p>
+                  <p className="text-lg font-semibold">{selectedMother.conditions || "None"}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">{t.mother.medications}</p>
-                  <p className="text-lg font-semibold">{selectedMother.medications || t.admin.none}</p>
+                  <p className="text-sm font-medium text-slate-600">Medications</p>
+                  <p className="text-lg font-semibold">{selectedMother.medications || "None"}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">{t.mother.allergies}</p>
-                  <p className="text-lg font-semibold">{selectedMother.allergies || t.admin.none}</p>
+                  <p className="text-sm font-medium text-slate-600">Allergies</p>
+                  <p className="text-lg font-semibold">{selectedMother.allergies || "None"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.emergencyContact}</p>
+                  <p className="text-sm font-medium text-slate-600">Emergency Contact</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.emergencyContact || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-600">{t.mother.emergencyPhone}</p>
+                  <p className="text-sm font-medium text-slate-600">Emergency Phone</p>
                   <p className="text-lg font-semibold">
                     {selectedMother.emergencyPhone || "N/A"}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-slate-600">{t.admin.registered}</p>
+                  <p className="text-sm font-medium text-slate-600">Registered</p>
                   <p className="text-sm text-slate-500">
                     {new Date(selectedMother.createdAt).toLocaleString()}
                   </p>

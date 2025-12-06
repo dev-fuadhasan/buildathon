@@ -28,6 +28,8 @@ export default function MotherLogin() {
         return;
       }
       localStorage.setItem("motherToken", data.token);
+      // Save that we're on dashboard to maintain state
+      localStorage.setItem("motherDashboardTab", "profile");
       router.push("/mother/dashboard");
     } catch (err: any) {
       setError(err.message || "An error occurred. Please try again.");

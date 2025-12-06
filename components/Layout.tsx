@@ -1,16 +1,121 @@
 "use client";
 
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useTranslation } from "@/hooks/useTranslation";
+import { usePathname, useRouter } from "next/navigation";
+import Icon from "@/components/Icon";
 
 type Props = PropsWithChildren;
 
 export default function Layout({ children }: Props) {
-  const t = useTranslation();
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
+  const [isMother, setIsMother] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check login state
+    const motherToken = localStorage.getItem("motherToken");
+    const doctorToken = localStorage.getItem("doctorToken");
+    const adminToken = localStorage.getItem("adminToken");
+    
+    setIsMother(!!motherToken);
+    setIsDoctor(!!doctorToken);
+    setIsAdmin(!!adminToken);
+
+    // Redirect logged-in users to their dashboards if on home page
+    if (isHome) {
+      if (motherToken) {
+        router.push("/mother/dashboard");
+        return;
+      } else if (doctorToken) {
+        router.push("/doctor/dashboard");
+        return;
+      } else if (adminToken) {
+        router.push("/admin/dashboard");
+        return;
+      }
+    }
+  }, [isHome, router]);
+
+  // Determine navbar items based on login state
+  const getNavItems = () => {
+    if (isMother || isDoctor || isAdmin) {
+      // Logged in - show chat link
+      return (
+        <>
+          <Link
+            href="/chat"
+            className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+          >
+            <span className="flex items-center gap-2">
+              <Icon name="chat" size={18} />
+              MomsCare AI Chat
+            </span>
+          </Link>
+        </>
+      );
+    } else {
+      // Not logged in - show chat, login, register based on context
+      if (pathname.startsWith("/doctor") || pathname === "/") {
+        // Doctor context or home
+        return (
+          <>
+            <Link
+              href="/chat"
+              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+            >
+              <span className="flex items-center gap-2">
+                <Icon name="chat" size={18} />
+                MomsCare AI Chat
+              </span>
+            </Link>
+            <Link
+              href="/doctor/login"
+              className="text-neutral-600 hover:text-blue-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-blue-50"
+            >
+              Login
+            </Link>
+            <Link
+              href="/doctor/register"
+              className="btn-primary text-sm px-4 py-2"
+            >
+              Register
+            </Link>
+          </>
+        );
+      } else {
+        // Mother context
+        return (
+          <>
+            <Link
+              href="/chat"
+              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+            >
+              <span className="flex items-center gap-2">
+                <Icon name="chat" size={18} />
+                MomsCare AI Chat
+              </span>
+            </Link>
+            <Link
+              href="/mother/login"
+              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+            >
+              Login
+            </Link>
+            <Link
+              href="/mother/register"
+              className="btn-primary text-sm px-4 py-2"
+            >
+              Register
+            </Link>
+          </>
+        );
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -26,24 +131,7 @@ export default function Layout({ children }: Props) {
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/chat"
-                className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
-              >
-                {t.chat.title}
-              </Link>
-              <Link
-                href="/mother/login"
-                className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
-              >
-                {t.common.login}
-              </Link>
-              <Link
-                href="/mother/register"
-                className="btn-primary text-sm px-4 py-2"
-              >
-                {t.common.register}
-              </Link>
+              {getNavItems()}
             </nav>
           </div>
         </div>

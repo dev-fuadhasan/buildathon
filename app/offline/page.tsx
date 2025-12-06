@@ -2,46 +2,30 @@
 
 import Layout from "@/components/Layout";
 import Icon from "@/components/Icon";
-import { getLanguage } from "@/lib/i18n";
-import { useState } from "react";
-
 export default function OfflinePage() {
-  const [lang] = useState(() => getLanguage());
-  const isBn = lang === "bn";
 
   return (
     <Layout>
       <div className="max-w-2xl mx-auto text-center py-16">
         <div className="text-6xl mb-6">📡</div>
         <h1 className="text-4xl font-bold text-slate-800 mb-4">
-          {isBn ? "অফলাইন" : "You're Offline"}
+          You're Offline
         </h1>
         <p className="text-xl text-slate-600 mb-8">
-          {isBn
-            ? "ইন্টারনেট সংযোগ নেই। অনুগ্রহ করে আপনার সংযোগ পরীক্ষা করুন।"
-            : "No internet connection. Please check your connection."}
+          No internet connection. Please check your connection.
         </p>
         <button
           onClick={() => window.location.reload()}
           className="btn-primary"
         >
-          {isBn ? "পুনরায় চেষ্টা করুন" : "Try Again"}
+          Try Again
         </button>
         <div className="mt-8 p-6 bg-yellow-50 rounded-lg border border-yellow-200">
           <p className="text-sm text-yellow-900">
-            {isBn
-              ? (
-                <span className="flex items-start gap-2">
-                  <Icon name="info" size={16} className="mt-0.5" />
-                  <span>টিপ: কিছু বৈশিষ্ট্য অফলাইনেও কাজ করতে পারে যদি আপনি আগে সাইটটি পরিদর্শন করে থাকেন।</span>
-                </span>
-              )
-              : (
-                <span className="flex items-start gap-2">
-                  <Icon name="info" size={16} className="mt-0.5" />
-                  <span>Tip: Some features may work offline if you've visited the site before.</span>
-                </span>
-              )}
+            <span className="flex items-start gap-2">
+              <Icon name="info" size={16} className="mt-0.5" />
+              <span>Tip: Some features may work offline if you've visited the site before.</span>
+            </span>
           </p>
         </div>
       </div>

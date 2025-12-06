@@ -97,6 +97,13 @@ export default function MotherDashboard() {
     } catch {
       // Will be set when profile loads
     }
+    
+    // Restore active tab from localStorage
+    const savedTab = localStorage.getItem("motherDashboardTab");
+    if (savedTab && ["profile", "prescriptions", "questions", "progress", "journal", "notifications"].includes(savedTab)) {
+      setActiveTab(savedTab as any);
+    }
+    
     fetchProfile(t);
     fetchPrescriptions(t);
     fetchQuestions(t);
@@ -117,6 +124,13 @@ export default function MotherDashboard() {
     
     return () => clearInterval(interval);
   }, []);
+  
+  // Save active tab to localStorage when it changes
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("motherDashboardTab", activeTab);
+    }
+  }, [activeTab, token]);
 
   const authHeaders = (t = token) =>
     t ? { Authorization: `Bearer ${t}` } : undefined;
@@ -851,7 +865,9 @@ export default function MotherDashboard() {
                           className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow"
                         >
                           <div className="flex items-center gap-3">
-                            <Icon name="prescription" size={32} />
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                              <Icon name="prescription" size={24} className="text-white" />
+                            </div>
                             <div>
                               <p className="font-medium text-slate-700">{fileName}</p>
                               <p className="text-xs text-slate-500">Click to view</p>

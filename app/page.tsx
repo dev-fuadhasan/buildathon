@@ -2,26 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getLanguage, getTranslations } from "@/lib/i18n";
-import LanguageSelector from "@/components/LanguageSelector";
+import { getTranslations } from "@/lib/i18n";
 import Icon from "@/components/Icon";
 import { Illustration } from "@/components/Icon";
 
 export default function Home() {
-  const [t, setT] = useState(getTranslations("en"));
-
-  useEffect(() => {
-    const lang = getLanguage();
-    setT(getTranslations(lang));
-  }, []);
+  const [t] = useState(getTranslations("en"));
 
   return (
     <main className="min-h-screen">
-      {/* Language Toggle - Top Right */}
-      <div className="absolute top-4 right-4 z-10">
-        <LanguageSelector />
-      </div>
-      
       {/* Hero Section - Redesigned */}
       <section className="relative overflow-hidden bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 pt-20 pb-16">
         <div className="absolute inset-0 opacity-20">
@@ -53,15 +42,15 @@ export default function Home() {
                   href="/chat"
                   className="btn-primary inline-flex items-center justify-center gap-3 text-lg px-8 py-4"
                 >
-                  <Icon name="chat" size={24} />
+                  <Icon name="chat" size={24} className="text-white" />
                   {t.home.chatButton}
                 </Link>
                 <Link
-                  href="/mother/register"
+                  href="/mother/login"
                   className="btn-secondary inline-flex items-center justify-center gap-3 text-lg px-8 py-4"
                 >
-                  <Icon name="mom" size={24} />
-                  {t.home.motherButton}
+                  <Icon name="mom" size={24} className="text-pink-600" />
+                  I am Mother
                 </Link>
               </div>
             </div>

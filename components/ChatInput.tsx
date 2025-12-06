@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 import Icon from "@/components/Icon";
 
@@ -11,7 +10,6 @@ type Props = {
 };
 
 export default function ChatInput({ onSend, disabled }: Props) {
-  const t = useTranslation();
   const lang = getLanguage();
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
@@ -29,13 +27,13 @@ export default function ChatInput({ onSend, disabled }: Props) {
   };
 
   return (
-    <div className="flex gap-3 items-end">
+    <div className="flex gap-2 items-end">
       <div className="flex-1 relative">
         <textarea
-          className="input resize-none min-h-[70px] max-h-[150px] pr-12 text-base"
+          className="input resize-none min-h-[48px] max-h-[120px] pr-10 text-sm py-2.5"
           placeholder={lang === "bn" 
             ? "আপনার বার্তা টাইপ করুন... (প্রেরণ করতে Enter, নতুন লাইনের জন্য Shift+Enter)"
-            : `${t.chat.placeholder} (Press Enter to send, Shift+Enter for new line)`}
+            : "Type your message... (Press Enter to send, Shift+Enter for new line)"}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
@@ -51,19 +49,13 @@ export default function ChatInput({ onSend, disabled }: Props) {
       <button
         onClick={handleSend}
         disabled={sending || disabled || !value.trim()}
-        className="btn-primary px-8 py-3.5 h-[70px] flex items-center justify-center min-w-[120px] shadow-lg hover:shadow-xl transition-all"
+        className="btn-primary px-4 py-2.5 h-[48px] flex items-center justify-center min-w-[80px] text-sm shadow-md hover:shadow-lg transition-all"
         title="Send message (Enter)"
       >
         {sending ? (
-          <span className="flex items-center gap-2">
-            <Icon name="pending" size={20} className="animate-spin" />
-            <span className="font-semibold">{lang === "bn" ? "প্রেরণ..." : "Sending..."}</span>
-          </span>
+          <Icon name="pending" size={18} className="animate-spin" />
         ) : (
-          <span className="flex items-center gap-2">
-            <Icon name="upload" size={20} />
-            <span className="font-semibold">{t.chat.send}</span>
-          </span>
+          <Icon name="upload" size={18} />
         )}
       </button>
     </div>
