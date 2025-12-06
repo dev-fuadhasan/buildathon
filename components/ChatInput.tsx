@@ -30,7 +30,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
     <div className="flex gap-2 items-end">
       <div className="flex-1 relative">
         <textarea
-          className="input resize-none min-h-[48px] max-h-[120px] pr-10 text-sm py-2.5"
+          className="input resize-none h-[48px] max-h-[120px] pr-10 text-sm py-2.5"
           placeholder={lang === "bn" 
             ? "আপনার বার্তা টাইপ করুন... (প্রেরণ করতে Enter, নতুন লাইনের জন্য Shift+Enter)"
             : "Type your message... (Press Enter to send, Shift+Enter for new line)"}
@@ -44,6 +44,7 @@ export default function ChatInput({ onSend, disabled }: Props) {
           }}
           disabled={sending || disabled}
           rows={1}
+          style={{ height: "48px", overflowY: "auto" }}
         />
       </div>
       <button
@@ -53,9 +54,9 @@ export default function ChatInput({ onSend, disabled }: Props) {
         title="Send message (Enter)"
       >
         {sending ? (
-          <Icon name="pending" size={18} className="animate-spin" />
+          <Icon name="pending" size={18} className="animate-spin brightness-0 invert" />
         ) : (
-          <Icon name="upload" size={18} />
+          <Icon name="upload" size={18} className="brightness-0 invert" />
         )}
       </button>
     </div>

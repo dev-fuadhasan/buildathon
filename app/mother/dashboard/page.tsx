@@ -873,12 +873,12 @@ export default function MotherDashboard() {
                               <p className="text-xs text-slate-500">Click to view</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
                             <a
                               href={p.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn-secondary text-sm"
+                              className="btn-secondary text-sm px-4 py-2 h-[36px] flex items-center justify-center"
                             >
                               View
                             </a>
@@ -912,7 +912,7 @@ export default function MotherDashboard() {
                                 }
                               }}
                               disabled={deletingPrescription === p.key}
-                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 min-w-[36px] h-[36px]"
+                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-4 py-2 h-[36px] min-w-[36px]"
                             >
                               {deletingPrescription === p.key ? (
                                 "..."

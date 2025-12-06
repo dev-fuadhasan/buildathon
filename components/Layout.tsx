@@ -48,12 +48,14 @@ export default function Layout({ children }: Props) {
         <>
           <Link
             href="/chat"
-            className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+            className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+              pathname === "/chat"
+                ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+            }`}
           >
-            <span className="flex items-center gap-2">
-              <Icon name="chat" size={18} />
-              MomsCare AI Chat
-            </span>
+            <Icon name="chat" size={18} />
+            MomsCare AI Chat
           </Link>
         </>
       );
@@ -65,22 +67,32 @@ export default function Layout({ children }: Props) {
           <>
             <Link
               href="/chat"
-              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+              className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                pathname === "/chat"
+                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+              }`}
             >
-              <span className="flex items-center gap-2">
-                <Icon name="chat" size={18} />
-                MomsCare AI Chat
-              </span>
+              <Icon name="chat" size={18} />
+              MomsCare AI Chat
             </Link>
             <Link
               href="/doctor/login"
-              className="text-neutral-600 hover:text-blue-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-blue-50"
+              className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/doctor/login"
+                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                  : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+              }`}
             >
               Login
             </Link>
             <Link
               href="/doctor/register"
-              className="btn-primary text-sm px-4 py-2"
+              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
+                pathname === "/doctor/register"
+                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg"
+                  : "btn-primary"
+              }`}
             >
               Register
             </Link>
@@ -92,22 +104,32 @@ export default function Layout({ children }: Props) {
           <>
             <Link
               href="/chat"
-              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+              className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                pathname === "/chat"
+                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+              }`}
             >
-              <span className="flex items-center gap-2">
-                <Icon name="chat" size={18} />
-                MomsCare AI Chat
-              </span>
+              <Icon name="chat" size={18} />
+              MomsCare AI Chat
             </Link>
             <Link
               href="/mother/login"
-              className="text-neutral-600 hover:text-pink-600 font-medium transition-colors px-3 py-2 rounded-lg hover:bg-pink-50"
+              className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/mother/login"
+                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+              }`}
             >
               Login
             </Link>
             <Link
               href="/mother/register"
-              className="btn-primary text-sm px-4 py-2"
+              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
+                pathname === "/mother/register"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
+                  : "btn-primary"
+              }`}
             >
               Register
             </Link>
