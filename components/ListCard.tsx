@@ -14,7 +14,7 @@ type Props = {
 export default function ListCard({ title, subtitle, badge, onClick, children, className = "" }: Props) {
   return (
     <div
-      className={`rounded-xl border-2 border-neutral-200 bg-white p-5 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-pink-300 hover:scale-[1.01] ${className}`}
+      className={`rounded-xl border-2 border-neutral-200 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer hover:border-pink-300 hover:scale-[1.01] ${className}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">

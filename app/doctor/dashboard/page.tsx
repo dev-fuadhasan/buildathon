@@ -54,12 +54,15 @@ export default function DoctorDashboard() {
   const router = useRouter();
   const [token, setToken] = useState("");
   const [doctorId, setDoctorId] = useState("");
+  const [doctorName, setDoctorName] = useState("");
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionItem | null>(null);
   const [answerTexts, setAnswerTexts] = useState<Record<string, string>>({});
   const [showPatientDetails, setShowPatientDetails] = useState<Record<string, boolean>>({});
+  const [filter, setFilter] = useState<"all" | "pending" | "answered">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
     isOpen: false,
     type: "info",
@@ -80,6 +83,7 @@ export default function DoctorDashboard() {
       }
       loadQuestions(t);
       checkDoctorStatus(t);
+      loadDoctorProfile(t);
       
       // Set up real-time updates
       
@@ -99,6 +103,18 @@ export default function DoctorDashboard() {
       };
     }
   }, []);
+
+  const loadDoctorProfile = async (t = token) => {
+    try {
+      const res = await fetch("/api/doctor/profile", { headers: headers(t) });
+      if (res.ok) {
+        const data = await res.json();
+        setDoctorName(data.profile?.name || "Doctor");
+      }
+    } catch (err) {
+      console.error("Failed to load doctor profile:", err);
+    }
+  };
   
   // Redirect to dashboard if logged in and on home page
   useEffect(() => {
@@ -188,6 +204,28 @@ export default function DoctorDashboard() {
   const unansweredQuestions = questions.filter((q) => !q.answer);
   const answeredQuestions = questions.filter((q) => q.answer);
 
+  // Filter and sort questions
+  const getFilteredAndSortedQuestions = () => {
+    let filtered = questions;
+    
+    if (filter === "pending") {
+      filtered = unansweredQuestions;
+    } else if (filter === "answered") {
+      filtered = answeredQuestions;
+    }
+    
+    // Sort by date
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortBy === "newest" ? dateB - dateA : dateA - dateB;
+    });
+    
+    return sorted;
+  };
+
+  const displayedQuestions = getFilteredAndSortedQuestions();
+
   if (!token) {
     return (
       <Layout>
@@ -204,33 +242,26 @@ export default function DoctorDashboard() {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Header - Redesigned */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold gradient-text mb-2 sm:mb-3">
-              Doctor Dashboard
+      <div className="space-y-0">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-50 pt-8 pb-12 mb-8 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundSize: '60px 60px'
+            }}></div>
+          </div>
+          <div className="relative z-10 max-w-7xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 mb-2">
+              Welcome Dr. {doctorName || "Doctor"}
             </h1>
-            <p className="text-sm sm:text-lg text-neutral-600">
-              Answer questions from mothers with care and expertise.
+            <p className="text-lg sm:text-xl text-neutral-700 font-medium">
+              You have <span className="font-bold text-orange-600">{unansweredQuestions.length}</span> pending {unansweredQuestions.length === 1 ? 'question' : 'questions'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <Link href="/doctor/profile" className="btn-secondary flex items-center gap-2">
-              <Icon name="profile" size={20} />
-              My Profile
-            </Link>
-            <button
-              className="btn-ghost text-sm"
-              onClick={() => {
-                localStorage.removeItem("doctorToken");
-                location.href = "/";
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+        </section>
+
+        <div className="space-y-8 mt-8">
 
         <MessagePopup
           isOpen={popup.isOpen}
@@ -262,63 +293,119 @@ export default function DoctorDashboard() {
           </div>
         )}
 
-        {/* Stats - Redesigned */}
+        {/* Stats - Enhanced with Better Visual Hierarchy */}
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
-          <DashboardCard title={
-            <span className="flex items-center gap-2">
-              <Icon name="question" size={20} />
-              Total Questions
-            </span>
-          }>
-            <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                <Icon name="question" size={24} className="text-white" />
+              </div>
+              <h3 className="text-base font-semibold text-neutral-700">Total Questions</h3>
+            </div>
+            <div className="text-5xl sm:text-6xl font-extrabold text-blue-600">
               {questions.length}
             </div>
-          </DashboardCard>
-          <DashboardCard title={
-            <span className="flex items-center gap-2">
-              <Icon name="pending" size={20} />
-              Pending
-            </span>
-          }>
-            <div className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-              {unansweredQuestions.length}
-            </div>
-          </DashboardCard>
-          <DashboardCard title={
-            <span className="flex items-center gap-2">
-              <Icon name="success" size={20} />
-              Answered
-            </span>
-          }>
-            <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              {answeredQuestions.length}
-            </div>
-          </DashboardCard>
-        </div>
-
-        {/* Unanswered Questions - Redesigned */}
-        {unansweredQuestions.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-6 text-neutral-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg">
+          </div>
+          <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center shadow-lg">
                 <Icon name="pending" size={24} className="text-white" />
               </div>
-              Pending Questions ({unansweredQuestions.length})
+              <h3 className="text-base font-semibold text-neutral-700">Pending</h3>
+            </div>
+            <div className="text-5xl sm:text-6xl font-extrabold text-orange-600">
+              {unansweredQuestions.length}
+            </div>
+          </div>
+          <div className="rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <Icon name="success" size={24} className="text-white" />
+              </div>
+              <h3 className="text-base font-semibold text-neutral-700">Answered</h3>
+            </div>
+            <div className="text-5xl sm:text-6xl font-extrabold text-green-600">
+              {answeredQuestions.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                filter === "all"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter("pending")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                filter === "pending"
+                  ? "bg-orange-600 text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Pending
+            </button>
+            <button
+              onClick={() => setFilter("answered")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                filter === "answered"
+                  ? "bg-green-600 text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Answered
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2 ml-auto">
+            <button
+              onClick={() => setSortBy("newest")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                sortBy === "newest"
+                  ? "bg-neutral-800 text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Newest
+            </button>
+            <button
+              onClick={() => setSortBy("oldest")}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                sortBy === "oldest"
+                  ? "bg-neutral-800 text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Oldest
+            </button>
+          </div>
+        </div>
+
+        {/* Questions List - Redesigned */}
+        {displayedQuestions.length > 0 && (
+          <div>
+            <h2 className="text-2xl font-bold mb-6 text-neutral-800 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${
+                filter === "pending" ? "from-yellow-500 to-orange-500" :
+                filter === "answered" ? "from-green-500 to-emerald-500" :
+                "from-blue-500 to-cyan-500"
+              } flex items-center justify-center shadow-lg`}>
+                <Icon name={filter === "pending" ? "pending" : filter === "answered" ? "success" : "question"} size={24} className="text-white" />
+              </div>
+              {filter === "pending" ? "Pending" : filter === "answered" ? "Answered" : "All"} Questions ({displayedQuestions.length})
             </h2>
             <div className="space-y-3">
-              {unansweredQuestions.map((q) => (
-                <ListCard
+              {displayedQuestions.map((q) => (
+                <div
                   key={q.id}
-                  title={q.mother?.name || q.mother?.email || "Mother"}
-                  subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
-                  badge={
-                    <div className="flex items-center gap-2">
-                      {q.hasNewActivity && (
-                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-                      )}
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>
-                    </div>
-                  }
+                  className="rounded-xl border-2 border-neutral-200 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer hover:border-pink-300 hover:scale-[1.01]"
                   onClick={() => {
                     setSelectedQuestion(q);
                     // Mark as seen
@@ -330,10 +417,58 @@ export default function DoctorDashboard() {
                     }
                   }}
                 >
-                  <p className="text-xs text-slate-500 mt-1">
-                    {new Date(q.createdAt).toLocaleDateString()}
-                  </p>
-                </ListCard>
+                  <div className="flex items-start gap-4">
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center flex-shrink-0 shadow-md">
+                      <Icon name="mom" size={24} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-lg text-neutral-900 mb-1">
+                            {q.mother?.name || q.mother?.email || "Mother"}
+                          </h4>
+                          <p className="font-semibold text-neutral-800 text-base leading-relaxed mb-2">
+                            {q.question.length > 150 ? q.question.substring(0, 150) + "..." : q.question}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            Asked on {new Date(q.createdAt).toLocaleDateString("en-US", { 
+                              year: "numeric", 
+                              month: "long", 
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {q.hasNewActivity && (
+                            <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+                          )}
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            q.answer 
+                              ? "bg-green-100 text-green-700" 
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {q.answer ? "Answered" : "Pending"}
+                          </span>
+                        </div>
+                      </div>
+                      {q.answer && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedQuestion(q);
+                          }}
+                          className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-semibold"
+                        >
+                          View Full Conversation
+                          <Icon name="view" size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -528,48 +663,6 @@ export default function DoctorDashboard() {
           )}
         </DetailModal>
 
-        {/* Answered Questions - Redesigned */}
-        {answeredQuestions.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-6 text-neutral-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                <Icon name="success" size={24} className="text-white" />
-              </div>
-              Answered Questions ({answeredQuestions.length})
-            </h2>
-            <div className="space-y-3">
-              {answeredQuestions.map((q) => (
-                <ListCard
-                  key={q.id}
-                  title={q.mother?.name || q.mother?.email || "Mother"}
-                  subtitle={q.question.length > 100 ? q.question.substring(0, 100) + "..." : q.question}
-                  badge={
-                    <div className="flex items-center gap-2">
-                      {q.hasNewActivity && (
-                        <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-                      )}
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Answered</span>
-                    </div>
-                  }
-                  onClick={() => {
-                    setSelectedQuestion(q);
-                    // Mark as seen
-                    if (q.hasNewActivity) {
-                      fetch(`/api/doctor/questions/${q.id}/mark-seen`, {
-                        method: "POST",
-                        headers: headers(),
-                      }).then(() => loadQuestions());
-                    }
-                  }}
-                >
-                  <p className="text-xs text-slate-500 mt-1">
-                    {new Date(q.createdAt).toLocaleDateString()}
-                  </p>
-                </ListCard>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Answered Question Detail Modal */}
         <DetailModal
@@ -741,17 +834,22 @@ export default function DoctorDashboard() {
         </DetailModal>
 
         {/* Empty State - Redesigned */}
-        {questions.length === 0 && (
-          <div className="text-center py-16">
+        {displayedQuestions.length === 0 && (
+          <div className="text-center py-16 rounded-xl border-2 border-neutral-200 bg-neutral-50">
             <div className="mb-6 flex justify-center">
               <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center shadow-lg">
                 <Icon name="doctor" size={64} className="text-blue-600" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-neutral-800 mb-3">No questions yet</h3>
-            <p className="text-lg text-neutral-600">Questions from mothers will appear here</p>
+            <h3 className="text-2xl font-bold text-neutral-800 mb-3">
+              {filter === "all" ? "No questions yet" : filter === "pending" ? "No pending questions" : "No answered questions"}
+            </h3>
+            <p className="text-lg text-neutral-600">
+              {filter === "all" ? "Questions from mothers will appear here" : "Try changing the filter to see more questions"}
+            </p>
           </div>
         )}
+        </div>
       </div>
     </Layout>
   );
