@@ -13,9 +13,9 @@ export async function POST(
     const body = await req.json();
     const { content, sessionId } = body;
 
-    if (!content || !sessionId) {
+    if (!content) {
       return NextResponse.json(
-        { error: "content and sessionId are required" },
+        { error: "content is required" },
         { status: 400 }
       );
     }
@@ -36,7 +36,7 @@ export async function POST(
       senderType = "admin";
       senderName = "Admin";
     } else {
-      senderId = conversation.userId || sessionId;
+      senderId = conversation.userId || sessionId || "user";
       senderType = "user";
       senderName = conversation.userName;
     }

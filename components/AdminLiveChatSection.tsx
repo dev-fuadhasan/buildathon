@@ -45,6 +45,22 @@ export default function AdminLiveChatSection({ token }: Props) {
     Authorization: `Bearer ${token}`,
   });
 
+  const markMessagesAsRead = async (conversationId: string) => {
+    try {
+      const res = await fetch(`/api/live-chat/conversations/${conversationId}/mark-read`, {
+        method: "POST",
+        headers: headers(),
+      });
+      if (res.ok) {
+        // Reload conversation to get updated read status
+        loadConversation(conversationId);
+        loadConversations();
+      }
+    } catch (err) {
+      console.error("Error marking messages as read:", err);
+    }
+  };
+
   useEffect(() => {
     loadConversations();
     // Poll for new conversations and messages
@@ -52,11 +68,20 @@ export default function AdminLiveChatSection({ token }: Props) {
       loadConversations();
       if (selectedConversation) {
         loadConversation(selectedConversation.id);
+        // Mark messages as read when admin views conversation
+        markMessagesAsRead(selectedConversation.id);
       }
     }, 2000); // Every 2 seconds
 
     return () => clearInterval(interval);
   }, [selectedConversation]);
+
+  // Mark messages as read when conversation is selected
+  useEffect(() => {
+    if (selectedConversation) {
+      markMessagesAsRead(selectedConversation.id);
+    }
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -72,6 +97,13 @@ export default function AdminLiveChatSection({ token }: Props) {
             new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
         );
         setConversations(sorted);
+        // Don't auto-select - only update if already selected
+        if (selectedConversation) {
+          const updated = sorted.find((c: Conversation) => c.id === selectedConversation.id);
+          if (updated) {
+            setSelectedConversation(updated);
+          }
+        }
       }
     } catch (err) {
       console.error("Error loading conversations:", err);
@@ -104,6 +136,7 @@ export default function AdminLiveChatSection({ token }: Props) {
         headers: headers(),
         body: JSON.stringify({
           content: messageText,
+          sessionId: "admin", // Admin doesn't need sessionId but API might expect it
         }),
       });
 
@@ -175,10 +208,11 @@ export default function AdminLiveChatSection({ token }: Props) {
                 />
                 <button
                   onClick={handleSearchById}
-                  className="px-3 h-9 rounded-lg bg-white border-2 border-neutral-200 text-neutral-600 hover:bg-pink-50 hover:border-pink-300 transition-all duration-200 flex items-center justify-center"
+                  className="px-3 h-9 rounded-lg bg-white border-2 border-neutral-200 text-neutral-600 hover:bg-pink-50 hover:border-pink-300 transition-all duration-200 flex items-center justify-center min-w-[36px]"
                   title="Search"
+                  type="button"
                 >
-                  <Icon name="search" size={16} />
+                  <span className="text-lg">🔍</span>
                 </button>
               </div>
             </div>
@@ -193,7 +227,11 @@ export default function AdminLiveChatSection({ token }: Props) {
                   return (
                     <button
                       key={conv.id}
-                      onClick={() => setSelectedConversation(conv)}
+                      onClick={() => {
+                        setSelectedConversation(conv);
+                        // Mark messages as read when conversation is selected
+                        markMessagesAsRead(conv.id);
+                      }}
                       className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                         selectedConversation?.id === conv.id
                           ? "border-pink-500 bg-pink-50"
