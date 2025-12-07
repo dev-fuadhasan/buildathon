@@ -445,24 +445,30 @@ export default function AdminDashboard() {
             { id: "analytics", label: "Analytics", icon: "progress" },
             { id: "doctors", label: "Doctors", icon: "doctor" },
             { id: "mothers", label: "Mothers", icon: "mom" },
-            { id: "reports", label: `Reports${reports.length > 0 ? ` (${reports.length})` : ""}`, icon: "reports" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`tab flex items-center gap-2 px-6 py-3.5 ${
-                activeTab === tab.id ? "tab-active" : "tab-inactive"
-              }`}
-            >
-              {tab.icon && <Icon name={tab.icon} size={20} />}
-              <span>{tab.label}</span>
-              {tab.id === "reports" && reports.length > 0 && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {reports.length}
-                </span>
-              )}
-            </button>
-          ))}
+            { id: "reports", label: "Reports", icon: "reports" },
+          ].map((tab) => {
+            const pendingReports = tab.id === "reports" 
+              ? reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending")
+              : [];
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`tab flex items-center gap-2 px-6 py-3.5 ${
+                  activeTab === tab.id ? "tab-active" : "tab-inactive"
+                }`}
+              >
+                {tab.icon && <Icon name={tab.icon} size={20} />}
+                <span>{tab.label}</span>
+                {tab.id === "reports" && pendingReports.length > 0 && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                    {pendingReports.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Overview Tab */}

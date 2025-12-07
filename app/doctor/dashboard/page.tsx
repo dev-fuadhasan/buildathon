@@ -585,8 +585,7 @@ export default function DoctorDashboard() {
                 </p>
                 <p className="text-base text-neutral-700 leading-relaxed">{selectedQuestion.answer}</p>
                 {selectedQuestion.answeredAt && (
-                  <p className="text-xs text-neutral-500 mt-3 flex items-center gap-1">
-                    <Icon name="calendar" size={14} />
+                  <p className="text-xs text-neutral-500 mt-3">
                     Answered on {new Date(selectedQuestion.answeredAt).toLocaleString()}
                   </p>
                 )}
