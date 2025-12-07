@@ -288,7 +288,7 @@ export default function LiveChatWidget({ onClose }: Props) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-96 h-[600px] bg-white rounded-2xl shadow-2xl border-2 border-pink-200 flex flex-col overflow-hidden">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-8rem)] sm:h-[600px] max-h-[600px] bg-white rounded-2xl shadow-2xl border-2 border-pink-200 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">

@@ -201,9 +201,9 @@ export default function AdminLiveChatSection({ token }: Props) {
           )}
         </span>
       }>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 h-[calc(100vh-20rem)] sm:h-[600px] max-h-[600px]">
           {/* Conversations List */}
-          <div className="lg:col-span-1 border-r border-slate-200 pr-4 overflow-y-auto">
+          <div className="lg:col-span-1 border-r-0 lg:border-r border-slate-200 pr-0 lg:pr-4 pb-4 lg:pb-0 border-b lg:border-b-0 overflow-y-auto max-h-[300px] lg:max-h-none">
             <div className="mb-4">
               <div className="flex gap-2 items-center">
                 <input
@@ -280,11 +280,11 @@ export default function AdminLiveChatSection({ token }: Props) {
           </div>
 
           {/* Chat Area */}
-          <div className="lg:col-span-2 flex flex-col">
+          <div className="lg:col-span-2 flex flex-col min-h-0">
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
-                <div className="border-b border-slate-200 pb-4 mb-4">
+                <div className="border-b border-slate-200 pb-3 sm:pb-4 mb-3 sm:mb-4 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-bold text-slate-800">{selectedConversation.userName}</h3>
@@ -302,13 +302,6 @@ export default function AdminLiveChatSection({ token }: Props) {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        selectedConversation.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-slate-100 text-slate-700"
-                      }`}>
-                        {selectedConversation.status}
-                      </span>
                       <button
                         onClick={async () => {
                           if (confirm("Are you sure you want to delete this conversation? This action cannot be undone.")) {
@@ -339,7 +332,7 @@ export default function AdminLiveChatSection({ token }: Props) {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-3 mb-4 bg-gradient-to-b from-slate-50 to-white p-4 rounded-lg">
+                <div className="flex-1 overflow-y-auto space-y-3 mb-3 sm:mb-4 bg-gradient-to-b from-slate-50 to-white p-3 sm:p-4 rounded-lg min-h-0">
                   {selectedConversation.messages.length === 0 ? (
                     <div className="text-center text-slate-500 py-8">
                       <p>No messages yet. Start the conversation!</p>

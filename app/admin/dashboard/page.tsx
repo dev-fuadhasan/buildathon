@@ -483,7 +483,7 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`tab flex items-center gap-2 px-6 py-3.5 ${
+                className={`tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id ? "tab-active" : "tab-inactive"
                 }`}
               >
@@ -503,57 +503,57 @@ export default function AdminDashboard() {
         {activeTab === "overview" && (
           <>
             {overview && (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                 <DashboardCard title={
-                  <span className="flex items-center gap-2">
-                    <Icon name="mom" size={20} />
-                    Total Mothers
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="mom" size={16} />
+                    <span className="text-xs sm:text-sm">Total Mothers</span>
                   </span>
-                }>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+                } className="py-3">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
                     {overview.mothers}
                   </div>
                 </DashboardCard>
                 <DashboardCard title={
-                  <span className="flex items-center gap-2">
-                    <Icon name="doctor" size={20} />
-                    Approved Doctors
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="doctor" size={16} />
+                    <span className="text-xs sm:text-sm">Approved Doctors</span>
                   </span>
-                }>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                } className="py-3">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                     {overview.doctors}
                   </div>
                 </DashboardCard>
                 <DashboardCard title={
-                  <span className="flex items-center gap-2">
-                    <Icon name="pending" size={20} />
-                    Pending Doctors
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="pending" size={16} />
+                    <span className="text-xs sm:text-sm">Pending Doctors</span>
                   </span>
-                }>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                } className="py-3">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
                     {overview.pendingDoctors}
                   </div>
                 </DashboardCard>
                 <DashboardCard title={
-                  <span className="flex items-center gap-2">
-                    <Icon name="question" size={20} />
-                    Total Questions
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="question" size={16} />
+                    <span className="text-xs sm:text-sm">Total Questions</span>
                   </span>
-                }>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                } className="py-3">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                     {overview.questions}
                   </div>
                 </DashboardCard>
                 <DashboardCard title={
-                  <span className="flex items-center gap-2">
-                    <Icon name="success" size={20} />
-                    Answered
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="success" size={16} />
+                    <span className="text-xs sm:text-sm">Answered</span>
                   </span>
-                }>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                } className="py-3">
+                  <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     {overview.answered}
                   </div>
-                  <p className="text-sm text-neutral-500 mt-2">
+                  <p className="text-xs text-neutral-500 mt-1">
                     {overview.questions > 0 
                       ? Math.round((overview.answered / overview.questions) * 100) 
                       : 0}% response rate

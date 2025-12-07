@@ -178,7 +178,7 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)] max-w-6xl mx-auto gap-3">
+      <div className="flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)] max-w-6xl mx-auto gap-2 sm:gap-3 px-2 sm:px-4">
         {/* Header - Compact */}
         <div className="flex items-center justify-between flex-shrink-0">
           <div>
