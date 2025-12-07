@@ -132,14 +132,14 @@ Medications: ${mother.medications || "N/A"}`;
     const allMessagesText = JSON.stringify(messages) + (profileContext || "");
     const estimatedTokens = Math.ceil(allMessagesText.length / 3.5); // More accurate estimate
     
-    // Check if token limit is exceeded (6000 tokens max, leave buffer)
-    if (estimatedTokens > 5000) {
+    // Check if token limit is exceeded (8000 tokens max, leave buffer for response)
+    if (estimatedTokens > 6000) {
       // Trim more aggressively
-      messages = limitConversationHistory(messages, 10);
+      messages = limitConversationHistory(messages, 12);
       
       // Re-check
       const newEstimatedTokens = Math.ceil((JSON.stringify(messages) + (profileContext || "")).length / 3.5);
-      if (newEstimatedTokens > 5000) {
+      if (newEstimatedTokens > 6000) {
         const errorMessage = userLanguage === "bn"
           ? "আপনার কথোপকথন খুব দীর্ঘ হয়ে গেছে। অনুগ্রহ করে একটি নতুন প্রশ্ন করুন বা পৃষ্ঠাটি রিফ্রেশ করুন।"
           : "Your conversation has become too long. Please ask a new question or refresh the page.";
