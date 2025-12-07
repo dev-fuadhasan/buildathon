@@ -40,14 +40,15 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   return (
     <>
-      {/* Mobile Menu Button - Only visible on mobile */}
+      {/* Mobile Menu Button - Always visible on mobile */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="lg:hidden fixed top-20 right-4 z-40 bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+        className="lg:hidden fixed top-20 right-4 z-50 bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
         aria-label="Open menu"
+        style={{ display: 'block' }}
       >
         {isOpen ? (
           <Icon name="close" size={24} className="brightness-0 invert" />

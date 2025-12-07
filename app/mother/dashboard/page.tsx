@@ -660,9 +660,7 @@ export default function MotherDashboard() {
 
           {/* Main Dashboard Cards - Overview */}
           {activeTab === "profile" && (
-            <section className="space-y-6">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900">Quick Actions</h2>
-              
+            <section>
               <div className="grid gap-6 md:grid-cols-2">
                 {/* AI Chat Card - Primary CTA */}
                 <Link
@@ -671,7 +669,7 @@ export default function MotherDashboard() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                      <Icon name="chat" size={28} className="text-white" />
+                      <Icon name="chat" size={28} className="text-white brightness-0 invert" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
