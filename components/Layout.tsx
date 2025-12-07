@@ -79,7 +79,7 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/doctor/login"
-              className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+              className={`font-medium transition-colors px-3 py-2 rounded-lg cursor-pointer ${
                 pathname === "/doctor/login"
                   ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
                   : pathname === "/doctor/register"
@@ -91,7 +91,7 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/doctor/register"
-              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
+              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all cursor-pointer ${
                 pathname === "/doctor/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
                   : "text-pink-600 border-2 border-pink-300 bg-transparent"
@@ -118,7 +118,7 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/mother/login"
-              className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+              className={`font-medium transition-colors px-3 py-2 rounded-lg cursor-pointer ${
                 pathname === "/mother/login"
                   ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
                   : pathname === "/mother/register"
@@ -130,7 +130,7 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/mother/register"
-              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
+              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all cursor-pointer ${
                 pathname === "/mother/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
                   : "text-pink-600 border-2 border-pink-300 bg-transparent"
