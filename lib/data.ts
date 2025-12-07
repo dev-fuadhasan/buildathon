@@ -632,3 +632,47 @@ export async function getAdminActivity(activityId: string): Promise<AdminActivit
   }
 }
 
+// Password Reset Token Types and Functions
+export type PasswordResetToken = {
+  token: string;
+  email: string;
+  role: "mother" | "doctor";
+  expiresAt: string; // ISO timestamp
+  createdAt: string;
+  used: boolean;
+};
+
+function passwordResetTokenKey(token: string): string {
+  return `password-reset-tokens/${token}.json`;
+}
+
+export async function savePasswordResetToken(tokenData: PasswordResetToken): Promise<void> {
+  try {
+    await putJson(passwordResetTokenKey(tokenData.token), tokenData);
+  } catch (err) {
+    console.error("Error saving password reset token:", err);
+    throw err;
+  }
+}
+
+export async function getPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
+  try {
+    return await getJson<PasswordResetToken>(passwordResetTokenKey(token));
+  } catch (err) {
+    console.error("Error getting password reset token:", err);
+    return null;
+  }
+}
+
+export async function markTokenAsUsed(token: string): Promise<void> {
+  try {
+    const tokenData = await getPasswordResetToken(token);
+    if (tokenData) {
+      tokenData.used = true;
+      await putJson(passwordResetTokenKey(token), tokenData);
+    }
+  } catch (err) {
+    console.error("Error marking token as used:", err);
+  }
+}
+

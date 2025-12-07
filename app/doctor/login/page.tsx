@@ -109,6 +109,14 @@ export default function DoctorLogin() {
             </button>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex items-center justify-between">
+            <Link
+              href="/forgot-password?role=doctor"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Forgot Password?
+            </Link>
+          </div>
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? "Signing in..." : "Login"}
           </button>

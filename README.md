@@ -45,6 +45,10 @@ CF_SECRET_ACCESS_KEY=your-r2-secret-access-key
 # Admin Credentials (for admin login)
 ADMIN_EMAIL=admin@momscare.com
 ADMIN_PASSWORD=your-secure-admin-password
+
+# Resend API (for password reset emails)
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=MomsCare <onboarding@resend.dev>  # Optional: defaults to onboarding@resend.dev
 ```
 
 ### How to Generate AUTH_JWT_SECRET:
