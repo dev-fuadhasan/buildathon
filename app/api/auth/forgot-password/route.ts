@@ -116,6 +116,18 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error("Resend API error:", error);
+        
+        // Check if it's a domain verification error
+        if (error.message && error.message.includes("testing emails")) {
+          return NextResponse.json(
+            { 
+              error: "Email service is currently in testing mode. To send password reset emails to all users, please verify your domain in Resend. Contact support for assistance or use the registered email address for testing.",
+              requiresDomainVerification: true
+            },
+            { status: 500 }
+          );
+        }
+        
         return NextResponse.json(
           { error: `Failed to send password reset email: ${error.message || "Please try again later."}` },
           { status: 500 }

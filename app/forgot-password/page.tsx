@@ -39,11 +39,18 @@ function ForgotPasswordForm() {
       const data = await res.json();
 
       if (!res.ok) {
+        let errorMessage = data.error || "Failed to send reset email. Please try again.";
+        
+        // Show helpful message for domain verification issue
+        if (data.requiresDomainVerification) {
+          errorMessage = "Email service is currently in testing mode. Password reset emails can only be sent to verified addresses. Please contact support or verify your domain in Resend to enable password resets for all users.";
+        }
+        
         setPopup({
           isOpen: true,
           type: "error",
           title: "Error",
-          message: data.error || "Failed to send reset email. Please try again.",
+          message: errorMessage,
         });
         return;
       }
