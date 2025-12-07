@@ -142,6 +142,32 @@ export default function AdminDashboard() {
       loadAllMothers(t);
       loadAnalytics(t);
       loadReports(t);
+      
+      // Set up real-time updates
+      
+      // Frequent updates (every 30 seconds) - for pending doctors and reports
+      const frequentInterval = setInterval(() => {
+        loadPending(t); // Check for new doctor applications
+        loadReports(t); // Check for new reports
+      }, 30 * 1000); // Every 30 seconds
+      
+      // Medium updates (every 2 minutes) - for overview and lists
+      const mediumInterval = setInterval(() => {
+        loadOverview(t);
+        loadAllDoctors(t);
+        loadAllMothers(t);
+      }, 2 * 60 * 1000); // Every 2 minutes
+      
+      // Less frequent updates (every 5 minutes) - for analytics
+      const slowInterval = setInterval(() => {
+        loadAnalytics(t);
+      }, 5 * 60 * 1000); // Every 5 minutes
+      
+      return () => {
+        clearInterval(frequentInterval);
+        clearInterval(mediumInterval);
+        clearInterval(slowInterval);
+      };
     }
   }, []);
   

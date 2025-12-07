@@ -80,12 +80,22 @@ export default function DoctorDashboard() {
       loadQuestions(t);
       checkDoctorStatus(t);
       
-      // Set up interval to check if account was paused
-      const interval = setInterval(() => {
-        checkDoctorStatus(t);
-      }, 5 * 60 * 1000); // Check every 5 minutes
+      // Set up real-time updates
       
-      return () => clearInterval(interval);
+      // Frequent updates (every 30 seconds) - for new questions
+      const frequentInterval = setInterval(() => {
+        loadQuestions(t); // Check for new questions
+      }, 30 * 1000); // Every 30 seconds
+      
+      // Less frequent updates (every 5 minutes) - for account status
+      const slowInterval = setInterval(() => {
+        checkDoctorStatus(t); // Check if account was paused
+      }, 5 * 60 * 1000); // Every 5 minutes
+      
+      return () => {
+        clearInterval(frequentInterval);
+        clearInterval(slowInterval);
+      };
     }
   }, []);
   

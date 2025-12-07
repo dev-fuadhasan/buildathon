@@ -130,16 +130,32 @@ export default function MotherDashboard() {
     updatePregnancyProgress(t);
     checkDailyTask(t);
     
-    // Set up interval to check for daily tasks, update pregnancy progress, and check if paused
-    // Check every 5 minutes
-    const interval = setInterval(() => {
+    // Set up real-time updates with different intervals for different data
+    
+    // Frequent updates (every 30 seconds) - for notifications and questions
+    const frequentInterval = setInterval(() => {
+      fetchNotifications(t); // Check for new notifications
+      fetchQuestions(t); // Check for new answers or comments
+    }, 30 * 1000); // Every 30 seconds
+    
+    // Medium updates (every 2 minutes) - for prescriptions and daily entries
+    const mediumInterval = setInterval(() => {
+      fetchPrescriptions(t);
+      fetchDailyEntries(t);
+    }, 2 * 60 * 1000); // Every 2 minutes
+    
+    // Less frequent updates (every 5 minutes) - for profile, progress, and daily tasks
+    const slowInterval = setInterval(() => {
       updatePregnancyProgress(t);
       checkDailyTask(t);
-      fetchNotifications(t); // Refresh notifications to show new recommendations
       fetchProfile(t); // Check if account was paused
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 5 * 60 * 1000); // Every 5 minutes
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(frequentInterval);
+      clearInterval(mediumInterval);
+      clearInterval(slowInterval);
+    };
   }, []);
   
   // Save active tab to localStorage when it changes
