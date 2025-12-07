@@ -79,22 +79,24 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/doctor/login"
-              className={`font-medium transition-colors px-3 py-2 rounded-lg cursor-pointer ${
+              className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
                 pathname === "/doctor/login"
-                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
                   : pathname === "/doctor/register"
                   ? "text-pink-600 border-2 border-pink-300 bg-transparent"
-                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
               Login
             </Link>
             <Link
               href="/doctor/register"
-              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all cursor-pointer ${
+              className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
                 pathname === "/doctor/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
-                  : "text-pink-600 border-2 border-pink-300 bg-transparent"
+                  : pathname === "/doctor/login"
+                  ? "text-pink-600 border-2 border-pink-300 bg-transparent"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
               Register
@@ -118,22 +120,24 @@ export default function Layout({ children }: Props) {
             </Link>
             <Link
               href="/mother/login"
-              className={`font-medium transition-colors px-3 py-2 rounded-lg cursor-pointer ${
+              className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
                 pathname === "/mother/login"
-                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
                   : pathname === "/mother/register"
                   ? "text-pink-600 border-2 border-pink-300 bg-transparent"
-                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
               Login
             </Link>
             <Link
               href="/mother/register"
-              className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all cursor-pointer ${
+              className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
                 pathname === "/mother/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
-                  : "text-pink-600 border-2 border-pink-300 bg-transparent"
+                  : pathname === "/mother/login"
+                  ? "text-pink-600 border-2 border-pink-300 bg-transparent"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
               Register
