@@ -60,9 +60,9 @@ export default function LiveChatWidget({ onClose }: Props) {
         
         // Try to find existing conversation
         checkExistingConversation(sid, payload.id).then((hasConversation) => {
-          // Don't auto-create - let user choose to start new conversation
           if (!hasConversation) {
-            setShowForm(false); // Hide form, show empty state with option to start
+            // Auto-create conversation for logged-in user
+            createConversationForLoggedInUser(sid, payload.id, motherToken ? "mother" : "doctor", token);
           }
         });
       } catch (err) {
@@ -242,9 +242,22 @@ export default function LiveChatWidget({ onClose }: Props) {
       if (res.ok) {
         const data = await res.json();
         setMessages(data.conversation.messages || []);
+        // Reload messages to ensure sync
+        if (conversationId) {
+          await loadMessages(conversationId);
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Error sending message:", errorData);
+        alert("Failed to send message. Please try again.");
+        // Restore message text on error
+        setInputMessage(messageText);
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      alert("Failed to send message. Please try again.");
+      // Restore message text on error
+      setInputMessage(messageText);
     } finally {
       setLoading(false);
     }

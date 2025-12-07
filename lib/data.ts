@@ -566,3 +566,13 @@ export async function getConversationsByUserId(userId: string): Promise<LiveChat
   }
 }
 
+export async function deleteLiveChatConversation(conversationId: string): Promise<void> {
+  try {
+    const { deleteObject } = await import("./r2Client");
+    await deleteObject(liveChatConversationKey(conversationId));
+  } catch (err) {
+    console.error("Error deleting live chat conversation:", err);
+    throw err;
+  }
+}
+

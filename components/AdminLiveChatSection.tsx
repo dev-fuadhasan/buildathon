@@ -301,7 +301,7 @@ export default function AdminLiveChatSection({ token }: Props) {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-2">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         selectedConversation.status === "active"
                           ? "bg-green-100 text-green-700"
@@ -309,6 +309,31 @@ export default function AdminLiveChatSection({ token }: Props) {
                       }`}>
                         {selectedConversation.status}
                       </span>
+                      <button
+                        onClick={async () => {
+                          if (confirm("Are you sure you want to delete this conversation? This action cannot be undone.")) {
+                            try {
+                              const res = await fetch(`/api/live-chat/conversations/${selectedConversation.id}`, {
+                                method: "DELETE",
+                                headers: headers(),
+                              });
+                              if (res.ok) {
+                                setSelectedConversation(null);
+                                loadConversations();
+                              } else {
+                                alert("Failed to delete conversation");
+                              }
+                            } catch (err) {
+                              console.error("Error deleting conversation:", err);
+                              alert("Failed to delete conversation");
+                            }
+                          }
+                        }}
+                        className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-xs font-semibold"
+                        title="Delete Conversation"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
