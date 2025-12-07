@@ -6,10 +6,64 @@ import { listObjects, signedUrl } from "@/lib/r2Client";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
 
+// Helper to clean and deduplicate messages
+function cleanMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
+  const cleaned: Array<{ role: string; content: string }> = [];
+  let lastContent = "";
+  
+  for (const msg of messages) {
+    const content = (msg.content || "").trim();
+    
+    // Skip empty messages
+    if (!content) continue;
+    
+    // Skip duplicate consecutive messages (same role and content)
+    if (content === lastContent && msg.role === cleaned[cleaned.length - 1]?.role) {
+      continue;
+    }
+    
+    // Skip if this assistant message is identical to the previous one
+    if (msg.role === "assistant" && cleaned.length > 0 && cleaned[cleaned.length - 1].role === "assistant") {
+      if (content === cleaned[cleaned.length - 1].content) {
+        continue;
+      }
+    }
+    
+    cleaned.push({ role: msg.role, content });
+    lastContent = content;
+  }
+  
+  return cleaned;
+}
+
+// Helper to limit conversation history to prevent token overflow
+function limitConversationHistory(
+  messages: Array<{ role: string; content: string }>,
+  maxMessages: number = 20
+): Array<{ role: string; content: string }> {
+  // Always keep the first message if it's a system/assistant greeting
+  // Keep the last maxMessages messages
+  if (messages.length <= maxMessages) {
+    return messages;
+  }
+  
+  // Keep first message if it's an assistant greeting
+  const firstMessage = messages[0];
+  const isGreeting = firstMessage?.role === "assistant" && 
+    (firstMessage.content.includes("Hi") || firstMessage.content.includes("হাই") || 
+     firstMessage.content.includes("MomsCare") || firstMessage.content.includes("assistant"));
+  
+  if (isGreeting) {
+    return [firstMessage, ...messages.slice(-(maxMessages - 1))];
+  }
+  
+  return messages.slice(-maxMessages);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const messages = body.messages || [];
+    let messages = body.messages || [];
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -17,6 +71,12 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Clean and deduplicate messages
+    messages = cleanMessages(messages);
+    
+    // Limit conversation history to prevent token overflow and maintain focus
+    messages = limitConversationHistory(messages, 18);
 
     const user = await getUserFromRequest(req);
 
@@ -28,7 +88,6 @@ export async function POST(req: NextRequest) {
       try {
         const mother = await getMother(user.id);
         if (mother) {
-          // Use daysPregnant if available, otherwise calculate from weeksPregnant
           const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
           
@@ -39,7 +98,6 @@ Conditions: ${mother.conditions || "N/A"}
 Medications: ${mother.medications || "N/A"}`;
           weeksPregnant = weeks;
           
-          // Fetch prescription URLs for image analysis
           try {
             const prefix = `prescriptions/${user.id}/`;
             const objects = await listObjects(prefix);
@@ -51,7 +109,6 @@ Medications: ${mother.medications || "N/A"}`;
           }
         }
       } catch (err) {
-        // If profile fetch fails, continue without context
         console.error("Failed to fetch mother profile:", err);
       }
     }
@@ -61,29 +118,41 @@ Medications: ${mother.medications || "N/A"}`;
       .filter((m: any) => m.role === "user")
       .pop()?.content || "";
     
+    if (!lastUserMessage.trim()) {
+      return NextResponse.json(
+        { error: "User message is required" },
+        { status: 400 }
+      );
+    }
+    
     // Detect language of user message
     const userLanguage = detectLanguage(lastUserMessage);
     
-    // Estimate token count (rough estimate: 1 token ≈ 4 characters)
-    // Count all messages + system prompts
+    // Estimate token count more accurately
     const allMessagesText = JSON.stringify(messages) + (profileContext || "");
-    const estimatedTokens = Math.ceil(allMessagesText.length / 4);
+    const estimatedTokens = Math.ceil(allMessagesText.length / 3.5); // More accurate estimate
     
-    // Check if token limit is exceeded (6000 tokens max)
-    if (estimatedTokens > 5500) { // Leave some buffer
-      const errorMessage = userLanguage === "bn"
-        ? "আপনার প্রশ্নটি খুব দীর্ঘ। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন। আপনি পরে আরও বিস্তারিত জানতে পারেন। অথবা আরও ভাল সাহায্যের জন্য লগইন করুন।"
-        : "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.";
+    // Check if token limit is exceeded (6000 tokens max, leave buffer)
+    if (estimatedTokens > 5000) {
+      // Trim more aggressively
+      messages = limitConversationHistory(messages, 10);
       
-      return NextResponse.json({
-        reply: errorMessage,
-        safetyWarning: false,
-        riskLevel: "low",
-      });
+      // Re-check
+      const newEstimatedTokens = Math.ceil((JSON.stringify(messages) + (profileContext || "")).length / 3.5);
+      if (newEstimatedTokens > 5000) {
+        const errorMessage = userLanguage === "bn"
+          ? "আপনার কথোপকথন খুব দীর্ঘ হয়ে গেছে। অনুগ্রহ করে একটি নতুন প্রশ্ন করুন বা পৃষ্ঠাটি রিফ্রেশ করুন।"
+          : "Your conversation has become too long. Please ask a new question or refresh the page.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
     }
     
     // Translate ALL user messages in the conversation to maintain context consistency
-    // This ensures continuous questions work properly
     const translatedMessages = await Promise.all(
       messages.map(async (m: any) => {
         if (m.role === "user") {
@@ -94,11 +163,10 @@ Medications: ${mother.medications || "N/A"}`;
               return { ...m, content: translated };
             } catch (error) {
               console.error("Translation error for message:", error);
-              return m; // Keep original if translation fails
+              return m;
             }
           }
         }
-        // Keep assistant messages as-is (they're already in English from previous responses)
         return m;
       })
     );
@@ -108,19 +176,16 @@ Medications: ${mother.medications || "N/A"}`;
     if (userLanguage === "bn") {
       try {
         translatedUserMessage = await translateToEnglish(lastUserMessage);
-        console.log("Original (Bangla/Banglish):", lastUserMessage);
-        console.log("Translated (English):", translatedUserMessage);
       } catch (error) {
         console.error("Translation error:", error);
-        // If translation fails, use original message
         translatedUserMessage = lastUserMessage;
       }
     }
     
-    // Safety check: Use translated message for safety detection
+    // Safety check
     const safetyCheck = checkSafety(translatedUserMessage, profileContext);
     
-    // If critical emergency, return immediate response without AI processing
+    // If critical emergency, return immediate response
     if (safetyCheck.requiresEmergency) {
       const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
       const finalReply = userLanguage === "bn" 
@@ -134,16 +199,31 @@ Medications: ${mother.medications || "N/A"}`;
       });
     }
     
-    // Get AI response in English (always process in English for accuracy)
+    // Get AI response in English
     let reply: string;
     try {
       reply = await askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant);
+      
+      // Validate and clean the response
+      reply = reply.trim();
+      
+      // Check for empty or very short responses
+      if (!reply || reply.length < 3) {
+        throw new Error("Received empty or invalid response from AI");
+      }
+      
+      // Check if response is just error messages or placeholders
+      if (reply.toLowerCase().includes("error") && reply.length < 50) {
+        throw new Error("AI returned an error response");
+      }
+      
     } catch (error: any) {
-      // Check if error is due to token limit
+      console.error("AI chat error:", error);
+      
       if (error.message && (error.message.includes("token") || error.message.includes("length") || error.message.includes("limit"))) {
         const errorMessage = userLanguage === "bn"
-          ? "আপনার প্রশ্নটি খুব দীর্ঘ। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন। আপনি পরে আরও বিস্তারিত জানতে পারেন। অথবা আরও ভাল সাহায্যের জন্য লগইন করুন।"
-          : "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.";
+          ? "আপনার প্রশ্নটি খুব দীর্ঘ। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন।"
+          : "Your question is too long. Please ask a shorter question.";
         
         return NextResponse.json({
           reply: errorMessage,
@@ -151,8 +231,17 @@ Medications: ${mother.medications || "N/A"}`;
           riskLevel: "low",
         });
       }
-      // Re-throw other errors
-      throw error;
+      
+      // Generic error message
+      const errorMessage = userLanguage === "bn"
+        ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+        : "Sorry, something went wrong. Please try again.";
+      
+      return NextResponse.json({
+        reply: errorMessage,
+        safetyWarning: false,
+        riskLevel: "low",
+      });
     }
     
     // Add safety warnings if needed
@@ -167,31 +256,19 @@ Medications: ${mother.medications || "N/A"}`;
     if (userLanguage === "bn") {
       try {
         finalReply = await translateToBangla(reply);
-        console.log("AI Response (English):", reply);
-        console.log("Translated Response (Bangla):", finalReply);
       } catch (error) {
         console.error("Translation error:", error);
-        // If translation fails, use English response
         finalReply = reply;
       }
     }
     
     return NextResponse.json({
-      reply: finalReply,
+      reply: finalReply.trim(),
       safetyWarning: safetyCheck.riskLevel !== "low",
       riskLevel: safetyCheck.riskLevel,
     });
   } catch (error: any) {
     console.error("Chat API error:", error);
-    
-    // Check if it's a token limit error
-    if (error.message && (error.message.includes("token") || error.message.includes("length") || error.message.includes("limit"))) {
-      return NextResponse.json({
-        reply: "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.",
-        safetyWarning: false,
-        riskLevel: "low",
-      });
-    }
     
     return NextResponse.json(
       { 
@@ -202,4 +279,3 @@ Medications: ${mother.medications || "N/A"}`;
     );
   }
 }
-
