@@ -667,25 +667,26 @@ export default function MotherDashboard() {
                 {/* AI Chat Card - Primary CTA */}
                 <Link
                   href="/chat"
-                  className="group relative rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border-2 border-pink-400 animate-pulse-border"
+                  className="group relative rounded-xl bg-white border-2 border-pink-300 p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] hover:border-pink-400"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                        <Icon name="chat" size={32} className="text-white" />
-                      </div>
-                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full">
-                        PRIMARY
-                      </span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Icon name="chat" size={28} className="text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Chat with MomsCare AI</h3>
-                    <p className="text-pink-100 text-sm mb-4 leading-relaxed">
-                      Get instant answers to your pregnancy questions with our AI assistant.
-                    </p>
-                    <div className="flex items-center gap-2 text-white font-semibold group-hover:gap-3 transition-all">
-                      <span>Start Chatting</span>
-                      <span className="text-xl">→</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-neutral-900">Chat with MomsCare AI</h3>
+                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 text-xs font-bold rounded-full">
+                          PRIMARY
+                        </span>
+                      </div>
+                      <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
+                        Get instant answers to your pregnancy questions.
+                      </p>
+                      <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
+                        <span>Start Chatting</span>
+                        <span>→</span>
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -693,96 +694,29 @@ export default function MotherDashboard() {
                 {/* Prescription Upload Card */}
                 <button
                   onClick={() => setActiveTab("prescriptions")}
-                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
+                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] hover:border-pink-300"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                      <Icon name="prescription" size={32} className="text-white" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Icon name="prescription" size={28} className="text-white" />
                     </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Upload Prescription</h3>
-                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
-                    Upload your prescriptions for better AI guidance and tracking.
-                  </p>
-                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
-                    <span>Upload Now</span>
-                    <span className="text-xl">→</span>
-                  </div>
-                  {prescriptions.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-neutral-200">
-                      <p className="text-sm text-neutral-500">
-                        {prescriptions.length} prescription{prescriptions.length !== 1 ? 's' : ''} uploaded
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-neutral-900 mb-1">Upload Prescription</h3>
+                      <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
+                        Upload your prescriptions for better AI guidance.
                       </p>
-                    </div>
-                  )}
-                </button>
-
-                {/* Doctor Q&A Card */}
-                <button
-                  onClick={() => setActiveTab("questions")}
-                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                      <Icon name="question" size={32} className="text-white" />
-                    </div>
-                    {questions.filter(q => !q.answer).length > 0 && (
-                      <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
-                        {questions.filter(q => !q.answer).length} Pending
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Ask a Doctor</h3>
-                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
-                    Get personalized answers from verified healthcare professionals.
-                  </p>
-                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
-                    <span>Ask Question</span>
-                    <span className="text-xl">→</span>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-neutral-200 flex gap-4 text-sm">
-                    <div>
-                      <span className="text-green-600 font-semibold">{questions.filter(q => q.answer).length}</span>
-                      <span className="text-neutral-500 ml-1">Answered</span>
-                    </div>
-                    <div>
-                      <span className="text-yellow-600 font-semibold">{questions.filter(q => !q.answer).length}</span>
-                      <span className="text-neutral-500 ml-1">Pending</span>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Pregnancy Progress Card */}
-                <button
-                  onClick={() => setActiveTab("progress")}
-                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                      <Icon name="progress" size={32} className="text-white" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Pregnancy Progress</h3>
-                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
-                    Track your pregnancy journey and get weekly tips.
-                  </p>
-                  {weeksPregnant && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-neutral-600">Week {weeksPregnant} of 40</span>
-                        <span className="text-pink-600 font-semibold">{Math.round((weeksPregnant / 40) * 100)}%</span>
+                      <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
+                        <span>Upload Now</span>
+                        <span>→</span>
                       </div>
-                      <div className="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-3 rounded-full transition-all duration-500"
-                          style={{ width: `${(weeksPregnant / 40) * 100}%` }}
-                        />
-                      </div>
+                      {prescriptions.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-neutral-200">
+                          <p className="text-xs text-neutral-500">
+                            {prescriptions.length} prescription{prescriptions.length !== 1 ? 's' : ''} uploaded
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
-                    <span>View Progress</span>
-                    <span className="text-xl">→</span>
                   </div>
                 </button>
               </div>
