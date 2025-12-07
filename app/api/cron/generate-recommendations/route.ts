@@ -5,7 +5,9 @@ import { detectTimezoneFromIP } from "@/lib/timezoneDetector";
 
 /**
  * This endpoint should be called by a cron job every 5 minutes
- * It will check all mothers and send recommendations at 8 AM and 8 PM in their local timezone
+ * It will:
+ * 1. Check all mothers and send recommendations at 8 AM and 8 PM in their local timezone
+ * 2. Update pregnancy days at 12:00 AM (midnight) in their local timezone
  * 
  * To set up a cron job:
  * - Vercel: Use Vercel Cron Jobs in vercel.json
@@ -17,8 +19,14 @@ export async function GET(req: NextRequest) {
     const mothers = await listAllMothers();
     const results = {
       processed: 0,
-      sent: 0,
-      skipped: 0,
+      recommendations: {
+        sent: 0,
+        skipped: 0,
+      },
+      pregnancyUpdates: {
+        updated: 0,
+        skipped: 0,
+      },
       errors: [] as string[],
     };
 
@@ -27,7 +35,6 @@ export async function GET(req: NextRequest) {
       try {
         // Skip paused mothers
         if (mother.status === "paused") {
-          results.skipped++;
           continue;
         }
 
@@ -37,13 +44,37 @@ export async function GET(req: NextRequest) {
         const { hour, minute } = getCurrentTimeInTimezone(timezone);
         const today = getCurrentDateInTimezone(timezone);
         
-        // Log for debugging (only log when it's close to 8 AM/PM to avoid spam)
+        // Log for debugging (only log when it's close to important times to avoid spam)
         if ((hour === 7 && minute >= 55) || (hour === 8 && minute <= 10) || 
-            (hour === 19 && minute >= 55) || (hour === 20 && minute <= 10)) {
+            (hour === 19 && minute >= 55) || (hour === 20 && minute <= 10) ||
+            (hour === 0 && minute <= 5)) {
           console.log(`[Cron] Mother ${mother.email || mother.id} - Timezone: ${timezone}, Local Time: ${hour}:${minute.toString().padStart(2, '0')}, Date: ${today}`);
         }
         
-        // Check if it's 8:00-8:05 AM or 8:00-8:05 PM in THEIR timezone
+        // 1. Check and update pregnancy progress at midnight (12:00-12:05 AM)
+        if (hour === 0 && minute >= 0 && minute <= 5) {
+          try {
+            const { updatePregnancyProgress } = await import("@/lib/pregnancyTracker");
+            // This function will check if it's already been updated today and update if needed
+            await updatePregnancyProgress(mother.id, timezone);
+            // Check if it was actually updated by checking the last update date
+            const { getMother } = await import("@/lib/data");
+            const updatedMother = await getMother(mother.id);
+            if (updatedMother?.lastPregnancyDayUpdate === today) {
+              results.pregnancyUpdates.updated++;
+              console.log(`[Cron] ✅ Updated pregnancy day for ${mother.email || mother.id} (${timezone})`);
+            } else {
+              results.pregnancyUpdates.skipped++;
+            }
+          } catch (error: any) {
+            console.error(`Error updating pregnancy progress for ${mother.id}:`, error);
+            results.errors.push(`Pregnancy update error for ${mother.email || mother.id}: ${error.message}`);
+          }
+        } else {
+          results.pregnancyUpdates.skipped++;
+        }
+        
+        // 2. Check and send recommendations at 8:00-8:05 AM or 8:00-8:05 PM
         let timeOfDay: "morning" | "evening" | null = null;
         
         if (hour === 8 && minute >= 0 && minute <= 5 && mother.lastMorningAdviceDate !== today) {
@@ -54,20 +85,22 @@ export async function GET(req: NextRequest) {
           console.log(`[Cron] ✅ Sending evening recommendation to ${mother.email || mother.id} (${timezone})`);
         }
 
-        if (!timeOfDay) {
-          results.skipped++;
-          continue;
-        }
-
-        // Call the recommendation generation endpoint for this mother
-        // We'll create a helper function to generate recommendations without auth
-        const { generateRecommendationForMother } = await import("@/lib/recommendationHelper");
-        const success = await generateRecommendationForMother(mother.id, timeOfDay, timezone);
-        
-        if (success) {
-          results.sent++;
+        if (timeOfDay) {
+          try {
+            const { generateRecommendationForMother } = await import("@/lib/recommendationHelper");
+            const success = await generateRecommendationForMother(mother.id, timeOfDay, timezone);
+            
+            if (success) {
+              results.recommendations.sent++;
+            } else {
+              results.errors.push(`Failed to send recommendation to ${mother.email || mother.id}`);
+            }
+          } catch (error: any) {
+            console.error(`Error sending recommendation to ${mother.id}:`, error);
+            results.errors.push(`Recommendation error for ${mother.email || mother.id}: ${error.message}`);
+          }
         } else {
-          results.errors.push(`Failed to send recommendation to ${mother.email || mother.id}`);
+          results.recommendations.skipped++;
         }
         
         results.processed++;

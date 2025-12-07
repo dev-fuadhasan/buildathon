@@ -1,15 +1,29 @@
-# Automatic Recommendations Cron Job Setup
+# Automatic Cron Job Setup
 
-The automatic recommendation system sends personalized recommendations to all mothers at 8 AM and 8 PM in their local timezone, regardless of whether they are logged in.
+The cron job system automatically handles two important tasks for all mothers:
+1. **Recommendations**: Sends personalized recommendations at 8 AM and 8 PM in their local timezone
+2. **Pregnancy Day Updates**: Auto-increments pregnancy days at 12:00 AM (midnight) in their local timezone
+
+Both tasks work regardless of whether mothers are logged in or not.
 
 ## How It Works
 
 The cron job endpoint `/api/cron/generate-recommendations` runs every 5 minutes and:
+
+### Recommendations (8 AM & 8 PM):
 1. Checks all active mothers
 2. Determines their local timezone
 3. Checks if it's 8:00-8:05 AM or 8:00-8:05 PM in their timezone
 4. Generates and sends personalized recommendations if it's the right time
 5. Avoids sending duplicate recommendations on the same day
+
+### Pregnancy Day Updates (Midnight):
+1. Checks all active mothers
+2. Determines their local timezone
+3. Checks if it's 12:00-12:05 AM (midnight) in their timezone
+4. Auto-increments pregnancy days by 1 if it's a new day
+5. Updates the mother's profile with the new pregnancy day count
+6. Avoids updating multiple times on the same day
 
 ## Setup Instructions for Netlify
 
@@ -79,14 +93,22 @@ The endpoint returns a JSON response with:
 - `timestamp`: When the job ran
 - `results`: Object with:
   - `processed`: Number of mothers processed
-  - `sent`: Number of recommendations sent
-  - `skipped`: Number of mothers skipped (not the right time, already sent, etc.)
+  - `recommendations`: Object with:
+    - `sent`: Number of recommendations sent
+    - `skipped`: Number of mothers skipped (not the right time, already sent, etc.)
+  - `pregnancyUpdates`: Object with:
+    - `updated`: Number of pregnancy days updated
+    - `skipped`: Number of mothers skipped (not midnight, already updated, etc.)
   - `errors`: Array of any errors encountered
 
 ## Notes
 
-- The cron job runs every 5 minutes to catch the 5-minute window (8:00-8:05 AM/PM)
+- The cron job runs every 5 minutes to catch the 5-minute windows:
+  - **Recommendations**: 8:00-8:05 AM and 8:00-8:05 PM
+  - **Pregnancy Updates**: 12:00-12:05 AM (midnight)
 - Recommendations are only sent once per day per time slot (morning/evening)
+- Pregnancy days are only updated once per day at midnight
 - Paused mothers are automatically skipped
 - The system uses each mother's stored timezone or detects it from their address
+- Both tasks work independently - a mother can receive recommendations and have their pregnancy day updated in the same cron run if the times align
 
