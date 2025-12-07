@@ -15,14 +15,20 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get("limit") || "100", 10);
-    const adminId = searchParams.get("adminId"); // For super admin to filter by editor
+    const limit = parseInt(searchParams.get("limit") || "500", 10);
+    const adminId = searchParams.get("adminId"); // For super admin to filter by specific admin/editor
     
-    // Super admin can see all activities or filter by adminId
+    // Super admin can see all activities (including their own) or filter by adminId
     // Editors can only see their own activities
-    const filterAdminId = user.adminType === "super_admin" 
-      ? (adminId || undefined)
-      : user.id; // Editors only see their own
+    let filterAdminId: string | undefined;
+    if (user.adminType === "super_admin") {
+      // If adminId is provided, filter by that specific admin/editor
+      // Otherwise, show all activities (including super admin)
+      filterAdminId = adminId || undefined;
+    } else {
+      // Editors only see their own activities
+      filterAdminId = user.id;
+    }
     
     const activities = await listAdminActivities(filterAdminId, limit);
     

@@ -285,12 +285,16 @@ export default function AdminDashboard() {
 
   const loadActivities = async (t = token, filterAdminId?: string) => {
     const url = filterAdminId 
-      ? `/api/admin/activities?limit=200&adminId=${filterAdminId}`
-      : `/api/admin/activities?limit=200`;
+      ? `/api/admin/activities?limit=500&adminId=${filterAdminId}`
+      : `/api/admin/activities?limit=500`;
     const res = await fetch(url, { headers: headers(t) });
     if (res.ok) {
       const data = await res.json();
-      setActivities(data.activities || []);
+      // Sort by timestamp descending (newest first)
+      const sorted = (data.activities || []).sort((a: AdminActivity, b: AdminActivity) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setActivities(sorted);
     }
   };
 
@@ -2038,18 +2042,19 @@ export default function AdminDashboard() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admin</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP Address</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {activities.map((activity) => (
                         <tr key={activity.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {new Date(activity.timestamp).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            <span className={`inline-block px-2 py-1 rounded text-xs ${
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                               activity.adminType === "super_admin"
                                 ? "bg-purple-100 text-purple-700"
                                 : "bg-blue-100 text-blue-700"
@@ -2062,9 +2067,40 @@ export default function AdminDashboard() {
                               {activity.targetType}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium">{activity.action}</td>
-                          <td className="px-4 py-3 text-sm text-slate-600">{activity.targetId}</td>
-                          <td className="px-4 py-3 text-sm text-slate-500">{activity.ipAddress || "N/A"}</td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            <span className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs">
+                              {activity.action.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600 font-mono text-xs">
+                            {activity.targetId}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-600">
+                            <div className="max-w-md">
+                              {Object.keys(activity.details || {}).length > 0 ? (
+                                <details className="cursor-pointer">
+                                  <summary className="text-blue-600 hover:text-blue-800 text-xs">
+                                    View Details
+                                  </summary>
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                                    {Object.entries(activity.details).map(([key, value]) => (
+                                      <div key={key} className="mb-1">
+                                        <span className="font-semibold">{key}:</span>{" "}
+                                        <span className="text-slate-700">
+                                          {typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              ) : (
+                                <span className="text-slate-400 text-xs">No details</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-500 font-mono text-xs">
+                            {activity.ipAddress || "N/A"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
