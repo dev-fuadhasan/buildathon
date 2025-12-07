@@ -89,7 +89,10 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   const handleTabClick = (tab: Tab) => {
     if (tab.action === "logout") {
+      // Remove all tokens (mother, doctor, admin)
       localStorage.removeItem("motherToken");
+      localStorage.removeItem("doctorToken");
+      localStorage.removeItem("adminToken");
       setIsOpen(false);
       router.push("/");
     } else if (tab.action === "navigate" && tab.href) {

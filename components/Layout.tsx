@@ -269,8 +269,10 @@ export default function Layout({ children }: Props) {
               {getNavItems()}
             </nav>
             
-            {/* Mobile menu button - Show MobileDashboardMenu button on mother dashboard, otherwise show default */}
-            {pathname.startsWith("/mother/dashboard") ? (
+            {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
+            {pathname.startsWith("/mother/dashboard") || 
+             pathname.startsWith("/doctor/dashboard") || 
+             pathname.startsWith("/admin/dashboard") ? (
               <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden"></div>
             ) : (
               <button

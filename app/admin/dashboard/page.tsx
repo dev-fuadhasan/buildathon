@@ -554,6 +554,8 @@ export default function AdminDashboard() {
       { id: "editors", label: "Editors", icon: "editor" },
       { id: "activity-logs", label: "Activity Logs", icon: "log" },
     ] : []),
+    { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/admin/dashboard" },
+    { id: "logout", label: "Logout", action: "logout" as const },
   ];
 
   return (
@@ -572,7 +574,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <button
-            className="btn-ghost"
+            className="btn-ghost hidden md:inline-flex"
             onClick={() => {
               localStorage.removeItem("adminToken");
               location.href = "/";

@@ -202,9 +202,24 @@ export default function DoctorDashboard() {
     );
   }
 
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/doctor/dashboard" },
+    { id: "profile", label: "My Profile", icon: "profile", action: "navigate" as const, href: "/doctor/profile" },
+    { id: "logout", label: "Logout", action: "logout" as const },
+  ];
+
   return (
     <Layout>
       <div className="space-y-8">
+        {/* Mobile Menu */}
+        <MobileDashboardMenu tabs={tabs} activeTab="dashboard" onTabChange={(id) => {
+          if (id === "dashboard") {
+            router.push("/doctor/dashboard");
+          } else if (id === "profile") {
+            router.push("/doctor/profile");
+          }
+        }} />
+        
         {/* Header - Redesigned */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
@@ -215,7 +230,7 @@ export default function DoctorDashboard() {
               Answer questions from mothers with care and expertise.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+          <div className="hidden md:flex flex-wrap gap-2 sm:gap-3">
             <Link href="/doctor/profile" className="btn-secondary flex items-center gap-2">
               <Icon name="profile" size={20} />
               My Profile
