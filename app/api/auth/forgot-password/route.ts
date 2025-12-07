@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       used: false,
     });
 
-    // Generate reset link
+    // Generate reset link with proper HTTPS
     // Try to get the base URL from various sources
     let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     
@@ -73,22 +73,26 @@ export async function POST(req: NextRequest) {
       }
       // Try Vercel
       if (!baseUrl && process.env.VERCEL) {
-        baseUrl = `https://${process.env.VERCEL_URL}`;
+        baseUrl = process.env.VERCEL_URL;
       }
-      // Fallback to localhost for development
+      // Fallback to production URL
       if (!baseUrl) {
         baseUrl = process.env.NODE_ENV === "production" 
-          ? "https://momscareai.netlify.app" 
-          : "http://localhost:3000";
+          ? "momscareai.netlify.app" 
+          : "localhost:3000";
       }
     }
     
-    // Ensure baseUrl has protocol
-    if (baseUrl && !baseUrl.startsWith("http")) {
-      baseUrl = `https://${baseUrl}`;
-    }
+    // Remove protocol if present (we'll add https)
+    baseUrl = baseUrl.replace(/^https?:\/\//, '');
+    // Remove trailing slash
+    baseUrl = baseUrl.replace(/\/$/, '');
     
-    const resetLink = `${baseUrl}/reset-password?token=${token}&role=${role}`;
+    // Always use HTTPS in production, HTTP only for localhost
+    const protocol = baseUrl.includes('localhost') ? 'http' : 'https';
+    const resetLink = `${protocol}://${baseUrl}/reset-password?token=${token}&role=${role}`;
+    
+    console.log("Generated reset link:", resetLink);
 
     // Send email
     try {

@@ -61,10 +61,13 @@ export function PasswordResetEmail({
             </Section>
             
             <Text style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6' }}>
-              Or copy and paste this link into your browser:
+              Or copy and paste this secure link into your browser:
             </Text>
-            <Text style={{ color: '#3b82f6', fontSize: '14px', wordBreak: 'break-all', backgroundColor: '#f3f4f6', padding: '10px', borderRadius: '4px' }}>
+            <Text style={{ color: '#3b82f6', fontSize: '14px', wordBreak: 'break-all', backgroundColor: '#f3f4f6', padding: '10px', borderRadius: '4px', fontFamily: 'monospace' }}>
               {resetLink}
+            </Text>
+            <Text style={{ color: '#059669', fontSize: '13px', lineHeight: '1.6', marginTop: '10px', fontWeight: '500' }}>
+              🔒 This is a secure link from MomsCare. It's safe to click.
             </Text>
             
             <Text style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', marginTop: '20px' }}>
