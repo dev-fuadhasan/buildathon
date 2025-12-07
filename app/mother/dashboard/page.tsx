@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
 import Icon from "@/components/Icon";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -95,6 +95,7 @@ export default function MotherDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const commentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
     isOpen: false,
     type: "info",
@@ -410,6 +411,16 @@ export default function MotherDashboard() {
     if (res.ok) {
       const data = await res.json();
       setQuestions(data.questions || []);
+      // If a question is selected, update it with latest data but don't reopen if it was closed
+      setSelectedQuestion((current) => {
+        if (current) {
+          const updated = data.questions?.find((q: Question) => q.id === current.id);
+          if (updated) {
+            return { ...updated, comments: current.comments || updated.comments || [] };
+          }
+        }
+        return current;
+      });
     }
   };
 
@@ -1066,30 +1077,44 @@ export default function MotherDashboard() {
                               <div className="flex gap-2">
                                 <button
                                   className="btn-secondary flex-1 text-sm"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Clear any pending timeout
+                                    if (commentTimeoutRef.current) {
+                                      clearTimeout(commentTimeoutRef.current);
+                                    }
                                     // Mark as seen
                                     fetch(`/api/mother/questions/${q.id}/mark-seen`, {
                                       method: "POST",
                                       headers: authHeaders(),
                                     });
                                     // Show full details in modal
-                                    // Load comments when question is selected
-                                  setSelectedQuestion(q);
-                                  // Force refresh comments after a short delay to ensure they load
-                                  setTimeout(() => {
-                                    if (q.id) {
-                                      fetch(`/api/questions/comments?questionId=${q.id}`, { 
-                                        headers: authHeaders() 
-                                      })
-                                        .then(r => r.json())
-                                        .then(d => {
-                                          if (d.comments) {
-                                            setSelectedQuestion({ ...q, comments: d.comments });
-                                          }
-                                        })
-                                        .catch(err => console.error("Failed to load comments:", err));
-                                    }
-                                  }, 100);
+                                    setSelectedQuestion(q);
+                                    // Force refresh comments after a short delay to ensure they load
+                                    commentTimeoutRef.current = setTimeout(() => {
+                                      // Only update if modal is still open (selectedQuestion is still set)
+                                      setSelectedQuestion((current) => {
+                                        if (current && current.id === q.id) {
+                                          fetch(`/api/questions/comments?questionId=${q.id}`, { 
+                                            headers: authHeaders() 
+                                          })
+                                            .then(r => r.json())
+                                            .then(d => {
+                                              if (d.comments) {
+                                                setSelectedQuestion((prev) => {
+                                                  // Double check modal is still open
+                                                  if (prev && prev.id === q.id) {
+                                                    return { ...prev, comments: d.comments };
+                                                  }
+                                                  return prev;
+                                                });
+                                              }
+                                            })
+                                            .catch(err => console.error("Failed to load comments:", err));
+                                        }
+                                        return current;
+                                      });
+                                    }, 100);
                                   }}
                                 >
                                   <span className="flex items-center gap-1">
@@ -1196,7 +1221,12 @@ export default function MotherDashboard() {
                               </div>
                               <button
                                 className="btn-secondary text-sm px-3 py-1"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Clear any pending timeout
+                                  if (commentTimeoutRef.current) {
+                                    clearTimeout(commentTimeoutRef.current);
+                                  }
                                   // Mark as seen
                                   fetch(`/api/mother/questions/${q.id}/mark-seen`, {
                                     method: "POST",
@@ -1205,19 +1235,29 @@ export default function MotherDashboard() {
                                   // Show full details in modal
                                   setSelectedQuestion(q);
                                   // Force refresh comments after a short delay to ensure they load
-                                  setTimeout(() => {
-                                    if (q.id) {
-                                      fetch(`/api/questions/comments?questionId=${q.id}`, { 
-                                        headers: authHeaders() 
-                                      })
-                                        .then(r => r.json())
-                                        .then(d => {
-                                          if (d.comments) {
-                                            setSelectedQuestion({ ...q, comments: d.comments });
-                                          }
+                                  commentTimeoutRef.current = setTimeout(() => {
+                                    // Only update if modal is still open (selectedQuestion is still set)
+                                    setSelectedQuestion((current) => {
+                                      if (current && current.id === q.id) {
+                                        fetch(`/api/questions/comments?questionId=${q.id}`, { 
+                                          headers: authHeaders() 
                                         })
-                                        .catch(err => console.error("Failed to load comments:", err));
-                                    }
+                                          .then(r => r.json())
+                                          .then(d => {
+                                            if (d.comments) {
+                                              setSelectedQuestion((prev) => {
+                                                // Double check modal is still open
+                                                if (prev && prev.id === q.id) {
+                                                  return { ...prev, comments: d.comments };
+                                                }
+                                                return prev;
+                                              });
+                                            }
+                                          })
+                                          .catch(err => console.error("Failed to load comments:", err));
+                                      }
+                                      return current;
+                                    });
                                   }, 100);
                                 }}
                               >
@@ -1246,6 +1286,11 @@ export default function MotherDashboard() {
                 <h2 className="text-2xl font-bold">Question Details</h2>
                 <button
                   onClick={() => {
+                    // Clear any pending timeout
+                    if (commentTimeoutRef.current) {
+                      clearTimeout(commentTimeoutRef.current);
+                      commentTimeoutRef.current = null;
+                    }
                     setSelectedQuestion(null);
                     fetchQuestions();
                   }}
