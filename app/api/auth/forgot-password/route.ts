@@ -7,7 +7,8 @@ import { PasswordResetEmail } from "@/components/EmailTemplate";
 function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured");
+    console.error("RESEND_API_KEY is not configured in environment variables");
+    throw new Error("Email service is not configured. Please contact support.");
   }
   return new Resend(apiKey);
 }
@@ -62,38 +63,72 @@ export async function POST(req: NextRequest) {
     });
 
     // Generate reset link
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-                    process.env.VERCEL_URL || 
-                    process.env.NETLIFY_URL ||
-                    "http://localhost:3000";
+    // Try to get the base URL from various sources
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    
+    if (!baseUrl) {
+      // Try Netlify environment variables
+      if (process.env.NETLIFY) {
+        baseUrl = process.env.DEPLOY_PRIME_URL || process.env.URL;
+      }
+      // Try Vercel
+      if (!baseUrl && process.env.VERCEL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      }
+      // Fallback to localhost for development
+      if (!baseUrl) {
+        baseUrl = process.env.NODE_ENV === "production" 
+          ? "https://momscareai.netlify.app" 
+          : "http://localhost:3000";
+      }
+    }
+    
+    // Ensure baseUrl has protocol
+    if (baseUrl && !baseUrl.startsWith("http")) {
+      baseUrl = `https://${baseUrl}`;
+    }
     
     const resetLink = `${baseUrl}/reset-password?token=${token}&role=${role}`;
 
     // Send email
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "MomsCare <onboarding@resend.dev>";
-    const resend = getResend();
-    
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: [email],
-      subject: "Reset Your MomsCare Password",
-      react: PasswordResetEmail({
-        resetLink,
-        userName: (user as any).name || "User",
-        expiresIn: "1 hour",
-      }),
-    });
+    try {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "MomsCare <onboarding@resend.dev>";
+      const resend = getResend();
+      
+      console.log("Attempting to send password reset email to:", email);
+      console.log("Using from email:", fromEmail);
+      console.log("Reset link:", resetLink);
+      
+      const { data, error } = await resend.emails.send({
+        from: fromEmail,
+        to: [email],
+        subject: "Reset Your MomsCare Password",
+        react: PasswordResetEmail({
+          resetLink,
+          userName: (user as any).name || "User",
+          expiresIn: "1 hour",
+        }),
+      });
 
-    if (error) {
-      console.error("Error sending password reset email:", error);
+      if (error) {
+        console.error("Resend API error:", error);
+        return NextResponse.json(
+          { error: `Failed to send password reset email: ${error.message || "Please try again later."}` },
+          { status: 500 }
+        );
+      }
+
+      console.log("Password reset email sent successfully to:", email);
+    } catch (emailError: any) {
+      console.error("Error in email sending process:", emailError);
       return NextResponse.json(
-        { error: "Failed to send password reset email. Please try again later." },
+        { error: emailError.message || "Failed to send password reset email. Please try again later." },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
-      message: "If an account exists with this email, a password reset link has been sent.",
+      message: "Password reset link has been sent to your email. Please check your inbox (and spam folder).",
     });
   } catch (error: any) {
     console.error("Forgot password error:", error);
