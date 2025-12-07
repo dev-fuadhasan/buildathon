@@ -97,8 +97,18 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports" | "live-chat" | "editors" | "activity-logs">("overview");
   const [activities, setActivities] = useState<AdminActivity[]>([]);
+  const [allActivities, setAllActivities] = useState<AdminActivity[]>([]); // Store all activities for client-side filtering
   const [editors, setEditors] = useState<Editor[]>([]);
   const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
+  const [activityFilters, setActivityFilters] = useState<{
+    adminEmail?: string;
+    adminType?: "super_admin" | "editor" | "all";
+    ipAddress?: string;
+    targetType?: string;
+    action?: string;
+    startDate?: string;
+    endDate?: string;
+  }>({});
   const [analytics, setAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
@@ -285,8 +295,8 @@ export default function AdminDashboard() {
 
   const loadActivities = async (t = token, filterAdminId?: string) => {
     const url = filterAdminId 
-      ? `/api/admin/activities?limit=500&adminId=${filterAdminId}`
-      : `/api/admin/activities?limit=500`;
+      ? `/api/admin/activities?limit=1000&adminId=${filterAdminId}`
+      : `/api/admin/activities?limit=1000`;
     const res = await fetch(url, { headers: headers(t) });
     if (res.ok) {
       const data = await res.json();
@@ -294,9 +304,61 @@ export default function AdminDashboard() {
       const sorted = (data.activities || []).sort((a: AdminActivity, b: AdminActivity) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
-      setActivities(sorted);
+      setAllActivities(sorted);
+      applyActivityFilters(sorted);
     }
   };
+
+  const applyActivityFilters = (activitiesToFilter: AdminActivity[] = allActivities) => {
+    let filtered = [...activitiesToFilter];
+
+    if (activityFilters.adminEmail) {
+      filtered = filtered.filter(a => 
+        a.adminEmail.toLowerCase().includes(activityFilters.adminEmail!.toLowerCase())
+      );
+    }
+
+    if (activityFilters.adminType && activityFilters.adminType !== "all") {
+      filtered = filtered.filter(a => a.adminType === activityFilters.adminType);
+    }
+
+    if (activityFilters.ipAddress) {
+      filtered = filtered.filter(a => 
+        a.ipAddress?.toLowerCase().includes(activityFilters.ipAddress!.toLowerCase())
+      );
+    }
+
+    if (activityFilters.targetType) {
+      filtered = filtered.filter(a => a.targetType === activityFilters.targetType);
+    }
+
+    if (activityFilters.action) {
+      filtered = filtered.filter(a => 
+        a.action.toLowerCase().includes(activityFilters.action!.toLowerCase())
+      );
+    }
+
+    if (activityFilters.startDate) {
+      const start = new Date(activityFilters.startDate);
+      filtered = filtered.filter(a => new Date(a.timestamp) >= start);
+    }
+
+    if (activityFilters.endDate) {
+      const end = new Date(activityFilters.endDate);
+      end.setHours(23, 59, 59, 999); // Include entire end date
+      filtered = filtered.filter(a => new Date(a.timestamp) <= end);
+    }
+
+    setActivities(filtered);
+  };
+
+  // Apply filters when they change
+  useEffect(() => {
+    if (allActivities.length > 0) {
+      applyActivityFilters(allActivities);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityFilters, allActivities.length]);
 
   const updateReportStatus = async (reportId: string, status: "pending" | "solved" | "rejected", decision?: string) => {
     try {
@@ -2004,12 +2066,12 @@ export default function AdminDashboard() {
 
         {activeTab === "activity-logs" && adminType === "super_admin" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <h2 className="text-2xl font-bold">
                 Activity Logs
                 {selectedEditor && ` - ${selectedEditor.email}`}
               </h2>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {selectedEditor && (
                   <button
                     onClick={() => {
@@ -2022,12 +2084,143 @@ export default function AdminDashboard() {
                   </button>
                 )}
                 <button
-                  onClick={() => loadActivities(undefined, selectedEditor?.id)}
+                  onClick={() => {
+                    loadActivities(undefined, selectedEditor?.id);
+                  }}
                   className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
                 >
                   Refresh
                 </button>
+                <button
+                  onClick={() => {
+                    setActivityFilters({});
+                    setSelectedEditor(null);
+                  }}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Clear Filters
+                </button>
               </div>
+            </div>
+
+            {/* Filter Section */}
+            <div className="bg-white rounded-lg shadow p-4 space-y-4">
+              <h3 className="font-bold text-lg mb-3">Filters</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Admin Email Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Admin Email
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Filter by email..."
+                    value={activityFilters.adminEmail || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, adminEmail: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Admin Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Admin Type
+                  </label>
+                  <select
+                    value={activityFilters.adminType || "all"}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, adminType: e.target.value as any || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="editor">Editor</option>
+                  </select>
+                </div>
+
+                {/* IP Address Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    IP Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Filter by IP..."
+                    value={activityFilters.ipAddress || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, ipAddress: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Target Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Target Type
+                  </label>
+                  <select
+                    value={activityFilters.targetType || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, targetType: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  >
+                    <option value="">All Types</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="mother">Mother</option>
+                    <option value="question">Question</option>
+                    <option value="report">Report</option>
+                    <option value="editor">Editor</option>
+                    <option value="system">System</option>
+                  </select>
+                </div>
+
+                {/* Action Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Action
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Filter by action..."
+                    value={activityFilters.action || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, action: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Start Date Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={activityFilters.startDate || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, startDate: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* End Date Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={activityFilters.endDate || ""}
+                    onChange={(e) => setActivityFilters({ ...activityFilters, endDate: e.target.value || undefined })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Active Filters Summary */}
+              {Object.keys(activityFilters).some(key => activityFilters[key as keyof typeof activityFilters]) && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Active Filters: {Object.values(activityFilters).filter(v => v).length} | 
+                    Showing {activities.length} of {allActivities.length} activities
+                  </p>
+                </div>
+              )}
             </div>
             
             {activities.length === 0 ? (
