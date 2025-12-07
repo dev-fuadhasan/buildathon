@@ -294,6 +294,41 @@ html {
   }
 }
 
+/* Blinking outlined animation for eye-catching buttons */
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.8),
+                0 0 0 0 rgba(236, 72, 153, 0.6),
+                0 0 0 0 rgba(236, 72, 153, 0.4);
+    border-color: rgba(236, 72, 153, 1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.4),
+                0 0 0 8px rgba(236, 72, 153, 0.2),
+                0 0 0 12px rgba(236, 72, 153, 0.1);
+    border-color: rgba(236, 72, 153, 0.8);
+  }
+}
+
+@keyframes blink-border {
+  0%, 100% {
+    border-color: rgba(236, 72, 153, 1);
+    outline: 2px solid rgba(236, 72, 153, 0.8);
+    outline-offset: 2px;
+  }
+  50% {
+    border-color: rgba(236, 72, 153, 0.5);
+    outline: 2px solid rgba(236, 72, 153, 0.3);
+    outline-offset: 4px;
+  }
+}
+
+.animate-pulse-border {
+  animation: pulse-border 2s ease-in-out infinite, blink-border 1.5s ease-in-out infinite;
+  position: relative;
+  border: 2px solid rgba(236, 72, 153, 1) !important;
+}
+
 /* Pulse animation for notifications */
 @keyframes pulse {
   0%, 100% {

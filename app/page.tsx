@@ -69,7 +69,7 @@ export default function Home() {
               <div className="flex flex-col gap-4 sm:flex-row pt-4">
                 <Link
                   href="/chat"
-                  className="btn-primary inline-flex items-center justify-center gap-3 text-lg px-8 py-4"
+                  className="btn-primary inline-flex items-center justify-center gap-3 text-lg px-8 py-4 animate-pulse-border relative"
                 >
                   <div className="w-6 h-6 flex items-center justify-center">
                     <Icon name="chat" size={24} className="brightness-0 invert" />
