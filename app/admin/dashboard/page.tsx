@@ -65,14 +65,40 @@ type Overview = {
   answered: number;
 };
 
+type AdminActivity = {
+  id: string;
+  adminId: string;
+  adminEmail: string;
+  adminType: "super_admin" | "editor";
+  action: string;
+  targetType: "doctor" | "mother" | "question" | "report" | "editor" | "system";
+  targetId: string;
+  details: Record<string, any>;
+  timestamp: string;
+  ipAddress?: string;
+};
+
+type Editor = {
+  id: string;
+  email: string;
+  lastActivity?: string;
+  isPaused: boolean;
+  totalActivities: number;
+};
+
 export default function AdminDashboard() {
   const [token, setToken] = useState("");
+  const [adminType, setAdminType] = useState<"super_admin" | "editor" | null>(null);
+  const [adminEmail, setAdminEmail] = useState("");
   const [pending, setPending] = useState<Doctor[]>([]);
   const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
   const [allMothers, setAllMothers] = useState<Mother[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports" | "live-chat">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports" | "live-chat" | "editors" | "activity-logs">("overview");
+  const [activities, setActivities] = useState<AdminActivity[]>([]);
+  const [editors, setEditors] = useState<Editor[]>([]);
+  const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
@@ -132,9 +158,19 @@ export default function AdminDashboard() {
     const t = localStorage.getItem("adminToken") || "";
     setToken(t);
     if (t) {
+      // Parse token to get admin type
+      try {
+        const payload = JSON.parse(atob(t.split('.')[1]));
+        setAdminType(payload.adminType || "editor");
+        setAdminEmail(payload.email || "");
+      } catch (err) {
+        console.error("Failed to parse admin token:", err);
+        setAdminType("editor"); // Default to editor if parsing fails
+      }
+      
       // Restore active tab from localStorage
       const savedTab = localStorage.getItem("adminDashboardTab");
-      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports", "live-chat"].includes(savedTab)) {
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports", "live-chat", "editors", "activity-logs"].includes(savedTab)) {
         setActiveTab(savedTab as any);
       }
       
@@ -144,6 +180,8 @@ export default function AdminDashboard() {
       loadAllMothers(t);
       loadAnalytics(t);
       loadReports(t);
+      
+      // Load editors and activities if super admin (will be loaded after adminType is set)
       
       // Set up real-time updates
       
@@ -173,6 +211,14 @@ export default function AdminDashboard() {
     }
   }, []);
   
+  // Load editors and activities when adminType is set
+  useEffect(() => {
+    if (token && adminType === "super_admin") {
+      loadEditors(token);
+      loadActivities(token);
+    }
+  }, [adminType, token]);
+
   // Save active tab to localStorage when it changes
   useEffect(() => {
     if (token) {
@@ -226,6 +272,25 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setReports(data.reports || []);
+    }
+  };
+
+  const loadEditors = async (t = token) => {
+    const res = await fetch("/api/admin/editors", { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setEditors(data.editors || []);
+    }
+  };
+
+  const loadActivities = async (t = token, filterAdminId?: string) => {
+    const url = filterAdminId 
+      ? `/api/admin/activities?limit=200&adminId=${filterAdminId}`
+      : `/api/admin/activities?limit=200`;
+    const res = await fetch(url, { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setActivities(data.activities || []);
     }
   };
 
@@ -419,6 +484,10 @@ export default function AdminDashboard() {
     { id: "mothers", label: "Mothers", icon: "mom" },
     { id: "reports", label: "Reports", icon: "reports", badge: reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length },
     { id: "live-chat", label: "Live Chat", icon: "chat" },
+    ...(adminType === "super_admin" ? [
+      { id: "editors", label: "Editors", icon: "users" },
+      { id: "activity-logs", label: "Activity Logs", icon: "history" },
+    ] : []),
   ];
 
   return (
@@ -433,7 +502,7 @@ export default function AdminDashboard() {
               Admin Dashboard
             </h1>
             <p className="text-sm sm:text-lg text-neutral-600">
-              Full access to manage MomsCare platform
+              {adminType === "super_admin" ? "Super Admin - Full access to manage MomsCare platform" : `Editor - ${adminEmail}`}
             </p>
           </div>
           <button
@@ -1810,6 +1879,200 @@ export default function AdminDashboard() {
         {/* Live Chat Tab */}
         {activeTab === "live-chat" && (
           <AdminLiveChatSection token={token} />
+        )}
+
+        {activeTab === "editors" && adminType === "super_admin" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Editor Management</h2>
+              <button
+                onClick={() => loadEditors()}
+                className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
+              >
+                Refresh
+              </button>
+            </div>
+            
+            {editors.length === 0 ? (
+              <p className="text-center py-8 text-slate-500">No editors found.</p>
+            ) : (
+              <div className="grid gap-4">
+                {editors.map((editor) => (
+                  <div key={editor.id} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-lg">{editor.email}</h3>
+                        <p className="text-sm text-slate-500">
+                          Last activity: {editor.lastActivity ? new Date(editor.lastActivity).toLocaleString() : "Never"}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          Total activities: {editor.totalActivities}
+                        </p>
+                        {editor.isPaused && (
+                          <span className="inline-block mt-2 px-2 py-1 bg-red-100 text-red-700 rounded text-sm">
+                            Paused
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            const action = editor.isPaused ? "unpause" : "pause";
+                            const res = await fetch("/api/admin/editors", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", ...headers() },
+                              body: JSON.stringify({ editorId: editor.id, action }),
+                            });
+                            if (res.ok) {
+                              setPopup({
+                                isOpen: true,
+                                type: "success",
+                                title: "Success",
+                                message: `Editor ${action === "pause" ? "paused" : "unpaused"} successfully`,
+                              });
+                              loadEditors();
+                            } else {
+                              const data = await res.json();
+                              setPopup({
+                                isOpen: true,
+                                type: "error",
+                                title: "Error",
+                                message: data.error || "Failed to update editor",
+                              });
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg ${
+                            editor.isPaused
+                              ? "bg-green-500 hover:bg-green-600"
+                              : "bg-yellow-500 hover:bg-yellow-600"
+                          } text-white`}
+                        >
+                          {editor.isPaused ? "Unpause" : "Pause"}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Are you sure you want to delete editor ${editor.email}?`)) return;
+                            const res = await fetch("/api/admin/editors", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json", ...headers() },
+                              body: JSON.stringify({ editorId: editor.id, action: "delete" }),
+                            });
+                            if (res.ok) {
+                              setPopup({
+                                isOpen: true,
+                                type: "success",
+                                title: "Success",
+                                message: "Editor deleted successfully",
+                              });
+                              loadEditors();
+                            } else {
+                              const data = await res.json();
+                              setPopup({
+                                isOpen: true,
+                                type: "error",
+                                title: "Error",
+                                message: data.error || "Failed to delete editor",
+                              });
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedEditor(editor);
+                            loadActivities(undefined, editor.id);
+                            setActiveTab("activity-logs");
+                          }}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                          View Logs
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "activity-logs" && adminType === "super_admin" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">
+                Activity Logs
+                {selectedEditor && ` - ${selectedEditor.email}`}
+              </h2>
+              <div className="flex gap-2">
+                {selectedEditor && (
+                  <button
+                    onClick={() => {
+                      setSelectedEditor(null);
+                      loadActivities();
+                    }}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                  >
+                    Show All
+                  </button>
+                )}
+                <button
+                  onClick={() => loadActivities(undefined, selectedEditor?.id)}
+                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+            
+            {activities.length === 0 ? (
+              <p className="text-center py-8 text-slate-500">No activities found.</p>
+            ) : (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Admin</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP Address</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {activities.map((activity) => (
+                        <tr key={activity.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm">
+                            {new Date(activity.timestamp).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`inline-block px-2 py-1 rounded text-xs ${
+                              activity.adminType === "super_admin"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}>
+                              {activity.adminEmail}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+                              {activity.targetType}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">{activity.action}</td>
+                          <td className="px-4 py-3 text-sm text-slate-600">{activity.targetId}</td>
+                          <td className="px-4 py-3 text-sm text-slate-500">{activity.ipAddress || "N/A"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </Layout>

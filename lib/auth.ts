@@ -6,6 +6,7 @@ export type AuthPayload = {
   id: string;
   role: "mother" | "doctor" | "admin";
   email: string;
+  adminType?: "super_admin" | "editor"; // Only for admin role
 };
 
 function getSecret(): string {

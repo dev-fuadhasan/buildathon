@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getDoctor, saveDoctor, getMother, saveMother } from "@/lib/data";
+import { getDoctor, saveDoctor, getMother, saveMother, listAdminActivities } from "@/lib/data";
+import { logActivity } from "@/lib/adminActivity";
 
 /**
  * Pause or unpause a user (doctor or mother)
@@ -21,12 +22,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Check if this user was last modified by super admin (editors can't change super admin decisions)
+    if (user.adminType === "editor") {
+      const activities = await listAdminActivities(undefined, 100);
+      const lastUserActivity = activities
+        .filter(a => a.targetType === userType && a.targetId === userId && (a.action.includes("pause") || a.action.includes("unpause")))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+      
+      // If last action was by super admin, editors cannot modify
+      if (lastUserActivity && lastUserActivity.adminType === "super_admin") {
+        return NextResponse.json({ 
+          error: "This action was performed by super admin and cannot be modified by editors" 
+        }, { status: 403 });
+      }
+    }
+    
     if (userType === "doctor") {
       const doctor = await getDoctor(userId);
       if (!doctor) {
         return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
       }
 
+      const previousStatus = doctor.status;
       const updated = {
         ...doctor,
         status: pause ? ("paused" as const) : ("approved" as const),
@@ -34,6 +51,16 @@ export async function POST(req: NextRequest) {
       };
 
       await saveDoctor(updated);
+      
+      // Log activity
+      await logActivity(
+        user,
+        pause ? "pause_doctor" : "unpause_doctor",
+        "doctor",
+        userId,
+        { previousStatus, newStatus: updated.status },
+        req
+      );
       
       // If pausing, invalidate all tokens by returning a flag to logout
       // The frontend should handle logout when pause is true
@@ -48,6 +75,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Mother not found" }, { status: 404 });
       }
 
+      const previousStatus = mother.status;
       const updated = {
         ...mother,
         status: pause ? ("paused" as const) : ("active" as const),
@@ -55,6 +83,16 @@ export async function POST(req: NextRequest) {
       };
 
       await saveMother(updated);
+      
+      // Log activity
+      await logActivity(
+        user,
+        pause ? "pause_mother" : "unpause_mother",
+        "mother",
+        userId,
+        { previousStatus, newStatus: updated.status },
+        req
+      );
       
       // If pausing, invalidate all tokens by returning a flag to logout
       return NextResponse.json({ 

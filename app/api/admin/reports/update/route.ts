@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getQuestion, saveQuestion } from "@/lib/data";
+import { getQuestion, saveQuestion, listAdminActivities } from "@/lib/data";
 import { saveNotification, Notification } from "@/lib/data";
+import { logActivity } from "@/lib/adminActivity";
 import { v4 as uuid } from "uuid";
 
 /**
@@ -28,7 +29,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
+    // Check if this report was last modified by super admin (editors can't change super admin decisions)
+    if (user.adminType === "editor") {
+      const activities = await listAdminActivities(undefined, 100);
+      const lastReportActivity = activities
+        .filter(a => a.targetType === "report" && a.targetId === reportId)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+      
+      // If last action was by super admin, editors cannot modify
+      if (lastReportActivity && lastReportActivity.adminType === "super_admin") {
+        return NextResponse.json({ 
+          error: "This action was performed by super admin and cannot be modified by editors" 
+        }, { status: 403 });
+      }
+    }
+
     // Update question with report status and admin decision
+    const previousStatus = question.reportStatus;
     const updated = {
       ...question,
       reportStatus: status as "pending" | "solved" | "rejected",
@@ -37,6 +54,21 @@ export async function POST(req: NextRequest) {
     };
 
     await saveQuestion(updated);
+    
+    // Log activity
+    await logActivity(
+      user,
+      `update_report_${status}`,
+      "report",
+      reportId,
+      { 
+        previousStatus, 
+        newStatus: status,
+        decision: decision || undefined,
+        questionId: reportId 
+      },
+      req
+    );
 
     // Send notification to mother if decision is provided
     if (decision && question.motherId) {

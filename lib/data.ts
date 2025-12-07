@@ -160,6 +160,19 @@ export type Notification = {
   createdAt: string;
 };
 
+export type AdminActivity = {
+  id: string;
+  adminId: string;
+  adminEmail: string;
+  adminType: "super_admin" | "editor";
+  action: string; // e.g., "approve_doctor", "reject_doctor", "pause_user", "delete_user", "update_report", etc.
+  targetType: "doctor" | "mother" | "question" | "report" | "editor" | "system";
+  targetId: string;
+  details: Record<string, any>; // Additional details about the action
+  timestamp: string;
+  ipAddress?: string;
+};
+
 const motherKey = (id: string) => `mothers/${id}.json`;
 const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
@@ -167,6 +180,7 @@ const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
+const adminActivityKey = (id: string) => `admin-activities/${id}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
@@ -573,6 +587,48 @@ export async function deleteLiveChatConversation(conversationId: string): Promis
   } catch (err) {
     console.error("Error deleting live chat conversation:", err);
     throw err;
+  }
+}
+
+// Admin Activity Logging Functions
+export async function logAdminActivity(activity: AdminActivity): Promise<void> {
+  try {
+    await putJson(adminActivityKey(activity.id), activity);
+  } catch (err) {
+    console.error("Error logging admin activity:", err);
+    // Don't throw - logging failures shouldn't break the main operation
+  }
+}
+
+export async function listAdminActivities(adminId?: string, limit?: number): Promise<AdminActivity[]> {
+  try {
+    const all = await listJson<AdminActivity>("admin-activities/");
+    let filtered = all;
+    
+    if (adminId) {
+      filtered = filtered.filter(activity => activity.adminId === adminId);
+    }
+    
+    // Sort by timestamp descending (newest first)
+    filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    if (limit) {
+      filtered = filtered.slice(0, limit);
+    }
+    
+    return filtered;
+  } catch (err) {
+    console.error("Error listing admin activities:", err);
+    return [];
+  }
+}
+
+export async function getAdminActivity(activityId: string): Promise<AdminActivity | null> {
+  try {
+    return await getJson<AdminActivity>(adminActivityKey(activityId));
+  } catch (err) {
+    console.error("Error getting admin activity:", err);
+    return null;
   }
 }
 

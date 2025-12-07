@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getDoctor, listAllDoctors, saveDoctor } from "@/lib/data";
+import { getDoctor, listAllDoctors, saveDoctor, getAdminActivity, listAdminActivities } from "@/lib/data";
 import { signedUrl } from "@/lib/r2Client";
+import { logActivity } from "@/lib/adminActivity";
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,12 +54,31 @@ export async function POST(req: NextRequest) {
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  
   const { doctorId, action, comment } = await req.json();
   if (!doctorId || !["approve", "reject"].includes(action)) {
     return NextResponse.json({ error: "doctorId and action required" }, { status: 400 });
   }
+  
   const doctor = await getDoctor(doctorId);
   if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+  
+  // Check if this doctor was last modified by super admin (editors can't change super admin decisions)
+  if (user.adminType === "editor") {
+    // Find the last activity for this doctor
+    const activities = await listAdminActivities(undefined, 100);
+    const lastDoctorActivity = activities
+      .filter(a => a.targetType === "doctor" && a.targetId === doctorId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+    
+    // If last action was by super admin, editors cannot modify
+    if (lastDoctorActivity && lastDoctorActivity.adminType === "super_admin") {
+      return NextResponse.json({ 
+        error: "This action was performed by super admin and cannot be modified by editors" 
+      }, { status: 403 });
+    }
+  }
+  
   const updated = {
     ...doctor,
     status: action === "approve" ? ("approved" as const) : ("rejected" as const),
@@ -71,6 +91,21 @@ export async function POST(req: NextRequest) {
   };
   
   await saveDoctor(updated);
+  
+  // Log activity
+  await logActivity(
+    user,
+    `${action}_doctor`,
+    "doctor",
+    doctorId,
+    { 
+      previousStatus: doctor.status, 
+      newStatus: updated.status,
+      comment: comment || undefined 
+    },
+    req
+  );
+  
   return NextResponse.json({ doctorId, status: updated.status });
 }
 

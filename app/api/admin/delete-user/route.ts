@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { deleteDoctor, getMother, deleteMother } from "@/lib/data";
+import { deleteDoctor, getMother, deleteMother, listAdminActivities } from "@/lib/data";
+import { logActivity } from "@/lib/adminActivity";
 
 /**
  * Delete a user (doctor or mother)
@@ -20,9 +21,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Only super admin can delete users
+  if (user.adminType !== "super_admin") {
+    return NextResponse.json({ 
+      error: "Only super admin can delete users" 
+    }, { status: 403 });
+  }
+
   try {
     if (userType === "doctor") {
       await deleteDoctor(userId);
+      
+      // Log activity
+      await logActivity(
+        user,
+        "delete_doctor",
+        "doctor",
+        userId,
+        { deletedAt: new Date().toISOString() },
+        req
+      );
+      
       return NextResponse.json({ success: true });
     } else if (userType === "mother") {
       const mother = await getMother(userId);
@@ -30,6 +49,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Mother not found" }, { status: 404 });
       }
       await deleteMother(userId);
+      
+      // Log activity
+      await logActivity(
+        user,
+        "delete_mother",
+        "mother",
+        userId,
+        { deletedAt: new Date().toISOString() },
+        req
+      );
+      
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

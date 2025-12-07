@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signAuthToken } from "@/lib/auth";
-import bcrypt from "bcryptjs";
+import { logActivity } from "@/lib/adminActivity";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+// Super Admin credentials
+const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@admin.com";
+const SUPER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin@password";
 
-if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-  console.warn("ADMIN_EMAIL or ADMIN_PASSWORD not set. Admin login will fail.");
+// Editor credentials
+const EDITOR_1_EMAIL = process.env.EDITOR_1_EMAIL || "access@fahim.com";
+const EDITOR_1_PASSWORD = process.env.EDITOR_1_PASSWORD || "fahim##02";
+const EDITOR_2_EMAIL = process.env.EDITOR_2_EMAIL || "access@saikat.com";
+const EDITOR_2_PASSWORD = process.env.EDITOR_2_PASSWORD || "saikat##03";
+
+// Helper to compare password with stored hash
+async function comparePassword(password: string, hash: string): Promise<boolean> {
+  const bcrypt = await import("bcryptjs");
+  return bcrypt.compare(password, hash);
+}
+
+// Helper to hash password (for initial setup)
+async function hashPassword(password: string): Promise<string> {
+  const bcrypt = await import("bcryptjs");
+  return bcrypt.hash(password, 10);
 }
 
 export async function POST(req: NextRequest) {
@@ -15,18 +30,92 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    return NextResponse.json({ error: "Admin credentials not configured" }, { status: 500 });
+  const emailLower = email.toLowerCase();
+  let adminId: string;
+  let adminEmail: string;
+  let adminType: "super_admin" | "editor";
+
+  // Check super admin
+  if (emailLower === SUPER_ADMIN_EMAIL.toLowerCase()) {
+    // Direct password comparison (passwords stored in env as plain text for simplicity)
+    if (password !== SUPER_ADMIN_PASSWORD) {
+      return NextResponse.json({ error: "Invalid admin credentials" }, { status: 401 });
+    }
+    adminId = "super_admin";
+    adminEmail = SUPER_ADMIN_EMAIL;
+    adminType = "super_admin";
   }
-
-  const emailMatch = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-  const passwordMatch = await bcrypt.compare(password, await bcrypt.hash(ADMIN_PASSWORD, 10));
-
-  if (!emailMatch || !passwordMatch) {
+  // Check editor 1
+  else if (emailLower === EDITOR_1_EMAIL.toLowerCase()) {
+    // Direct password comparison (passwords stored in env as plain text for simplicity)
+    if (password !== EDITOR_1_PASSWORD) {
+      return NextResponse.json({ error: "Invalid admin credentials" }, { status: 401 });
+    }
+    
+    // Check if editor is paused
+    const { listAdminActivities } = await import("@/lib/data");
+    const activities = await listAdminActivities("editor_1", 100);
+    const pauseActivity = activities.find(a => a.action === "pause_editor");
+    if (pauseActivity) {
+      const unpauseActivity = activities.find(a => 
+        a.action === "unpause_editor" && 
+        new Date(a.timestamp) > new Date(pauseActivity.timestamp)
+      );
+      if (!unpauseActivity) {
+        return NextResponse.json({ error: "This editor account has been paused by super admin" }, { status: 403 });
+      }
+    }
+    
+    adminId = "editor_1";
+    adminEmail = EDITOR_1_EMAIL;
+    adminType = "editor";
+  }
+  // Check editor 2
+  else if (emailLower === EDITOR_2_EMAIL.toLowerCase()) {
+    // Direct password comparison (passwords stored in env as plain text for simplicity)
+    if (password !== EDITOR_2_PASSWORD) {
+      return NextResponse.json({ error: "Invalid admin credentials" }, { status: 401 });
+    }
+    
+    // Check if editor is paused
+    const { listAdminActivities } = await import("@/lib/data");
+    const activities = await listAdminActivities("editor_2", 100);
+    const pauseActivity = activities.find(a => a.action === "pause_editor");
+    if (pauseActivity) {
+      const unpauseActivity = activities.find(a => 
+        a.action === "unpause_editor" && 
+        new Date(a.timestamp) > new Date(pauseActivity.timestamp)
+      );
+      if (!unpauseActivity) {
+        return NextResponse.json({ error: "This editor account has been paused by super admin" }, { status: 403 });
+      }
+    }
+    
+    adminId = "editor_2";
+    adminEmail = EDITOR_2_EMAIL;
+    adminType = "editor";
+  }
+  else {
     return NextResponse.json({ error: "Invalid admin credentials" }, { status: 401 });
   }
 
-  const token = signAuthToken({ id: "admin", email: ADMIN_EMAIL, role: "admin" });
-  return NextResponse.json({ token });
+  // Log login activity
+  await logActivity(
+    { id: adminId, email: adminEmail, role: "admin", adminType },
+    "login",
+    "system",
+    "system",
+    { loginTime: new Date().toISOString() },
+    req
+  );
+
+  const token = signAuthToken({ 
+    id: adminId, 
+    email: adminEmail, 
+    role: "admin",
+    adminType 
+  });
+  
+  return NextResponse.json({ token, adminType });
 }
 
