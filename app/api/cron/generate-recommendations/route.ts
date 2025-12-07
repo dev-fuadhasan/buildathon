@@ -37,13 +37,21 @@ export async function GET(req: NextRequest) {
         const { hour, minute } = getCurrentTimeInTimezone(timezone);
         const today = getCurrentDateInTimezone(timezone);
         
-        // Check if it's 8:00-8:05 AM or 8:00-8:05 PM
+        // Log for debugging (only log when it's close to 8 AM/PM to avoid spam)
+        if ((hour === 7 && minute >= 55) || (hour === 8 && minute <= 10) || 
+            (hour === 19 && minute >= 55) || (hour === 20 && minute <= 10)) {
+          console.log(`[Cron] Mother ${mother.email || mother.id} - Timezone: ${timezone}, Local Time: ${hour}:${minute.toString().padStart(2, '0')}, Date: ${today}`);
+        }
+        
+        // Check if it's 8:00-8:05 AM or 8:00-8:05 PM in THEIR timezone
         let timeOfDay: "morning" | "evening" | null = null;
         
         if (hour === 8 && minute >= 0 && minute <= 5 && mother.lastMorningAdviceDate !== today) {
           timeOfDay = "morning";
+          console.log(`[Cron] ✅ Sending morning recommendation to ${mother.email || mother.id} (${timezone})`);
         } else if (hour === 20 && minute >= 0 && minute <= 5 && mother.lastNightAdviceDate !== today) {
           timeOfDay = "evening";
+          console.log(`[Cron] ✅ Sending evening recommendation to ${mother.email || mother.id} (${timezone})`);
         }
 
         if (!timeOfDay) {
