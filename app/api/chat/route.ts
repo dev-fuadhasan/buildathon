@@ -64,7 +64,46 @@ Medications: ${mother.medications || "N/A"}`;
     // Detect language of user message
     const userLanguage = detectLanguage(lastUserMessage);
     
-    // Translate user message to English if it's in Bangla/Banglish
+    // Estimate token count (rough estimate: 1 token ≈ 4 characters)
+    // Count all messages + system prompts
+    const allMessagesText = JSON.stringify(messages) + (profileContext || "");
+    const estimatedTokens = Math.ceil(allMessagesText.length / 4);
+    
+    // Check if token limit is exceeded (6000 tokens max)
+    if (estimatedTokens > 5500) { // Leave some buffer
+      const errorMessage = userLanguage === "bn"
+        ? "আপনার প্রশ্নটি খুব দীর্ঘ। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন। আপনি পরে আরও বিস্তারিত জানতে পারেন। অথবা আরও ভাল সাহায্যের জন্য লগইন করুন।"
+        : "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.";
+      
+      return NextResponse.json({
+        reply: errorMessage,
+        safetyWarning: false,
+        riskLevel: "low",
+      });
+    }
+    
+    // Translate ALL user messages in the conversation to maintain context consistency
+    // This ensures continuous questions work properly
+    const translatedMessages = await Promise.all(
+      messages.map(async (m: any) => {
+        if (m.role === "user") {
+          const msgLanguage = detectLanguage(m.content);
+          if (msgLanguage === "bn") {
+            try {
+              const translated = await translateToEnglish(m.content);
+              return { ...m, content: translated };
+            } catch (error) {
+              console.error("Translation error for message:", error);
+              return m; // Keep original if translation fails
+            }
+          }
+        }
+        // Keep assistant messages as-is (they're already in English from previous responses)
+        return m;
+      })
+    );
+    
+    // Translate the last user message separately for safety check
     let translatedUserMessage = lastUserMessage;
     if (userLanguage === "bn") {
       try {
@@ -77,14 +116,6 @@ Medications: ${mother.medications || "N/A"}`;
         translatedUserMessage = lastUserMessage;
       }
     }
-    
-    // Create translated messages array for AI processing
-    const translatedMessages = messages.map((m: any) => {
-      if (m.role === "user" && m.content === lastUserMessage) {
-        return { ...m, content: translatedUserMessage };
-      }
-      return m;
-    });
     
     // Safety check: Use translated message for safety detection
     const safetyCheck = checkSafety(translatedUserMessage, profileContext);
@@ -104,7 +135,25 @@ Medications: ${mother.medications || "N/A"}`;
     }
     
     // Get AI response in English (always process in English for accuracy)
-    let reply = await askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant);
+    let reply: string;
+    try {
+      reply = await askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant);
+    } catch (error: any) {
+      // Check if error is due to token limit
+      if (error.message && (error.message.includes("token") || error.message.includes("length") || error.message.includes("limit"))) {
+        const errorMessage = userLanguage === "bn"
+          ? "আপনার প্রশ্নটি খুব দীর্ঘ। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন। আপনি পরে আরও বিস্তারিত জানতে পারেন। অথবা আরও ভাল সাহায্যের জন্য লগইন করুন।"
+          : "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
+      // Re-throw other errors
+      throw error;
+    }
     
     // Add safety warnings if needed
     if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
@@ -134,6 +183,16 @@ Medications: ${mother.medications || "N/A"}`;
     });
   } catch (error: any) {
     console.error("Chat API error:", error);
+    
+    // Check if it's a token limit error
+    if (error.message && (error.message.includes("token") || error.message.includes("length") || error.message.includes("limit"))) {
+      return NextResponse.json({
+        reply: "Your question is too long. Please ask a shorter question. You can add more details later. Or login for better assistance.",
+        safetyWarning: false,
+        riskLevel: "low",
+      });
+    }
+    
     return NextResponse.json(
       { 
         error: "Failed to process chat request",
