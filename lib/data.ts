@@ -99,6 +99,45 @@ export type ChatHistory = {
   updatedAt: string;
 };
 
+// Live Chat Types
+export type LiveChatUser = {
+  userId?: string; // If logged in (mother/doctor ID)
+  userType?: "mother" | "doctor"; // If logged in
+  name: string;
+  phone: string;
+  email?: string;
+  sessionId?: string; // Browser session identifier
+  ipAddress?: string; // IP address for persistence
+};
+
+export type LiveChatMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string; // "admin" or user identifier
+  senderType: "admin" | "user";
+  senderName: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+};
+
+export type LiveChatConversation = {
+  id: string; // Unique conversation ID
+  userId?: string; // If logged in
+  userType?: "mother" | "doctor";
+  userName: string;
+  userPhone: string;
+  userEmail?: string;
+  sessionId?: string; // Browser session
+  ipAddress?: string;
+  messages: LiveChatMessage[];
+  status: "active" | "closed" | "resolved";
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt?: string;
+  adminId?: string; // Admin handling the conversation
+};
+
 export type DailyEntry = {
   id: string;
   motherId: string;
@@ -127,6 +166,7 @@ const questionKey = (id: string) => `questions/${id}.json`;
 const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
+const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
 
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
@@ -484,6 +524,45 @@ export async function deleteNotification(motherId: string, notificationId: strin
     await deleteObject(notificationKey(motherId, notificationId));
   } catch (err) {
     console.error("Error deleting notification:", err);
+  }
+}
+
+// Live Chat Functions
+export async function getLiveChatConversation(conversationId: string): Promise<LiveChatConversation | null> {
+  try {
+    return await getJson<LiveChatConversation>(liveChatConversationKey(conversationId));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveLiveChatConversation(conversation: LiveChatConversation) {
+  return putJson(liveChatConversationKey(conversation.id), conversation);
+}
+
+export async function listLiveChatConversations(): Promise<LiveChatConversation[]> {
+  try {
+    return await listJson<LiveChatConversation>("live-chat/conversations/");
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function getConversationsBySession(sessionId: string): Promise<LiveChatConversation[]> {
+  try {
+    const all = await listLiveChatConversations();
+    return all.filter(conv => conv.sessionId === sessionId);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function getConversationsByUserId(userId: string): Promise<LiveChatConversation[]> {
+  try {
+    const all = await listLiveChatConversations();
+    return all.filter(conv => conv.userId === userId);
+  } catch (err) {
+    return [];
   }
 }
 

@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import MessagePopup from "@/components/MessagePopup";
+import AdminLiveChatSection from "@/components/AdminLiveChatSection";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
   const [allMothers, setAllMothers] = useState<Mother[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports" | "live-chat">("overview");
   const [analytics, setAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
@@ -132,7 +133,7 @@ export default function AdminDashboard() {
     if (t) {
       // Restore active tab from localStorage
       const savedTab = localStorage.getItem("adminDashboardTab");
-      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports"].includes(savedTab)) {
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports", "live-chat"].includes(savedTab)) {
         setActiveTab(savedTab as any);
       }
       
@@ -472,6 +473,7 @@ export default function AdminDashboard() {
             { id: "doctors", label: "Doctors", icon: "doctor" },
             { id: "mothers", label: "Mothers", icon: "mom" },
             { id: "reports", label: "Reports", icon: "reports" },
+            { id: "live-chat", label: "Live Chat", icon: "chat" },
           ].map((tab) => {
             const pendingReports = tab.id === "reports" 
               ? reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending")
@@ -1804,6 +1806,11 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {/* Live Chat Tab */}
+        {activeTab === "live-chat" && (
+          <AdminLiveChatSection token={token} />
         )}
       </div>
     </Layout>
