@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
       user = await findDoctorByEmail(email);
     }
 
-    // Always return success to prevent email enumeration
-    // But only send email if user exists
+    // Check if user exists
     if (!user) {
-      return NextResponse.json({
-        message: "If an account exists with this email, a password reset link has been sent.",
-      });
+      return NextResponse.json(
+        { error: "This email is not registered in our system. Please enter a registered email address." },
+        { status: 404 }
+      );
     }
 
     // Generate reset token

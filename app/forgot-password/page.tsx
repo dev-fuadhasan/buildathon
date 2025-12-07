@@ -52,7 +52,7 @@ function ForgotPasswordForm() {
         isOpen: true,
         type: "success",
         title: "Email Sent",
-        message: data.message || "If an account exists with this email, a password reset link has been sent. Please check your inbox.",
+        message: data.message || "Password reset link has been sent to your email. Please check your inbox (and spam folder).",
       });
 
       // Clear email field
@@ -77,7 +77,10 @@ function ForgotPasswordForm() {
             Forgot Password
           </h1>
           <p className="text-slate-600 mt-2">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your registered email address and we'll send you a link to reset your password.
+          </p>
+          <p className="text-sm text-amber-600 mt-2 font-medium">
+            ⚠️ Please enter the email address you used to register. If the email is not registered, you will not receive a reset link.
           </p>
         </div>
 
