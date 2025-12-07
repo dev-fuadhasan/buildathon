@@ -56,8 +56,8 @@ export default function AdminLiveChatSection({ token }: Props) {
         headers: headers(),
       });
       if (res.ok) {
-        // Reload conversation to get updated read status
-        loadConversation(conversationId);
+        // Reload conversation to get updated read status, but skip auto-scroll if user is scrolling
+        loadConversation(conversationId, isUserScrollingRef.current || !shouldAutoScroll);
         loadConversations();
       }
     } catch (err) {
@@ -70,15 +70,20 @@ export default function AdminLiveChatSection({ token }: Props) {
     // Poll for new conversations and messages
     const interval = setInterval(() => {
       loadConversations();
-      if (selectedConversation && !isUserScrollingRef.current) {
-        loadConversation(selectedConversation.id);
-        // Mark messages as read when admin views conversation
-        markMessagesAsRead(selectedConversation.id);
+      if (selectedConversation) {
+        // Only load conversation if user is not scrolling
+        // Pass skipAutoScroll=true to prevent auto-scroll when user is scrolling
+        loadConversation(selectedConversation.id, isUserScrollingRef.current || !shouldAutoScroll);
+        
+        // Only mark as read if user is not scrolling (to avoid triggering updates)
+        if (!isUserScrollingRef.current) {
+          markMessagesAsRead(selectedConversation.id);
+        }
       }
     }, 2000); // Every 2 seconds
 
     return () => clearInterval(interval);
-  }, [selectedConversation]);
+  }, [selectedConversation, shouldAutoScroll]);
 
   // Mark messages as read when conversation is selected
   useEffect(() => {
@@ -90,21 +95,36 @@ export default function AdminLiveChatSection({ token }: Props) {
   // Auto-scroll only if user is near bottom and not manually scrolling
   useEffect(() => {
     // Skip if user is actively scrolling
-    if (isUserScrollingRef.current) return;
+    if (isUserScrollingRef.current) {
+      return;
+    }
     
-    if (!messagesContainerRef.current || !shouldAutoScroll) return;
+    // Skip if auto-scroll is disabled
+    if (!shouldAutoScroll) {
+      return;
+    }
+    
+    if (!messagesContainerRef.current) {
+      return;
+    }
     
     const container = messagesContainerRef.current;
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
     
     // Only auto-scroll if user is already near bottom
-    if (isNearBottom) {
-      // Use requestAnimationFrame to ensure scroll happens after render
-      requestAnimationFrame(() => {
-        if (!isUserScrollingRef.current && messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottom && messagesEndRef.current) {
+      // Use a small delay to ensure DOM is updated
+      const timeoutId = setTimeout(() => {
+        // Double-check user is still not scrolling and still at bottom
+        if (!isUserScrollingRef.current && shouldAutoScroll && messagesEndRef.current) {
+          const stillNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+          if (stillNearBottom) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
         }
-      });
+      }, 50);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [selectedConversation?.messages, shouldAutoScroll]);
 
@@ -115,14 +135,15 @@ export default function AdminLiveChatSection({ token }: Props) {
 
     let lastScrollTop = container.scrollTop;
     let scrollDirection: 'up' | 'down' | null = null;
+    let scrollTimer: NodeJS.Timeout | null = null;
 
     const handleScroll = () => {
       const currentScrollTop = container.scrollTop;
       
       // Determine scroll direction
-      if (currentScrollTop > lastScrollTop) {
+      if (currentScrollTop > lastScrollTop + 1) {
         scrollDirection = 'down';
-      } else if (currentScrollTop < lastScrollTop) {
+      } else if (currentScrollTop < lastScrollTop - 1) {
         scrollDirection = 'up';
       }
       lastScrollTop = currentScrollTop;
@@ -134,23 +155,27 @@ export default function AdminLiveChatSection({ token }: Props) {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
       
       // Check if user is near bottom
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
       
-      // If user scrolls up, disable auto-scroll
+      // If user scrolls up, immediately disable auto-scroll
       if (scrollDirection === 'up') {
         setShouldAutoScroll(false);
       }
       
-      // After user stops scrolling for 300ms, check position and re-enable if at bottom
+      // After user stops scrolling for 500ms, check position
       scrollTimeoutRef.current = setTimeout(() => {
         isUserScrollingRef.current = false;
-        // Only re-enable auto-scroll if user is at bottom
-        if (isNearBottom) {
+        // Only re-enable auto-scroll if user manually scrolled back to bottom
+        const stillNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        if (stillNearBottom && scrollDirection === 'down') {
           setShouldAutoScroll(true);
         }
-      }, 300);
+      }, 500);
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
@@ -158,6 +183,9 @@ export default function AdminLiveChatSection({ token }: Props) {
       container.removeEventListener('scroll', handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
+      }
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
       }
     };
   }, [selectedConversation]);
@@ -191,7 +219,7 @@ export default function AdminLiveChatSection({ token }: Props) {
     }
   };
 
-  const loadConversation = async (id: string) => {
+  const loadConversation = async (id: string, skipAutoScroll = false) => {
     try {
       const res = await fetch(`/api/live-chat/conversations/${id}`, { headers: headers() });
       if (res.ok) {
@@ -199,6 +227,14 @@ export default function AdminLiveChatSection({ token }: Props) {
         // Only update if this is the currently selected conversation
         setSelectedConversation(prev => {
           if (prev && prev.id === id) {
+            // Check if messages actually changed
+            const messagesChanged = JSON.stringify(prev.messages) !== JSON.stringify(data.conversation.messages);
+            
+            // If user is scrolling or we should skip auto-scroll, don't update if messages haven't changed
+            if (skipAutoScroll && !messagesChanged && isUserScrollingRef.current) {
+              return prev; // Don't update to prevent auto-scroll trigger
+            }
+            
             return data.conversation;
           }
           return prev;
