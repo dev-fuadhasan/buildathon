@@ -3,9 +3,11 @@
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
+import MessagePopup from "@/components/MessagePopup";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 
@@ -67,6 +69,7 @@ type Question = {
 
 export default function MotherDashboard() {
   const t = useTranslation();
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [motherId, setMotherId] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -85,6 +88,12 @@ export default function MotherDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
@@ -114,12 +123,13 @@ export default function MotherDashboard() {
     updatePregnancyProgress(t);
     checkDailyTask(t);
     
-    // Set up interval to check for daily tasks and update pregnancy progress
+    // Set up interval to check for daily tasks, update pregnancy progress, and check if paused
     // Check every 5 minutes
     const interval = setInterval(() => {
       updatePregnancyProgress(t);
       checkDailyTask(t);
       fetchNotifications(t); // Refresh notifications to show new recommendations
+      fetchProfile(t); // Check if account was paused
     }, 5 * 60 * 1000); // Check every 5 minutes
     
     return () => clearInterval(interval);
@@ -143,6 +153,24 @@ export default function MotherDashboard() {
       if (data.profile?.id && !motherId) {
         setMotherId(data.profile.id);
       }
+      
+      // Check if account is paused and auto-logout
+      if (data.profile?.status === "paused") {
+        setPopup({
+          isOpen: true,
+          type: "error",
+          title: "Account Paused",
+          message: "Your account has been paused by admin. You will be logged out automatically.",
+        });
+        setTimeout(() => {
+          localStorage.removeItem("motherToken");
+          router.push("/");
+        }, 3000);
+      }
+    } else if (res.status === 401) {
+      // Token invalid or account paused - logout
+      localStorage.removeItem("motherToken");
+      router.push("/");
     }
   };
 
@@ -541,8 +569,16 @@ export default function MotherDashboard() {
           </div>
         </div>
 
-        {/* Message Alert - Redesigned */}
-        {message && (
+        <MessagePopup
+          isOpen={popup.isOpen}
+          onClose={() => setPopup({ ...popup, isOpen: false })}
+          type={popup.type}
+          title={popup.title}
+          message={popup.message}
+        />
+
+        {/* Message Alert - For simple messages */}
+        {message && !popup.isOpen && (
           <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
               ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 

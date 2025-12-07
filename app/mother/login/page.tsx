@@ -1,6 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
+import MessagePopup from "@/components/MessagePopup";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +11,12 @@ export default function MotherLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,8 +30,18 @@ export default function MotherLogin() {
       });
       const data = await res.json();
       if (!res.ok) {
-        // Display the error message from the API
-        setError(data.error || "Login failed");
+        // Show popup for important messages
+        const errorMsg = data.error || "Login failed";
+        if (errorMsg.includes("paused") || errorMsg.includes("approval")) {
+          setPopup({
+            isOpen: true,
+            type: "error",
+            title: "Account Paused",
+            message: errorMsg,
+          });
+        } else {
+          setError(errorMsg);
+        }
         return;
       }
       localStorage.setItem("motherToken", data.token);
@@ -45,6 +62,14 @@ export default function MotherLogin() {
           <h1 className="text-3xl font-bold">Mother Login</h1>
           <p className="text-slate-600">Access your dashboard and chat context.</p>
         </div>
+        <MessagePopup
+          isOpen={popup.isOpen}
+          onClose={() => setPopup({ ...popup, isOpen: false })}
+          type={popup.type}
+          title={popup.title}
+          message={popup.message}
+        />
+
         <form onSubmit={onSubmit} className="card space-y-4">
           <input
             className="input"

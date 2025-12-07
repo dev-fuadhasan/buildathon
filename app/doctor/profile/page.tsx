@@ -2,9 +2,11 @@
 
 import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
+import MessagePopup from "@/components/MessagePopup";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Profile = {
   id: string;
@@ -24,6 +26,7 @@ type Profile = {
 };
 
 export default function DoctorProfile() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,6 +34,12 @@ export default function DoctorProfile() {
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     const t = localStorage.getItem("doctorToken") || "";
@@ -101,15 +110,23 @@ export default function DoctorProfile() {
 
       const data = await res.json();
       if (res.ok) {
-        setMessage(data.message || "✅ Profile updated successfully!");
+        const msg = data.message || "Profile updated successfully!";
         
         // Always logout after profile edit
         if (data.requiresLogout) {
-          // Clear token and redirect to login after a short delay
+          setPopup({
+            isOpen: true,
+            type: "warning",
+            title: "Profile Updated",
+            message: msg + "\n\nYou have been logged out. Please use your new email to log in after admin approval.",
+          });
+          // Clear token and redirect to login after popup
           setTimeout(() => {
             localStorage.removeItem("doctorToken");
-            window.location.href = "/doctor/login";
-          }, 2000); // 2 second delay to show the message
+            router.push("/doctor/login");
+          }, 4000);
+        } else {
+          setMessage("✅ " + msg);
         }
       } else {
         setMessage(`❌ ${data.error || "Could not save profile"}`);
@@ -154,6 +171,14 @@ export default function DoctorProfile() {
   return (
     <Layout>
       <div className="space-y-6">
+        <MessagePopup
+          isOpen={popup.isOpen}
+          onClose={() => setPopup({ ...popup, isOpen: false })}
+          type={popup.type}
+          title={popup.title}
+          message={popup.message}
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

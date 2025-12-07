@@ -4,6 +4,7 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
+import MessagePopup from "@/components/MessagePopup";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -98,6 +99,12 @@ export default function AdminDashboard() {
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [selectedReportStatus, setSelectedReportStatus] = useState<"all" | "pending" | "solved" | "rejected">("all");
   const [adminDecisionText, setAdminDecisionText] = useState("");
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   const loadDoctorDetails = async (doctorId: string) => {
     const res = await fetch(`/api/admin/doctor-details?id=${doctorId}`, {
@@ -245,17 +252,32 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage(`✅ User ${pause ? "paused" : "unpaused"} successfully`);
+        setPopup({
+          isOpen: true,
+          type: "success",
+          title: pause ? "User Paused" : "User Unpaused",
+          message: `The ${userType} has been ${pause ? "paused" : "unpaused"} successfully. ${pause ? "They will be automatically logged out if currently logged in." : ""}`,
+        });
         if (userType === "doctor") {
           loadAllDoctors();
         } else {
           loadAllMothers();
         }
       } else {
-        setMessage(`❌ ${data.error || "Failed to update user"}`);
+        setPopup({
+          isOpen: true,
+          type: "error",
+          title: "Operation Failed",
+          message: data.error || "Failed to update user status. Please try again.",
+        });
       }
     } catch (err) {
-      setMessage("❌ Network error. Please try again.");
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Network Error",
+        message: "Network error. Please try again.",
+      });
     }
   };
 
@@ -386,8 +408,16 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* Message Alert - Redesigned */}
-        {message && (
+        <MessagePopup
+          isOpen={popup.isOpen}
+          onClose={() => setPopup({ ...popup, isOpen: false })}
+          type={popup.type}
+          title={popup.title}
+          message={popup.message}
+        />
+
+        {/* Message Alert - For simple messages */}
+        {message && !popup.isOpen && (
           <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
               ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 

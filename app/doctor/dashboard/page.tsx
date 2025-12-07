@@ -5,9 +5,11 @@ import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import CommentSection from "@/components/CommentSection";
+import MessagePopup from "@/components/MessagePopup";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Comment = {
   id: string;
@@ -48,6 +50,7 @@ type QuestionItem = {
 };
 
 export default function DoctorDashboard() {
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [doctorId, setDoctorId] = useState("");
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
@@ -56,6 +59,12 @@ export default function DoctorDashboard() {
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionItem | null>(null);
   const [answerTexts, setAnswerTexts] = useState<Record<string, string>>({});
   const [showPatientDetails, setShowPatientDetails] = useState<Record<string, boolean>>({});
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   useEffect(() => {
     const t = localStorage.getItem("doctorToken") || "";
@@ -69,6 +78,14 @@ export default function DoctorDashboard() {
         // Will be set when questions load
       }
       loadQuestions(t);
+      checkDoctorStatus(t);
+      
+      // Set up interval to check if account was paused
+      const interval = setInterval(() => {
+        checkDoctorStatus(t);
+      }, 5 * 60 * 1000); // Check every 5 minutes
+      
+      return () => clearInterval(interval);
     }
   }, []);
   
@@ -87,9 +104,41 @@ export default function DoctorDashboard() {
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions || []);
+      } else if (res.status === 401) {
+        // Token invalid or account paused - logout
+        localStorage.removeItem("doctorToken");
+        router.push("/");
       }
     } catch (err) {
       console.error("Failed to load questions:", err);
+    }
+  };
+
+  const checkDoctorStatus = async (t = token) => {
+    try {
+      const res = await fetch("/api/doctor/profile", { headers: headers(t) });
+      if (res.ok) {
+        const data = await res.json();
+        // Check if account is paused and auto-logout
+        if (data.profile?.status === "paused") {
+          setPopup({
+            isOpen: true,
+            type: "error",
+            title: "Account Paused",
+            message: "Your account has been paused by admin. You will be logged out automatically.",
+          });
+          setTimeout(() => {
+            localStorage.removeItem("doctorToken");
+            router.push("/");
+          }, 3000);
+        }
+      } else if (res.status === 401) {
+        // Token invalid or account paused - logout
+        localStorage.removeItem("doctorToken");
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("Failed to check doctor status:", err);
     }
   };
 
@@ -172,8 +221,16 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Message Alert - Redesigned */}
-        {message && (
+        <MessagePopup
+          isOpen={popup.isOpen}
+          onClose={() => setPopup({ ...popup, isOpen: false })}
+          type={popup.type}
+          title={popup.title}
+          message={popup.message}
+        />
+
+        {/* Message Alert - For simple messages */}
+        {message && !popup.isOpen && (
           <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
             message.includes("successfully") || message.includes("Success") 
               ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 

@@ -1,6 +1,7 @@
 "use client";
 
 import Layout from "@/components/Layout";
+import MessagePopup from "@/components/MessagePopup";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -21,6 +22,12 @@ export default function DoctorRegister() {
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,10 +92,24 @@ export default function DoctorRegister() {
         throw new Error(data.error || "Registration failed");
       }
 
-      alert("Application submitted successfully! You can log in after admin approval.");
-      router.push("/doctor/login");
+      setPopup({
+        isOpen: true,
+        type: "success",
+        title: "Application Submitted Successfully!",
+        message: "Your application has been submitted. You can log in after admin approval. We'll notify you once your account is approved.",
+      });
+      
+      // Redirect after popup is closed
+      setTimeout(() => {
+        router.push("/doctor/login");
+      }, 3000);
     } catch (err: any) {
-      setError(err.message);
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Registration Failed",
+        message: err.message || "An error occurred during registration. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -271,6 +292,14 @@ export default function DoctorRegister() {
               )}
             </div>
           </div>
+
+          <MessagePopup
+            isOpen={popup.isOpen}
+            onClose={() => setPopup({ ...popup, isOpen: false })}
+            type={popup.type}
+            title={popup.title}
+            message={popup.message}
+          />
 
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-4">
