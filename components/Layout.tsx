@@ -4,7 +4,6 @@ import { PropsWithChildren, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
-import LiveChatButton from "@/components/LiveChatButton";
 
 type Props = PropsWithChildren;
 
@@ -212,8 +211,6 @@ export default function Layout({ children }: Props) {
         </footer>
       )}
 
-      {/* Live Chat Button - Always visible */}
-      <LiveChatButton />
     </div>
   );
 }

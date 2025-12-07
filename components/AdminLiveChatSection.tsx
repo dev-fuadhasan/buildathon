@@ -160,20 +160,25 @@ export default function AdminLiveChatSection({ token }: Props) {
           {/* Conversations List */}
           <div className="lg:col-span-1 border-r border-slate-200 pr-4 overflow-y-auto">
             <div className="mb-4">
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
-                  className="input flex-1 text-sm"
+                  className="flex-1 text-sm h-9 px-3 rounded-lg border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400"
                   placeholder="Search by Conversation ID..."
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearchById();
+                    }
+                  }}
                 />
                 <button
                   onClick={handleSearchById}
-                  className="btn-secondary px-3"
+                  className="px-3 h-9 rounded-lg bg-white border-2 border-neutral-200 text-neutral-600 hover:bg-pink-50 hover:border-pink-300 transition-all duration-200 flex items-center justify-center"
                   title="Search"
                 >
-                  <Icon name="search" size={18} />
+                  <Icon name="search" size={16} />
                 </button>
               </div>
             </div>
