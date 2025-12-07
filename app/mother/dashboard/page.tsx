@@ -592,16 +592,19 @@ export default function MotherDashboard() {
   return (
     <Layout>
         <div className="space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0">
+          {/* Mobile Menu */}
+          <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
+
           {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-8 sm:p-12 mt-6 border border-pink-200 shadow-lg">
+          <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-6 sm:p-8 md:p-12 mt-6 border border-pink-200 shadow-lg">
             <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
             <div className="relative z-10">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
                 <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 mb-3">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-2 md:mb-3">
                     Welcome{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}! 👋
                   </h1>
-                  <p className="text-lg sm:text-xl text-neutral-700 font-medium mb-6">
+                  <p className="text-base sm:text-lg md:text-xl text-neutral-700 font-medium mb-4 md:mb-6">
                     Track your pregnancy journey with personalized guidance.
                   </p>
                   {weeksPregnant && (
@@ -619,7 +622,7 @@ export default function MotherDashboard() {
                     </div>
                   )}
                 </div>
-                <div className="flex-shrink-0">
+                <div className="hidden md:flex flex-shrink-0">
                   <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-xl">
                     <Icon name="mom" size={64} className="text-white" />
                   </div>
