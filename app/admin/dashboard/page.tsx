@@ -551,8 +551,8 @@ export default function AdminDashboard() {
     { id: "reports", label: "Reports", icon: "reports", badge: reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length },
     { id: "live-chat", label: "Live Chat", icon: "chat" },
     ...(adminType === "super_admin" ? [
-      { id: "editors", label: "Editors", icon: "users" },
-      { id: "activity-logs", label: "Activity Logs", icon: "history" },
+      { id: "editors", label: "Editors", icon: "editor" },
+      { id: "activity-logs", label: "Activity Logs", icon: "log" },
     ] : []),
   ];
 
