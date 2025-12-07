@@ -117,10 +117,12 @@ export default function AdminLiveChatSection({ token }: Props) {
       // Use a small delay to ensure DOM is updated
       const timeoutId = setTimeout(() => {
         // Double-check user is still not scrolling and still at bottom
-        if (!isUserScrollingRef.current && shouldAutoScroll && messagesEndRef.current) {
+        if (!isUserScrollingRef.current && shouldAutoScroll && messagesEndRef.current && container) {
           const stillNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
           if (stillNearBottom) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+            // Use scrollTop instead of scrollIntoView to avoid affecting page scroll
+            // Only scroll the messages container, not the entire page
+            container.scrollTop = container.scrollHeight;
           }
         }
       }, 50);
@@ -138,7 +140,10 @@ export default function AdminLiveChatSection({ token }: Props) {
     let scrollDirection: 'up' | 'down' | null = null;
     let scrollTimer: NodeJS.Timeout | null = null;
 
-    const handleScroll = () => {
+    const handleScroll = (e: Event) => {
+      // Only handle scroll events from the messages container, not page scroll
+      if (e.target !== container) return;
+      
       const currentScrollTop = container.scrollTop;
       
       // Determine scroll direction
@@ -477,6 +482,7 @@ export default function AdminLiveChatSection({ token }: Props) {
                 <div 
                   ref={messagesContainerRef}
                   className="flex-1 overflow-y-auto space-y-3 mb-3 sm:mb-4 bg-gradient-to-b from-slate-50 to-white p-3 sm:p-4 rounded-lg min-h-0"
+                  style={{ overscrollBehavior: 'contain' }}
                 >
                   {selectedConversation.messages.length === 0 ? (
                     <div className="text-center text-slate-500 py-8">
