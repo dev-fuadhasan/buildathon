@@ -40,6 +40,7 @@ export default function AdminLiveChatSection({ token }: Props) {
   const [searchId, setSearchId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const conversationsListRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const isUserScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -192,6 +193,10 @@ export default function AdminLiveChatSection({ token }: Props) {
 
   const loadConversations = async () => {
     try {
+      // Save scroll position of conversations list before update
+      const conversationsList = conversationsListRef.current;
+      const savedScrollTop = conversationsList?.scrollTop || 0;
+      
       const res = await fetch("/api/live-chat/conversations", { headers: headers() });
       if (res.ok) {
         const data = await res.json();
@@ -200,6 +205,17 @@ export default function AdminLiveChatSection({ token }: Props) {
             new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
         );
         setConversations(sorted);
+        
+        // Restore scroll position after state update
+        if (conversationsList && savedScrollTop > 0) {
+          // Use requestAnimationFrame to ensure DOM is updated
+          requestAnimationFrame(() => {
+            if (conversationsListRef.current) {
+              conversationsListRef.current.scrollTop = savedScrollTop;
+            }
+          });
+        }
+        
         // Don't auto-select - only update if already selected (preserve selection)
         if (selectedConversation) {
           const updated = sorted.find((c: Conversation) => c.id === selectedConversation.id);
@@ -323,7 +339,10 @@ export default function AdminLiveChatSection({ token }: Props) {
       }>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 h-[calc(100vh-20rem)] sm:h-[600px] max-h-[600px]">
           {/* Conversations List */}
-          <div className="lg:col-span-1 border-r-0 lg:border-r border-slate-200 pr-0 lg:pr-4 pb-4 lg:pb-0 border-b lg:border-b-0 overflow-y-auto max-h-[300px] lg:max-h-none">
+          <div 
+            ref={conversationsListRef}
+            className="lg:col-span-1 border-r-0 lg:border-r border-slate-200 pr-0 lg:pr-4 pb-4 lg:pb-0 border-b lg:border-b-0 overflow-y-auto max-h-[300px] lg:max-h-none"
+          >
             <div className="mb-4">
               <div className="flex gap-2 items-center">
                 <input
