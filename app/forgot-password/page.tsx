@@ -41,6 +41,11 @@ function ForgotPasswordForm() {
       if (!res.ok) {
         let errorMessage = data.error || "Failed to send reset email. Please try again.";
         
+        // Show helpful message for API key issue
+        if (data.invalidApiKey) {
+          errorMessage = "Resend API key is invalid or missing. Please check your RESEND_API_KEY in Netlify environment variables. The key should start with 're_' and can be found in your Resend dashboard at https://resend.com/api-keys";
+        }
+        
         // Show helpful message for domain verification issue
         if (data.requiresDomainVerification) {
           errorMessage = "Email service is currently in testing mode. Password reset emails can only be sent to verified addresses. Please contact support or verify your domain in Resend to enable password resets for all users.";

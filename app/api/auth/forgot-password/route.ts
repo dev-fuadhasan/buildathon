@@ -8,8 +8,15 @@ function getResend() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY is not configured in environment variables");
-    throw new Error("Email service is not configured. Please contact support.");
+    throw new Error("Email service is not configured. RESEND_API_KEY is missing. Please add it to your environment variables.");
   }
+  
+  // Validate API key format (Resend API keys start with 're_')
+  if (!apiKey.startsWith('re_')) {
+    console.error("RESEND_API_KEY format appears invalid. Resend API keys should start with 're_'");
+    throw new Error("Invalid Resend API key format. Please check your RESEND_API_KEY in environment variables.");
+  }
+  
   return new Resend(apiKey);
 }
 
@@ -116,6 +123,17 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error("Resend API error:", error);
+        
+        // Check for API key errors
+        if (error.message && (error.message.includes("API key is invalid") || error.message.includes("Invalid API key"))) {
+          return NextResponse.json(
+            { 
+              error: "Resend API key is invalid or missing. Please check your RESEND_API_KEY in Netlify environment variables. The key should start with 're_'.",
+              invalidApiKey: true
+            },
+            { status: 500 }
+          );
+        }
         
         // Check if it's a domain verification error
         if (error.message && error.message.includes("testing emails")) {
