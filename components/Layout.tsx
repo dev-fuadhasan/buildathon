@@ -41,6 +41,13 @@ export default function Layout({ children }: Props) {
     }
   }, [isHome, router]);
 
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   // Determine navbar items based on login state
   const getNavItems = () => {
     if (isMother || isDoctor || isAdmin) {
@@ -61,11 +68,67 @@ export default function Layout({ children }: Props) {
         </>
       );
     } else {
-      // Not logged in - show chat, login, register based on context
-      if (pathname.startsWith("/doctor") || pathname === "/") {
-        // Doctor context or home
+      // Not logged in - show full navigation
+      if (isHome) {
+        // Homepage - show full navigation menu
         return (
           <>
+            <Link
+              href="/"
+              className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                pathname === "/"
+                  ? "text-pink-600 font-semibold"
+                  : "text-neutral-600 hover:text-pink-600"
+              }`}
+            >
+              Home
+            </Link>
+            <a
+              href="#get-started"
+              onClick={(e) => { e.preventDefault(); scrollToSection("get-started"); }}
+              className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600 cursor-pointer"
+            >
+              For Mothers
+            </a>
+            <a
+              href="#get-started"
+              onClick={(e) => { e.preventDefault(); scrollToSection("get-started"); }}
+              className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-blue-600 cursor-pointer"
+            >
+              For Doctors
+            </a>
+            <a
+              href="#features"
+              onClick={(e) => { e.preventDefault(); scrollToSection("features"); }}
+              className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600 cursor-pointer"
+            >
+              Features
+            </a>
+            <Link
+              href="/chat"
+              className="font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+            >
+              <Icon name="chat" size={18} />
+              Chat
+            </Link>
+            <Link
+              href="/mother/login"
+              className="text-sm font-semibold transition-all px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md hover:shadow-lg transform hover:scale-105"
+            >
+              Login
+            </Link>
+          </>
+        );
+      } else if (pathname.startsWith("/doctor")) {
+        // Doctor context
+        return (
+          <>
+            <Link
+              href="/"
+              className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600"
+            >
+              Home
+            </Link>
             <Link
               href="/chat"
               className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
@@ -107,6 +170,12 @@ export default function Layout({ children }: Props) {
         // Mother context
         return (
           <>
+            <Link
+              href="/"
+              className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600"
+            >
+              Home
+            </Link>
             <Link
               href="/chat"
               className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
@@ -150,10 +219,10 @@ export default function Layout({ children }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header - Soft and welcoming */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm sticky top-0 z-50">
+      {/* Header - Enhanced Navigation */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 md:h-18">
             <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
                 <span className="text-white font-bold text-base sm:text-lg">M</span>
@@ -161,14 +230,14 @@ export default function Layout({ children }: Props) {
               <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
             
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-1">
               {getNavItems()}
             </nav>
             
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+              className="lg:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -185,7 +254,7 @@ export default function Layout({ children }: Props) {
           
           {/* Mobile menu */}
           {mobileMenuOpen && (
-            <nav className="md:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-3">
+            <nav className="lg:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-2">
               {getNavItems()}
             </nav>
           )}
@@ -194,22 +263,14 @@ export default function Layout({ children }: Props) {
 
       {/* Main Content */}
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </div>
-      </main>
-
-      {/* Footer - Minimal and clean */}
-      {isHome && (
-        <footer className="bg-white/60 backdrop-blur-sm border-t border-neutral-200 mt-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="text-center text-sm text-neutral-500">
-              <p>© {new Date().getFullYear()} MomsCare. All rights reserved.</p>
-              <p className="mt-1">Made with ❤️ for mothers everywhere</p>
-            </div>
+        {isHome ? (
+          children
+        ) : (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {children}
           </div>
-        </footer>
-      )}
+        )}
+      </main>
 
     </div>
   );
