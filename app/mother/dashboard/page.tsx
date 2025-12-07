@@ -590,64 +590,7 @@ export default function MotherDashboard() {
   const weeksPregnant = profile?.weeksPregnant || (profile?.daysPregnant ? Math.floor(profile.daysPregnant / 7) : null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
-      {/* Navigation Bar */}
-      <nav className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                <span className="text-white font-bold text-base sm:text-lg">M</span>
-              </div>
-              <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
-            </Link>
-            
-            <div className="hidden lg:flex items-center gap-1">
-              <Link
-                href="/mother/dashboard"
-                className="font-medium transition-colors px-4 py-2 rounded-lg text-pink-600 bg-pink-50"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/chat"
-                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
-              >
-                <Icon name="chat" size={18} />
-                Chat
-              </Link>
-              <button
-                onClick={() => setActiveTab("prescriptions")}
-                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
-              >
-                <Icon name="upload" size={18} />
-                Upload Prescription
-              </button>
-              <button
-                onClick={() => setActiveTab("profile")}
-                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
-              >
-                <Icon name="profile" size={18} />
-                My Profile
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.removeItem("motherToken");
-                  location.href = "/";
-                }}
-                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-red-600 hover:bg-red-50"
-              >
-                Logout
-              </button>
-            </div>
-            
-            {/* Mobile menu button */}
-            <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
-          </div>
-        </div>
-      </nav>
-
-      <Layout>
+    <Layout>
         <div className="space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0">
           {/* Hero Section */}
           <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-8 sm:p-12 mt-6 border border-pink-200 shadow-lg">
@@ -2011,6 +1954,5 @@ export default function MotherDashboard() {
         )}
         </div>
       </Layout>
-    </div>
   );
 }

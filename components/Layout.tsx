@@ -50,8 +50,44 @@ export default function Layout({ children }: Props) {
 
   // Determine navbar items based on login state
   const getNavItems = () => {
-    if (isMother || isDoctor || isAdmin) {
-      // Logged in - show chat link
+    if (isMother) {
+      // Logged in as mother - show full navigation
+      return (
+        <>
+          <Link
+            href="/mother/dashboard"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/mother/dashboard"
+                ? "text-pink-600 bg-pink-50 font-semibold"
+                : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+            }`}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/chat"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg flex items-center gap-2 ${
+              pathname === "/chat"
+                ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+            }`}
+          >
+            <Icon name="chat" size={18} />
+            Chat
+          </Link>
+          <button
+            onClick={() => {
+              localStorage.removeItem("motherToken");
+              location.href = "/";
+            }}
+            className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-red-600 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        </>
+      );
+    } else if (isDoctor || isAdmin) {
+      // Logged in as doctor or admin - show chat link
       return (
         <>
           <Link
