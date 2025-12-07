@@ -25,7 +25,7 @@ export default function Home() {
     if (isMother) {
       router.push("/mother/dashboard");
     } else {
-      router.push("/mother/register");
+      router.push("/mother/login");
     }
   };
 
@@ -188,17 +188,17 @@ export default function Home() {
                   {!isMother && (
                     <>
                       <Link
-                        href="/mother/register"
+                        href="/mother/login"
                         className="inline-flex items-center justify-center gap-2 text-base font-bold px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
                       >
                         Get Started as a Mother
                         <span className="text-lg">→</span>
                       </Link>
                       <Link
-                        href="/mother/login"
+                        href="/mother/register"
                         className="inline-flex items-center justify-center text-base font-semibold px-8 py-4 bg-white text-pink-600 rounded-xl border-2 border-pink-300 shadow-md hover:shadow-lg hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"
                       >
-                        {t.common.login}
+                        Create Account
                       </Link>
                     </>
                   )}

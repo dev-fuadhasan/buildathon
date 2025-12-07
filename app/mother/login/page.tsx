@@ -93,14 +93,23 @@ export default function MotherLogin() {
           </button>
         </form>
         
-        {/* Registration Link */}
-        <div className="text-center">
-          <p className="text-slate-600">
-            Don't have an account?{" "}
-            <Link href="/mother/register" className="text-pink-600 hover:text-pink-700 font-medium underline">
-              Register as Mother
+        {/* Registration Section */}
+        <div className="card bg-pink-50 border-2 border-pink-200">
+          <div className="text-center space-y-3">
+            <p className="text-slate-700 font-medium">
+              Don't have an account?
+            </p>
+            <Link 
+              href="/mother/register" 
+              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
+            >
+              Create New Account
+              <span className="text-lg">→</span>
             </Link>
-          </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Register to get started with MomsCare
+            </p>
+          </div>
         </div>
       </div>
     </Layout>
