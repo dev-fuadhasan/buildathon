@@ -614,7 +614,7 @@ export default function MotherDashboard() {
             { id: "questions", label: t.mother.questions, icon: "question" },
             { id: "progress", label: t.mother.progress, icon: "progress" },
             { id: "journal", label: "Daily Entry", icon: "daily-entry" },
-            { id: "notifications", label: `Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`, icon: "notifications" },
+            { id: "notifications", label: "Notifications", icon: "notifications" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1083,7 +1083,7 @@ export default function MotherDashboard() {
                                 </button>
                                 {q.answer && (
                                   <button
-                                    className={`text-sm px-3 py-2 rounded transition-colors flex items-center gap-1 ${
+                                    className={`text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
                                       isReported
                                         ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
                                         : "bg-red-500 hover:bg-red-600 text-white"
@@ -1270,7 +1270,7 @@ export default function MotherDashboard() {
                         const isReported = selectedQuestion.reported || selectedQuestion.reportStatus === "pending";
                         return (
                           <button
-                            className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1 ${
+                            className={`text-xs px-3 py-1 rounded-lg transition-colors flex items-center gap-1 ${
                               isReported
                                 ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
                                 : "bg-red-500 hover:bg-red-600 text-white"
