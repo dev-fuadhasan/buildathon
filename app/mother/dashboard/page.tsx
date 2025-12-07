@@ -583,89 +583,289 @@ export default function MotherDashboard() {
     { id: "notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
   ];
 
+  // Calculate days left to due date
+  const daysLeft = profile?.dueDate 
+    ? Math.max(0, Math.ceil((new Date(profile.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+    : null;
+  const weeksPregnant = profile?.weeksPregnant || (profile?.daysPregnant ? Math.floor(profile.daysPregnant / 7) : null);
+
   return (
-    <Layout>
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 pb-20 lg:pb-0">
-        {/* Mobile Menu */}
-        <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-pink-600">
-              {t.mother.welcome}{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}!
-            </h1>
-            <p className="text-sm sm:text-base text-slate-600 mt-1">
-              {t.home.mothersDesc}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <Link href="/chat" className="btn-secondary flex items-center gap-2">
-              <Icon name="chat" size={20} />
-              {t.chat.title}
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
+      {/* Navigation Bar */}
+      <nav className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                <span className="text-white font-bold text-base sm:text-lg">M</span>
+              </div>
+              <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
-            <button
-              className="btn-secondary text-sm"
-              onClick={() => {
-                localStorage.removeItem("motherToken");
-                location.href = "/";
-              }}
-            >
-              {t.common.logout}
-            </button>
+            
+            <div className="hidden lg:flex items-center gap-1">
+              <Link
+                href="/mother/dashboard"
+                className="font-medium transition-colors px-4 py-2 rounded-lg text-pink-600 bg-pink-50"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/chat"
+                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
+              >
+                <Icon name="chat" size={18} />
+                Chat
+              </Link>
+              <button
+                onClick={() => setActiveTab("prescriptions")}
+                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
+              >
+                <Icon name="upload" size={18} />
+                Upload Prescription
+              </button>
+              <button
+                onClick={() => setActiveTab("profile")}
+                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-pink-600 hover:bg-pink-50 flex items-center gap-2"
+              >
+                <Icon name="profile" size={18} />
+                My Profile
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem("motherToken");
+                  location.href = "/";
+                }}
+                className="font-medium transition-colors px-4 py-2 rounded-lg text-neutral-600 hover:text-red-600 hover:bg-red-50"
+              >
+                Logout
+              </button>
+            </div>
+            
+            {/* Mobile menu button */}
+            <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
           </div>
         </div>
+      </nav>
 
-        <MessagePopup
-          isOpen={popup.isOpen}
-          onClose={() => setPopup({ ...popup, isOpen: false })}
-          type={popup.type}
-          title={popup.title}
-          message={popup.message}
-        />
+      <Layout>
+        <div className="space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0">
+          {/* Hero Section */}
+          <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-8 sm:p-12 mt-6 border border-pink-200 shadow-lg">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
+            <div className="relative z-10">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 mb-3">
+                    Welcome{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}! 👋
+                  </h1>
+                  <p className="text-lg sm:text-xl text-neutral-700 font-medium mb-6">
+                    Track your pregnancy journey with personalized guidance.
+                  </p>
+                  {weeksPregnant && (
+                    <div className="flex flex-wrap gap-4">
+                      <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-4 shadow-md border border-pink-200">
+                        <p className="text-sm text-neutral-600 mb-1">Week of Pregnancy</p>
+                        <p className="text-2xl font-bold text-pink-600">{weeksPregnant} weeks</p>
+                      </div>
+                      {daysLeft !== null && (
+                        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-4 shadow-md border border-pink-200">
+                          <p className="text-sm text-neutral-600 mb-1">Days to Due Date</p>
+                          <p className="text-2xl font-bold text-pink-600">{daysLeft} days</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-xl">
+                    <Icon name="mom" size={64} className="text-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        {/* Message Alert - For simple messages */}
-        {message && !popup.isOpen && (
-          <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
-            message.includes("successfully") || message.includes("Success") 
-              ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 
-              : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-red-200"
-          }`}>
-            <Icon 
-              name={message.includes("successfully") || message.includes("Success") ? "success" : "error"} 
-              size={24} 
-              className="flex-shrink-0 mt-0.5"
-            />
-            <p className="flex-1 font-medium">{message}</p>
-            <button
-              onClick={() => setMessage("")}
-              className="flex-shrink-0 text-neutral-400 hover:text-neutral-600"
-            >
-              <Icon name="close" size={20} />
-            </button>
+          <MessagePopup
+            isOpen={popup.isOpen}
+            onClose={() => setPopup({ ...popup, isOpen: false })}
+            type={popup.type}
+            title={popup.title}
+            message={popup.message}
+          />
+
+          {/* Message Alert - For simple messages */}
+          {message && !popup.isOpen && (
+            <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
+              message.includes("successfully") || message.includes("Success") 
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-green-200" 
+                : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-red-200"
+            }`}>
+              <Icon 
+                name={message.includes("successfully") || message.includes("Success") ? "success" : "error"} 
+                size={24} 
+                className="flex-shrink-0 mt-0.5"
+              />
+              <p className="flex-1 font-medium">{message}</p>
+              <button
+                onClick={() => setMessage("")}
+                className="flex-shrink-0 text-neutral-400 hover:text-neutral-600"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+          )}
+
+          {/* Main Dashboard Cards - Overview */}
+          {activeTab === "profile" && (
+            <section className="space-y-6">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900">Quick Actions</h2>
+              
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* AI Chat Card - Primary CTA */}
+                <Link
+                  href="/chat"
+                  className="group relative rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border-2 border-pink-400 animate-pulse-border"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                        <Icon name="chat" size={32} className="text-white" />
+                      </div>
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full">
+                        PRIMARY
+                      </span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Chat with MomsCare AI</h3>
+                    <p className="text-pink-100 text-sm mb-4 leading-relaxed">
+                      Get instant answers to your pregnancy questions with our AI assistant.
+                    </p>
+                    <div className="flex items-center gap-2 text-white font-semibold group-hover:gap-3 transition-all">
+                      <span>Start Chatting</span>
+                      <span className="text-xl">→</span>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Prescription Upload Card */}
+                <button
+                  onClick={() => setActiveTab("prescriptions")}
+                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                      <Icon name="prescription" size={32} className="text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Upload Prescription</h3>
+                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
+                    Upload your prescriptions for better AI guidance and tracking.
+                  </p>
+                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
+                    <span>Upload Now</span>
+                    <span className="text-xl">→</span>
+                  </div>
+                  {prescriptions.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-neutral-200">
+                      <p className="text-sm text-neutral-500">
+                        {prescriptions.length} prescription{prescriptions.length !== 1 ? 's' : ''} uploaded
+                      </p>
+                    </div>
+                  )}
+                </button>
+
+                {/* Doctor Q&A Card */}
+                <button
+                  onClick={() => setActiveTab("questions")}
+                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                      <Icon name="question" size={32} className="text-white" />
+                    </div>
+                    {questions.filter(q => !q.answer).length > 0 && (
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
+                        {questions.filter(q => !q.answer).length} Pending
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Ask a Doctor</h3>
+                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
+                    Get personalized answers from verified healthcare professionals.
+                  </p>
+                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
+                    <span>Ask Question</span>
+                    <span className="text-xl">→</span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-neutral-200 flex gap-4 text-sm">
+                    <div>
+                      <span className="text-green-600 font-semibold">{questions.filter(q => q.answer).length}</span>
+                      <span className="text-neutral-500 ml-1">Answered</span>
+                    </div>
+                    <div>
+                      <span className="text-yellow-600 font-semibold">{questions.filter(q => !q.answer).length}</span>
+                      <span className="text-neutral-500 ml-1">Pending</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Pregnancy Progress Card */}
+                <button
+                  onClick={() => setActiveTab("progress")}
+                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-8 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.02] hover:border-pink-300"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                      <Icon name="progress" size={32} className="text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-neutral-900 mb-2">Pregnancy Progress</h3>
+                  <p className="text-neutral-600 text-sm mb-4 leading-relaxed">
+                    Track your pregnancy journey and get weekly tips.
+                  </p>
+                  {weeksPregnant && (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-neutral-600">Week {weeksPregnant} of 40</span>
+                        <span className="text-pink-600 font-semibold">{Math.round((weeksPregnant / 40) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-neutral-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${(weeksPregnant / 40) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-pink-600 font-semibold group-hover:gap-3 transition-all">
+                    <span>View Progress</span>
+                    <span className="text-xl">→</span>
+                  </div>
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Tabs - Desktop Only */}
+          <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`tab flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap ${
+                  activeTab === tab.id ? "tab-active" : "tab-inactive"
+                }`}
+              >
+                <Icon name={tab.icon} size={20} />
+                <span>{tab.label}</span>
+                {tab.badge && tab.badge > 0 && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* Tabs - Desktop Only */}
-        <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`tab flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap ${
-                activeTab === tab.id ? "tab-active" : "tab-inactive"
-              }`}
-            >
-              <Icon name={tab.icon} size={20} />
-              <span>{tab.label}</span>
-              {tab.badge && tab.badge > 0 && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
@@ -879,174 +1079,210 @@ export default function MotherDashboard() {
           </DashboardCard>
         )}
 
-        {/* Prescriptions Tab */}
-        {activeTab === "prescriptions" && (
-          <DashboardCard title={t.mother.prescriptions}>
+          {/* Prescriptions Tab */}
+          {activeTab === "prescriptions" && (
+            <DashboardCard title={t.mother.prescriptions}>
+              <div className="space-y-6">
+                <div className="rounded-xl border-2 border-dashed border-pink-300 bg-gradient-to-br from-pink-50 to-rose-50 p-8 shadow-sm hover:shadow-md transition-shadow">
+                  <form onSubmit={uploadPrescription} className="space-y-4">
+                    <div className="text-center mb-6">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-lg">
+                        <Icon name="upload" size={40} className="text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-neutral-900 mb-2">Upload Prescription for Better AI Guidance</h3>
+                      <p className="text-sm text-neutral-600">
+                        Drag and drop your prescription file here, or click to browse
+                      </p>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Supported formats: PDF, PNG, JPG (Max 10MB)
+                      </p>
+                    </div>
+                    <div>
+                      <input
+                        type="file"
+                        name="file"
+                        className="input w-full cursor-pointer"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Auto-submit on file selection
+                            const form = e.target.closest('form');
+                            if (form) {
+                              form.requestSubmit();
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg font-semibold" disabled={uploading}>
+                      {uploading ? (
+                        <>
+                          <Icon name="pending" size={20} />
+                          {t.common.loading}
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="upload" size={20} />
+                          Upload Prescription
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold mb-4 text-neutral-900 flex items-center gap-2">
+                    <Icon name="prescription" size={24} className="text-pink-600" />
+                    Your Prescriptions ({prescriptions.length})
+                  </h3>
+                  {prescriptions.length === 0 ? (
+                    <div className="text-center py-12 text-neutral-500 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50">
+                      <Icon name="prescription" size={48} className="mx-auto mb-3 text-neutral-300" />
+                      <p className="text-lg font-medium mb-2">{t.mother.noPrescriptions}</p>
+                      <p className="text-sm">{t.mother.uploadPrescription}</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {prescriptions.map((p) => {
+                        const fileName = p.key.split("/").pop() || "prescription";
+                        return (
+                          <div
+                            key={p.key}
+                            className="flex items-center justify-between rounded-xl border-2 border-neutral-200 bg-white p-5 hover:shadow-md hover:border-pink-300 transition-all"
+                          >
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <Icon name="prescription" size={28} className="text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-800 truncate">{fileName}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Click to view</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 items-center flex-shrink-0">
+                              <a
+                                href={p.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-secondary text-sm px-4 py-2.5 h-[40px] flex items-center justify-center gap-1.5"
+                              >
+                                <Icon name="view" size={16} />
+                                View
+                              </a>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm("Are you sure you want to delete this prescription?")) {
+                                    return;
+                                  }
+                                  setDeletingPrescription(p.key);
+                                  try {
+                                    const encodedKey = encodeURIComponent(p.key);
+                                    const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                      method: "DELETE",
+                                      headers: authHeaders(),
+                                    });
+                                    if (res.ok) {
+                                      setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
+                                      fetchPrescriptions();
+                                    } else {
+                                      let data: any = {};
+                                      try {
+                                        const text = await res.text();
+                                        data = text ? JSON.parse(text) : {};
+                                      } catch {}
+                                      setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
+                                    }
+                                  } catch (err) {
+                                    setMessage(`❌ Network error`);
+                                  } finally {
+                                    setDeletingPrescription(null);
+                                  }
+                                }}
+                                disabled={deletingPrescription === p.key}
+                                className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-4 py-2.5 h-[40px] min-w-[40px]"
+                              >
+                                {deletingPrescription === p.key ? (
+                                  "..."
+                                ) : (
+                                  <Icon name="delete" size={18} className="flex-shrink-0" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </DashboardCard>
+          )}
+
+          {/* Questions Tab */}
+          {activeTab === "questions" && (
             <div className="space-y-6">
-              <div className="rounded-lg border-2 border-dashed border-pink-200 bg-pink-50 p-6">
-                <form onSubmit={uploadPrescription} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      {t.mother.uploadPrescription} (PDF, PNG, JPG - Max 10MB)
-                    </label>
-                    <input
-                      type="file"
-                      name="file"
-                      className="input w-full"
-                      accept=".pdf,.png,.jpg,.jpeg"
-                      disabled={uploading}
-                    />
+              <DashboardCard title={t.mother.askDoctor}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-neutral-900">Ask a Question</h3>
+                    <button 
+                      className="btn-primary flex items-center gap-2 px-6 py-2.5"
+                      onClick={() => {
+                        const textarea = document.querySelector('textarea');
+                        if (textarea) textarea.focus();
+                      }}
+                    >
+                      <Icon name="question" size={18} />
+                      Ask a Question
+                    </button>
                   </div>
-                  <button type="submit" className="btn-primary flex items-center gap-2" disabled={uploading}>
-                    {uploading ? (
+                  <textarea
+                    className="input w-full h-32 text-base"
+                    placeholder={t.mother.questionPlaceholder}
+                    value={questionText}
+                    onChange={(e) => setQuestionText(e.target.value)}
+                    disabled={loading}
+                  />
+                  <button className="btn-primary w-full flex items-center gap-2 justify-center py-4 text-lg font-semibold" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
+                    {loading ? t.common.loading : (
                       <>
-                        <Icon name="pending" size={18} />
-                        {t.common.loading}
-                      </>
-                    ) : (
-                      <>
-                        <Icon name="upload" size={18} />
-                        {t.mother.uploadPrescription}
+                        <Icon name="submit" size={20} />
+                        {t.common.submit} {t.mother.questions.split(" ")[0]}
                       </>
                     )}
                   </button>
-                </form>
-              </div>
+                  <p className="text-sm text-slate-600 flex items-start gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <Icon name="info" size={18} className="mt-0.5 text-blue-600 flex-shrink-0" />
+                    <span><strong>Tip:</strong> Include details about symptoms, timing, and any concerns you have for better answers.</span>
+                  </p>
+                </div>
+              </DashboardCard>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-slate-800">
-                  {t.mother.totalPrescriptions}: {prescriptions.length}
-                </h3>
-                {prescriptions.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <p className="text-lg mb-2">{t.mother.noPrescriptions}</p>
-                    <p className="text-sm">{t.mother.uploadPrescription}</p>
+              <DashboardCard title={t.mother.yourQuestions}>
+                {questions.length === 0 ? (
+                  <div className="text-center py-12 text-neutral-500 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50">
+                    <Icon name="question" size={48} className="mx-auto mb-3 text-neutral-300" />
+                    <p className="text-lg font-medium mb-2">{t.mother.noQuestions}</p>
+                    <p className="text-sm">{t.mother.askDoctor}</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {prescriptions.map((p) => {
-                      const fileName = p.key.split("/").pop() || "prescription";
-                      return (
-                        <div
-                          key={p.key}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                              <Icon name="prescription" size={24} className="text-white" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-700">{fileName}</p>
-                              <p className="text-xs text-slate-500">Click to view</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <a
-                              href={p.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-secondary text-sm px-4 py-2 h-[36px] flex items-center justify-center"
-                            >
-                              View
-                            </a>
-                            <button
-                              onClick={async () => {
-                                if (!confirm("Are you sure you want to delete this prescription?")) {
-                                  return;
-                                }
-                                setDeletingPrescription(p.key);
-                                try {
-                                  const encodedKey = encodeURIComponent(p.key);
-                                  const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
-                                    method: "DELETE",
-                                    headers: authHeaders(),
-                                  });
-                                  if (res.ok) {
-                                    setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
-                                    fetchPrescriptions();
-                                  } else {
-                                    let data: any = {};
-                                    try {
-                                      const text = await res.text();
-                                      data = text ? JSON.parse(text) : {};
-                                    } catch {}
-                                    setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
-                                  }
-                                } catch (err) {
-                                  setMessage(`❌ Network error`);
-                                } finally {
-                                  setDeletingPrescription(null);
-                                }
-                              }}
-                              disabled={deletingPrescription === p.key}
-                              className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-4 py-2 h-[36px] min-w-[36px]"
-                            >
-                              {deletingPrescription === p.key ? (
-                                "..."
-                              ) : (
-                                <Icon name="delete" size={18} className="flex-shrink-0" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </DashboardCard>
-        )}
-
-        {/* Questions Tab */}
-        {activeTab === "questions" && (
-          <div className="space-y-6">
-            <DashboardCard title={t.mother.askDoctor}>
-              <div className="space-y-4">
-                <textarea
-                  className="input w-full h-32"
-                  placeholder={t.mother.questionPlaceholder}
-                  value={questionText}
-                  onChange={(e) => setQuestionText(e.target.value)}
-                  disabled={loading}
-                />
-                <button className="btn-primary w-full flex items-center gap-2 justify-center" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
-                  {loading ? t.common.loading : (
-                    <>
-                      <Icon name="submit" size={18} />
-                      {t.common.submit} {t.mother.questions.split(" ")[0]}
-                    </>
-                  )}
-                </button>
-                <p className="text-xs text-slate-500 flex items-start gap-2">
-                  <Icon name="info" size={16} className="mt-0.5" />
-                  <span>Tip: Include details about symptoms, timing, and any concerns you have.</span>
-                </p>
-              </div>
-            </DashboardCard>
-
-            <DashboardCard title={t.mother.yourQuestions}>
-              {questions.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <p>{t.mother.noQuestions}</p>
-                  <p className="text-sm mt-1">{t.mother.askDoctor}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Answered Questions - Grid View */}
-                  {questions.filter(q => q.answer).length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
-                        <Icon name="success" size={20} />
-                        Answered Questions
-                      </h3>
+                  <div className="space-y-6">
+                    {/* Answered Questions - Grid View */}
+                    {questions.filter(q => q.answer).length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
+                          <Icon name="success" size={24} />
+                          Answered Questions ({questions.filter(q => q.answer).length})
+                        </h3>
                       <div className="grid gap-4 md:grid-cols-2">
                         {questions.filter(q => q.answer).map((q) => {
                           const isReported = q.reported || q.reportStatus === "pending";
                           return (
                             <div
                               key={q.id}
-                              className={`rounded-lg border-2 p-4 relative ${
+                              className={`rounded-xl border-2 p-5 relative shadow-sm hover:shadow-md transition-all ${
                                 isReported 
                                   ? "border-orange-300 bg-orange-50" 
                                   : "border-green-200 bg-green-50"
@@ -1054,8 +1290,8 @@ export default function MotherDashboard() {
                             >
                               {/* Reported Badge */}
                               {isReported && (
-                                <div className="absolute top-2 right-2 px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
-                                  <Icon name="report" size={12} />
+                                <div className="absolute top-3 right-3 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-md">
+                                  <Icon name="report" size={14} />
                                   Reported
                                 </div>
                               )}
@@ -1197,18 +1433,18 @@ export default function MotherDashboard() {
                     </div>
                   )}
 
-                  {/* Unanswered Questions - List View */}
-                  {questions.filter(q => !q.answer).length > 0 && (
-                    <div className="mt-6">
-                      <h3 className="font-semibold text-yellow-700 mb-3 flex items-center gap-2">
-                        <Icon name="pending" size={20} />
-                        Pending Questions
-                      </h3>
+                    {/* Unanswered Questions - List View */}
+                    {questions.filter(q => !q.answer).length > 0 && (
+                      <div className="mt-6">
+                        <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
+                          <Icon name="pending" size={24} />
+                          Pending Questions ({questions.filter(q => !q.answer).length})
+                        </h3>
                       <div className="space-y-3">
                         {questions.filter(q => !q.answer).map((q) => (
                           <div
                             key={q.id}
-                            className="rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4 relative"
+                            className="rounded-xl border-2 border-yellow-300 bg-yellow-50 p-5 relative shadow-sm hover:shadow-md transition-all"
                           >
                             {/* Notification Badge */}
                             {q.hasNewActivity && (
@@ -1773,7 +2009,8 @@ export default function MotherDashboard() {
             )}
           </DashboardCard>
         )}
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+    </div>
   );
 }

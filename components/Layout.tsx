@@ -50,52 +50,7 @@ export default function Layout({ children }: Props) {
 
   // Determine navbar items based on login state
   const getNavItems = () => {
-    if (isDoctor && pathname.startsWith("/doctor")) {
-      // Doctor dashboard - show full navigation
-      return (
-        <>
-          <Link
-            href="/doctor/dashboard"
-            className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-              pathname === "/doctor/dashboard"
-                ? "bg-blue-100 text-blue-700 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/doctor/dashboard"
-            className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-              pathname === "/doctor/dashboard"
-                ? "bg-blue-100 text-blue-700 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Questions
-          </Link>
-          <Link
-            href="/doctor/profile"
-            className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-              pathname === "/doctor/profile"
-                ? "bg-blue-100 text-blue-700 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Profile
-          </Link>
-          <button
-            onClick={() => {
-              localStorage.removeItem("doctorToken");
-              location.href = "/";
-            }}
-            className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-red-600 hover:bg-red-50"
-          >
-            Logout
-          </button>
-        </>
-      );
-    } else if (isMother || isDoctor || isAdmin) {
+    if (isMother || isDoctor || isAdmin) {
       // Logged in - show chat link
       return (
         <>
@@ -265,7 +220,7 @@ export default function Layout({ children }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header - Enhanced Navigation */}
-      <header className={`${pathname.startsWith("/doctor") && (isDoctor || pathname === "/doctor/login" || pathname === "/doctor/register") ? "bg-white/80 backdrop-blur-md" : "bg-white/95 backdrop-blur-md"} border-b border-neutral-200 shadow-sm sticky top-0 z-50`}>
+      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-18">
             <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
