@@ -61,15 +61,15 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   return (
     <>
-      {/* Mobile Menu Button - Positioned in navbar location (left side, in header) */}
+      {/* Mobile Menu Button - Positioned in navbar location (right side, aligned with header) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="mobile-menu-button lg:!hidden fixed top-4 left-4 z-[60] bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+        className="mobile-menu-button lg:!hidden fixed right-4 z-[60] bg-gradient-to-r from-pink-500 to-rose-500 text-white p-2.5 sm:p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+        style={{ zIndex: 60, top: '2rem' }}
         aria-label="Open menu"
-        style={{ zIndex: 60 }}
       >
         {isOpen ? (
           <Icon name="close" size={24} className="brightness-0 invert" />
@@ -90,10 +90,10 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
         />
       )}
 
-      {/* Sidebar Menu - Opens from left side */}
+      {/* Sidebar Menu - Opens from right side */}
       <div
-        className={`mobile-menu-container fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:!hidden ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`mobile-menu-container fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:!hidden ${
+          isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500">
