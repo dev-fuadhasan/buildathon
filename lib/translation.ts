@@ -29,6 +29,7 @@ export function detectLanguage(text: string): "en" | "bn" {
 
 /**
  * Translate text from Bangla/Banglish to English using Groq AI
+ * Enhanced with medical/pregnancy term awareness
  */
 export async function translateToEnglish(text: string): Promise<string> {
   if (!isGroqConfigured()) {
@@ -45,14 +46,35 @@ export async function translateToEnglish(text: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "You are a professional translator. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, natural English. Preserve the meaning and context accurately. Only return the translated text, nothing else.",
+          content: `You are a professional medical translator specializing in pregnancy and maternal health. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English.
+
+CRITICAL: Pay special attention to medical and pregnancy-related terms:
+- "bomi" or "বমি" = vomiting/nausea
+- "ghono bomi" or "ঘন ঘন বমি" = frequent vomiting
+- "mas" or "মাস" = month
+- "saptah" or "সপ্তাহ" = week
+- "pet" or "পেট" = stomach/abdomen
+- "pet betha" or "পেট ব্যথা" = stomach pain/abdominal pain
+- "kharap" or "খারাপ" = bad/not good
+- "valo" or "ভালো" = good
+- "lokkhon" or "লক্ষণ" = symptom/sign
+- "dokkhin" or "ডাক্তার" = doctor
+- "osustho" or "অসুস্থ" = sick/unwell
+- "jhor" or "জ্বর" = fever
+- "pet kharap" or "পেট খারাপ" = stomach upset/diarrhea
+- "matha betha" or "মাথা ব্যথা" = headache
+- "dhoron" or "ধরন" = type/kind
+- "kemon" or "কেমন" = how/what kind
+- "koto" or "কত" = how much/how many
+
+Translate accurately preserving the exact medical meaning. If the text is about pregnancy symptoms, vomiting, pain, or health concerns, translate those terms precisely. Only return the translated text, nothing else.`,
         },
         {
           role: "user",
           content: text,
         },
       ],
-      temperature: 0.3,
+      temperature: 0.2, // Lower temperature for more accurate translation
       max_tokens: 1000,
     });
 
@@ -61,7 +83,10 @@ export async function translateToEnglish(text: string): Promise<string> {
       throw new Error("Translation failed");
     }
 
-    return translated;
+    // Clean up any extra text the model might add
+    const cleaned = translated.replace(/^(Translation:|Translated text:|English:)\s*/i, "").trim();
+    
+    return cleaned;
   } catch (error: any) {
     console.error("Translation to English error:", error);
     // If translation fails, return original text

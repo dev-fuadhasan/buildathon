@@ -176,6 +176,8 @@ Medications: ${mother.medications || "N/A"}`;
     if (userLanguage === "bn") {
       try {
         translatedUserMessage = await translateToEnglish(lastUserMessage);
+        // Log for debugging translation accuracy
+        console.log("Translation:", { original: lastUserMessage, translated: translatedUserMessage });
       } catch (error) {
         console.error("Translation error:", error);
         translatedUserMessage = lastUserMessage;
