@@ -180,22 +180,14 @@ export default function DoctorProfile() {
         />
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-blue-600">My Profile</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-blue-600">My Profile</h1>
             <p className="text-slate-600 mt-2">Manage your professional information</p>
           </div>
-          <div className="flex gap-3">
-            <Link href="/doctor/dashboard" className="btn-secondary">
-              ← Back to Dashboard
-            </Link>
-            {!isEditing && (
-              <button onClick={() => setIsEditing(true)} className="btn-primary flex items-center gap-2">
-                <Icon name="edit" size={18} />
-                Edit Profile
-              </button>
-            )}
-          </div>
+          <Link href="/doctor/dashboard" className="btn-secondary w-fit">
+            ← Back to Dashboard
+          </Link>
         </div>
 
         {/* Status Alert */}
@@ -270,7 +262,21 @@ export default function DoctorProfile() {
         </DashboardCard>
 
         {/* Profile Form */}
-        <DashboardCard title={isEditing ? "Edit Profile" : "Profile Information"}>
+        <DashboardCard 
+          title={isEditing ? "Edit Profile" : "Profile Information"}
+          action={
+            !isEditing ? (
+              <button 
+                onClick={() => setIsEditing(true)} 
+                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all border border-blue-200 hover:border-blue-300 active:scale-95"
+              >
+                <Icon name="edit" size={16} />
+                <span className="hidden sm:inline">Edit Profile</span>
+                <span className="sm:hidden">Edit</span>
+              </button>
+            ) : undefined
+          }
+        >
           {isEditing ? (
             <form onSubmit={saveProfile} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
