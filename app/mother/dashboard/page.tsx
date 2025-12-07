@@ -65,6 +65,13 @@ type Question = {
   answeredAt?: string;
   comments?: Comment[];
   hasNewActivity?: boolean;
+  reported?: boolean;
+  reportStatus?: "pending" | "solved" | "rejected";
+  reportReason?: string;
+  reportedBy?: string;
+  reportedAt?: string;
+  adminDecision?: string;
+  adminDecisionAt?: string;
 };
 
 export default function MotherDashboard() {
@@ -1001,99 +1008,144 @@ export default function MotherDashboard() {
                         Answered Questions
                       </h3>
                       <div className="grid gap-4 md:grid-cols-2">
-                        {questions.filter(q => q.answer).map((q) => (
-                          <div
-                            key={q.id}
-                            className="rounded-lg border-2 border-green-200 bg-green-50 p-4 relative"
-                          >
-                            {/* Notification Badge */}
-                            {q.hasNewActivity && (
-                              <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-                            )}
-                            <div className="flex items-start justify-between mb-2">
-                              <p className="font-medium text-slate-700 line-clamp-2 flex-1">{q.question}</p>
-                            </div>
-                            <p className="text-xs text-slate-500 mb-3">
-                              {new Date(q.createdAt).toLocaleDateString()}
-                            </p>
-                            <div className="mt-2 rounded bg-white p-2 mb-3">
-                              <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
-                                <Icon name="doctor" size={14} />
-                                Answer:
+                        {questions.filter(q => q.answer).map((q) => {
+                          const isReported = q.reported || q.reportStatus === "pending";
+                          return (
+                            <div
+                              key={q.id}
+                              className={`rounded-lg border-2 p-4 relative ${
+                                isReported 
+                                  ? "border-orange-300 bg-orange-50" 
+                                  : "border-green-200 bg-green-50"
+                              }`}
+                            >
+                              {/* Reported Badge */}
+                              {isReported && (
+                                <div className="absolute top-2 right-2 px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                                  <Icon name="report" size={12} />
+                                  Reported
+                                </div>
+                              )}
+                              {/* Notification Badge */}
+                              {q.hasNewActivity && !isReported && (
+                                <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                              )}
+                              <div className="flex items-start justify-between mb-2">
+                                <p className="font-medium text-slate-700 line-clamp-2 flex-1">{q.question}</p>
+                              </div>
+                              <p className="text-xs text-slate-500 mb-3">
+                                {new Date(q.createdAt).toLocaleDateString()}
                               </p>
-                              <p className="text-sm text-slate-700 line-clamp-2">{q.answer}</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                className="btn-secondary flex-1 text-sm"
-                                onClick={() => {
-                                  // Mark as seen
-                                  fetch(`/api/mother/questions/${q.id}/mark-seen`, {
-                                    method: "POST",
-                                    headers: authHeaders(),
-                                  });
-                                  // Show full details in modal
-                                  // Load comments when question is selected
-                                setSelectedQuestion(q);
-                                // Force refresh comments after a short delay to ensure they load
-                                setTimeout(() => {
-                                  if (q.id) {
-                                    fetch(`/api/questions/comments?questionId=${q.id}`, { 
-                                      headers: authHeaders() 
-                                    })
-                                      .then(r => r.json())
-                                      .then(d => {
-                                        if (d.comments) {
-                                          setSelectedQuestion({ ...q, comments: d.comments });
-                                        }
-                                      })
-                                      .catch(err => console.error("Failed to load comments:", err));
-                                  }
-                                }, 100);
-                                }}
-                              >
-                                <span className="flex items-center gap-1">
-                                  <Icon name="view" size={16} />
-                                  View Full Details
-                                </span>
-                              </button>
-                              {q.answer && (
+                              <div className={`mt-2 rounded p-2 mb-3 ${
+                                isReported ? "bg-orange-100" : "bg-white"
+                              }`}>
+                                <p className={`text-xs font-medium mb-1 flex items-center gap-1 ${
+                                  isReported ? "text-orange-700" : "text-green-700"
+                                }`}>
+                                  <Icon name="doctor" size={14} />
+                                  Answer:
+                                </p>
+                                <p className="text-sm text-slate-700 line-clamp-2">{q.answer}</p>
+                              </div>
+                              <div className="flex gap-2">
                                 <button
-                                  className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-2 rounded transition-colors"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const reason = prompt("Please provide a reason for reporting this answer:");
-                                    if (reason) {
-                                      try {
-                                        const res = await fetch(`/api/mother/questions/${q.id}/report`, {
-                                          method: "POST",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                            ...authHeaders(),
-                                          },
-                                          body: JSON.stringify({ reason }),
-                                        });
-                                        if (res.ok) {
-                                          alert("Report submitted successfully. Admin will review it.");
-                                          fetchQuestions();
-                                        } else {
-                                          alert("Failed to submit report. Please try again.");
-                                        }
-                                      } catch (err) {
-                                        alert("Network error. Please try again.");
-                                      }
+                                  className="btn-secondary flex-1 text-sm"
+                                  onClick={() => {
+                                    // Mark as seen
+                                    fetch(`/api/mother/questions/${q.id}/mark-seen`, {
+                                      method: "POST",
+                                      headers: authHeaders(),
+                                    });
+                                    // Show full details in modal
+                                    // Load comments when question is selected
+                                  setSelectedQuestion(q);
+                                  // Force refresh comments after a short delay to ensure they load
+                                  setTimeout(() => {
+                                    if (q.id) {
+                                      fetch(`/api/questions/comments?questionId=${q.id}`, { 
+                                        headers: authHeaders() 
+                                      })
+                                        .then(r => r.json())
+                                        .then(d => {
+                                          if (d.comments) {
+                                            setSelectedQuestion({ ...q, comments: d.comments });
+                                          }
+                                        })
+                                        .catch(err => console.error("Failed to load comments:", err));
                                     }
+                                  }, 100);
                                   }}
                                 >
                                   <span className="flex items-center gap-1">
-                                    <Icon name="report" size={16} />
-                                    Report
+                                    <Icon name="view" size={16} />
+                                    View Full Details
                                   </span>
                                 </button>
-                              )}
+                                {q.answer && (
+                                  <button
+                                    className={`text-sm px-3 py-2 rounded transition-colors flex items-center gap-1 ${
+                                      isReported
+                                        ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
+                                        : "bg-red-500 hover:bg-red-600 text-white"
+                                    }`}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (isReported) {
+                                        setPopup({
+                                          isOpen: true,
+                                          type: "info",
+                                          title: "Already Reported",
+                                          message: "This question has already been reported. Admin will review it soon.",
+                                        });
+                                        return;
+                                      }
+                                      const reason = prompt("Please provide a reason for reporting this answer:");
+                                      if (reason) {
+                                        try {
+                                          const res = await fetch(`/api/mother/questions/${q.id}/report`, {
+                                            method: "POST",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              ...authHeaders(),
+                                            },
+                                            body: JSON.stringify({ reason }),
+                                          });
+                                          if (res.ok) {
+                                            setPopup({
+                                              isOpen: true,
+                                              type: "success",
+                                              title: "Report Submitted",
+                                              message: "Report submitted successfully. Admin will review it.",
+                                            });
+                                            fetchQuestions();
+                                          } else {
+                                            setPopup({
+                                              isOpen: true,
+                                              type: "error",
+                                              title: "Report Failed",
+                                              message: "Failed to submit report. Please try again.",
+                                            });
+                                          }
+                                        } catch (err) {
+                                          setPopup({
+                                            isOpen: true,
+                                            type: "error",
+                                            title: "Network Error",
+                                            message: "Network error. Please try again.",
+                                          });
+                                        }
+                                      }
+                                    }}
+                                    disabled={isReported}
+                                  >
+                                    <Icon name="report" size={16} />
+                                    {isReported ? "Reported" : "Report"}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1195,41 +1247,89 @@ export default function MotherDashboard() {
                   </p>
                 </div>
                 {selectedQuestion.answer && (
-                  <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+                  <div className={`rounded-lg border p-4 ${
+                    selectedQuestion.reported || selectedQuestion.reportStatus === "pending"
+                      ? "bg-orange-50 border-orange-200"
+                      : "bg-green-50 border-green-200"
+                  }`}>
                     <div className="flex justify-between items-start mb-2">
-                      <p className="text-sm font-medium text-green-700 flex items-center gap-1">
+                      <p className={`text-sm font-medium flex items-center gap-1 ${
+                        selectedQuestion.reported || selectedQuestion.reportStatus === "pending"
+                          ? "text-orange-700"
+                          : "text-green-700"
+                      }`}>
                         <Icon name="doctor" size={16} />
                         Doctor's Answer
+                        {(selectedQuestion.reported || selectedQuestion.reportStatus === "pending") && (
+                          <span className="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
+                            Reported
+                          </span>
+                        )}
                       </p>
-                      <button
-                        className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors"
-                        onClick={async () => {
-                          const reason = prompt("Please provide a reason for reporting this answer:");
-                          if (reason) {
-                            try {
-                              const res = await fetch(`/api/mother/questions/${selectedQuestion.id}/report`, {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  ...authHeaders(),
-                                },
-                                body: JSON.stringify({ reason }),
-                              });
-                              if (res.ok) {
-                                alert("Report submitted successfully. Admin will review it.");
-                                setSelectedQuestion(null);
-                                fetchQuestions();
-                              } else {
-                                alert("Failed to submit report. Please try again.");
+                      {(() => {
+                        const isReported = selectedQuestion.reported || selectedQuestion.reportStatus === "pending";
+                        return (
+                          <button
+                            className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1 ${
+                              isReported
+                                ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
+                                : "bg-red-500 hover:bg-red-600 text-white"
+                            }`}
+                            onClick={async () => {
+                              if (isReported) {
+                                setPopup({
+                                  isOpen: true,
+                                  type: "info",
+                                  title: "Already Reported",
+                                  message: "This question has already been reported. Admin will review it soon.",
+                                });
+                                return;
                               }
-                            } catch (err) {
-                              alert("Network error. Please try again.");
-                            }
-                          }
-                        }}
-                      >
-                        🚨 Report
-                      </button>
+                              const reason = prompt("Please provide a reason for reporting this answer:");
+                              if (reason) {
+                                try {
+                                  const res = await fetch(`/api/mother/questions/${selectedQuestion.id}/report`, {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      ...authHeaders(),
+                                    },
+                                    body: JSON.stringify({ reason }),
+                                  });
+                                  if (res.ok) {
+                                    setPopup({
+                                      isOpen: true,
+                                      type: "success",
+                                      title: "Report Submitted",
+                                      message: "Report submitted successfully. Admin will review it.",
+                                    });
+                                    setSelectedQuestion(null);
+                                    fetchQuestions();
+                                  } else {
+                                    setPopup({
+                                      isOpen: true,
+                                      type: "error",
+                                      title: "Report Failed",
+                                      message: "Failed to submit report. Please try again.",
+                                    });
+                                  }
+                                } catch (err) {
+                                  setPopup({
+                                    isOpen: true,
+                                    type: "error",
+                                    title: "Network Error",
+                                    message: "Network error. Please try again.",
+                                  });
+                                }
+                              }
+                            }}
+                            disabled={isReported}
+                          >
+                            <Icon name="report" size={14} />
+                            {isReported ? "Reported" : "Report"}
+                          </button>
+                        );
+                      })()}
                     </div>
                     <p className="text-slate-700 whitespace-pre-wrap">{selectedQuestion.answer}</p>
                     {selectedQuestion.answeredAt && (

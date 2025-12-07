@@ -9,8 +9,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const questions = await listMotherQuestions(user.id);
+  // Filter out questions that have been solved by admin (reportStatus === "solved")
+  // These should only be visible in admin dashboard
+  const visibleQuestions = questions.filter(q => q.reportStatus !== "solved");
+  
   // Ensure comments are included and check for new activity
-  const questionsWithComments = questions.map(q => {
+  const questionsWithComments = visibleQuestions.map(q => {
     const lastSeen = q.lastSeenByMother ? new Date(q.lastSeenByMother).getTime() : 0;
     const answerTime = q.answeredAt ? new Date(q.answeredAt).getTime() : 0;
     const latestCommentTime = q.comments && q.comments.length > 0

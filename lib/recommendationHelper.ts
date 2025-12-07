@@ -49,10 +49,12 @@ export async function generateRecommendationForMother(
       console.error("Failed to fetch prescriptions for recommendation:", err);
     }
     
-    // Get recent questions and answers
+    // Get recent questions and answers (exclude solved reports)
     const { listMotherQuestions } = await import("./data");
     const questions = await listMotherQuestions(motherId);
-    const questionsAndAnswers = questions
+    // Filter out questions that have been solved by admin (reportStatus === "solved")
+    const visibleQuestions = questions.filter(q => q.reportStatus !== "solved");
+    const questionsAndAnswers = visibleQuestions
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5)
       .map(q => ({
