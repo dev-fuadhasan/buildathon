@@ -43,6 +43,7 @@ type Mother = {
   bloodGroup?: string;
   weeksPregnant?: number;
   daysPregnant?: number;
+  timezone?: string;
   conditions?: string;
   medications?: string;
   emergencyContact?: string;
@@ -1596,6 +1597,18 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-sm font-medium text-slate-600">Blood Group</p>
                   <p className="text-lg font-semibold">{selectedMother.bloodGroup || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Timezone</p>
+                  <p className="text-lg font-semibold flex items-center gap-2">
+                    <Icon name="clock" size={18} className="text-blue-500" />
+                    {selectedMother.timezone || "Not set"}
+                  </p>
+                  {selectedMother.timezone && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Recommendations sent at 8 AM & 8 PM local time
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-600">Previous Pregnancies</p>
