@@ -4,8 +4,15 @@ import { PropsWithChildren, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
+import { useMobileMenu, MobileDashboardMenuButton } from "@/components/MobileDashboardMenu";
 
 type Props = PropsWithChildren;
+
+function MobileMenuButtonWrapper() {
+  const menu = useMobileMenu();
+  if (!menu) return null;
+  return <MobileDashboardMenuButton isOpen={menu.isOpen} onToggle={() => menu.setIsOpen(!menu.isOpen)} />;
+}
 
 export default function Layout({ children }: Props) {
   const pathname = usePathname();
@@ -270,8 +277,10 @@ export default function Layout({ children }: Props) {
               {getNavItems()}
             </nav>
             
-            {/* Mobile menu button - Hide on mother dashboard (handled by MobileDashboardMenu) */}
-            {!pathname.startsWith("/mother/dashboard") && (
+            {/* Mobile menu button - Show MobileDashboardMenu button on mother dashboard, otherwise show default */}
+            {pathname.startsWith("/mother/dashboard") ? (
+              <MobileMenuButtonWrapper />
+            ) : (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"

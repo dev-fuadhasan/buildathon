@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
 
@@ -19,6 +19,40 @@ type Props = {
   onTabChange: (tabId: string) => void;
 };
 
+// Export button component separately for use in Layout
+export function MobileDashboardMenuButton({ isOpen, onToggle }: { isOpen: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      className="lg:!hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+      aria-label="Toggle menu"
+    >
+      {isOpen ? (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ) : (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+// Create a context to share menu state
+const MobileMenuContext = React.createContext<{
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+} | null>(null);
+
+export function useMobileMenu() {
+  return React.useContext(MobileMenuContext);
+}
+
 export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
@@ -28,7 +62,7 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
     if (isOpen) {
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
-        if (!target.closest('.mobile-menu-container') && !target.closest('.mobile-menu-button')) {
+        if (!target.closest('.mobile-menu-container') && !target.closest('button[aria-label="Toggle menu"]')) {
           setIsOpen(false);
         }
       };
@@ -46,6 +80,7 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
     }
   }, [activeTab, tabs]);
 
+
   const handleTabClick = (tab: Tab) => {
     if (tab.action === "logout") {
       localStorage.removeItem("motherToken");
@@ -59,28 +94,9 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
     }
   };
 
+
   return (
-    <>
-      {/* Mobile Menu Button - Positioned exactly where Layout's mobile menu button was */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className="mobile-menu-button lg:!hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
-        style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', zIndex: 60 }}
-        aria-label="Toggle menu"
-      >
-        {isOpen ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        )}
-      </button>
+    <MobileMenuContext.Provider value={{ isOpen, setIsOpen }}>
 
       {/* Overlay */}
       {isOpen && (
@@ -139,7 +155,7 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
           ))}
         </nav>
       </div>
-    </>
+    </MobileMenuContext.Provider>
   );
 }
 
