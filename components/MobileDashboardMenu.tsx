@@ -61,23 +61,23 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   return (
     <>
-      {/* Mobile Menu Button - Positioned in navbar location (right side, aligned with header) */}
+      {/* Mobile Menu Button - Positioned exactly where Layout's mobile menu button was */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="mobile-menu-button lg:!hidden fixed right-4 z-[60] bg-gradient-to-r from-pink-500 to-rose-500 text-white p-2.5 sm:p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
-        style={{ zIndex: 60, top: '2rem' }}
-        aria-label="Open menu"
+        className="mobile-menu-button lg:!hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+        style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', zIndex: 60 }}
+        aria-label="Toggle menu"
       >
         {isOpen ? (
-          <Icon name="close" size={24} className="brightness-0 invert" />
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="brightness-0 invert">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         )}
       </button>
@@ -96,14 +96,15 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500">
-          <h2 className="text-lg font-bold text-white">Menu</h2>
+        <div className="p-4 border-b border-neutral-200 flex items-center justify-end">
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
             aria-label="Close menu"
           >
-            <Icon name="close" size={20} className="brightness-0 invert" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
         <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-73px)]">
