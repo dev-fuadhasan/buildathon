@@ -6,6 +6,9 @@ import { listObjects, signedUrl } from "@/lib/r2Client";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
 
+// Increase timeout for chat API (60 seconds)
+export const maxDuration = 60;
+
 // Helper to clean and deduplicate messages
 function cleanMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
   const cleaned: Array<{ role: string; content: string }> = [];
@@ -201,10 +204,18 @@ Medications: ${mother.medications || "N/A"}`;
       });
     }
     
-    // Get AI response in English
+    // Get AI response in English with timeout handling
     let reply: string;
     try {
-      reply = await askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant);
+      // Add timeout wrapper to prevent 502 errors
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 55000); // 55 seconds timeout
+      });
+      
+      reply = await Promise.race([
+        askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant),
+        timeoutPromise
+      ]) as string;
       
       // Validate and clean the response
       reply = reply.trim();
@@ -257,6 +268,19 @@ Medications: ${mother.medications || "N/A"}`;
         const errorMessage = userLanguage === "bn"
           ? "সার্ভিস ব্যস্ত। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
           : "Service is busy. Please try again in a moment.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
+      
+      // Check for timeout errors
+      if (error.message && (error.message.includes("timeout") || error.message.includes("too long"))) {
+        const errorMessage = userLanguage === "bn"
+          ? "আপনার প্রশ্নের উত্তর পেতে একটু বেশি সময় লাগছে। অনুগ্রহ করে একটি ছোট প্রশ্ন করুন বা কিছুক্ষণ পর আবার চেষ্টা করুন।"
+          : "Your question is taking too long to answer. Please ask a shorter question or try again in a moment.";
         
         return NextResponse.json({
           reply: errorMessage,
