@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
 
@@ -55,7 +56,12 @@ export function useMobileMenu() {
 
 export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -97,6 +103,20 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   return (
     <MobileMenuContext.Provider value={{ isOpen, setIsOpen }}>
+      {/* Mobile Menu Button - Portal into header */}
+      {mounted && typeof window !== 'undefined' && (() => {
+        const slot = document.getElementById('mobile-dashboard-menu-button-slot');
+        if (slot) {
+          return createPortal(
+            <MobileDashboardMenuButton 
+              isOpen={isOpen} 
+              onToggle={() => setIsOpen(!isOpen)} 
+            />,
+            slot
+          );
+        }
+        return null;
+      })()}
 
       {/* Overlay */}
       {isOpen && (
