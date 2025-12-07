@@ -60,9 +60,9 @@ export default function LiveChatWidget({ onClose }: Props) {
         
         // Try to find existing conversation
         checkExistingConversation(sid, payload.id).then((hasConversation) => {
+          // Don't auto-create - let user choose to start new conversation
           if (!hasConversation) {
-            // No existing conversation, create one automatically
-            createConversationForLoggedInUser(sid, payload.id, motherToken ? "mother" : "doctor", token);
+            setShowForm(false); // Hide form, show empty state with option to start
           }
         });
       } catch (err) {
@@ -257,7 +257,7 @@ export default function LiveChatWidget({ onClose }: Props) {
         <div className="flex items-center gap-2">
           <Icon name="chat" size={20} className="brightness-0 invert" />
           <div>
-            <h3 className="font-semibold">Live Chat Support</h3>
+            <h3 className="font-semibold text-white">Live Chat Support</h3>
             <p className="text-xs opacity-90">
               {adminOnline ? (
                 <span className="flex items-center gap-1">
@@ -272,10 +272,10 @@ export default function LiveChatWidget({ onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+          className="text-white hover:bg-white/20 rounded-full p-1 transition-colors w-8 h-8 flex items-center justify-center"
           aria-label="Close chat"
         >
-          <Icon name="close" size={20} className="brightness-0 invert" />
+          <span className="text-xl font-bold">×</span>
         </button>
       </div>
 
@@ -365,20 +365,52 @@ export default function LiveChatWidget({ onClose }: Props) {
         </div>
       ) : (
         <>
-          {/* Conversation ID Display */}
+          {/* Conversation ID Display and New Conversation Button */}
           {conversationId && (
-            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <p className="text-xs text-slate-600">
                 Conversation ID: <span className="font-mono font-semibold">{conversationId}</span>
               </p>
+              <button
+                onClick={() => {
+                  setConversationId(null);
+                  setMessages([]);
+                  setShowForm(true);
+                }}
+                className="text-xs px-3 py-1 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+              >
+                New Conversation
+              </button>
             </div>
           )}
 
           {/* Messages */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gradient-to-b from-slate-50 to-white">
-            {messages.length === 0 ? (
+            {messages.length === 0 && conversationId ? (
               <div className="text-center text-slate-500 py-8">
-                <p>No messages yet. Start the conversation!</p>
+                <p className="mb-4">No messages yet. Start the conversation!</p>
+                <button
+                  onClick={() => {
+                    setShowForm(true);
+                    setConversationId(null);
+                    setMessages([]);
+                  }}
+                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+                >
+                  Start New Conversation
+                </button>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-slate-500 py-8">
+                <p className="mb-4">No conversation started yet.</p>
+                <button
+                  onClick={() => {
+                    setShowForm(true);
+                  }}
+                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+                >
+                  Start New Conversation
+                </button>
               </div>
             ) : (
               messages.map((msg) => (

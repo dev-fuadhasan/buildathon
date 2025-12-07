@@ -83,8 +83,9 @@ export async function POST(req: NextRequest) {
         const mother = await getMother(user.id);
         if (mother) {
           // Use database info if available
+          const conversationId = uuid();
           const conversation: LiveChatConversation = {
-            id: uuid(),
+            id: conversationId,
             userId: user.id,
             userType: "mother",
             userName: mother.name || name,
@@ -92,7 +93,18 @@ export async function POST(req: NextRequest) {
             userEmail: mother.email || email,
             sessionId,
             ipAddress: getClientIP(req) || undefined,
-            messages: [],
+            messages: [
+              {
+                id: uuid(),
+                conversationId: conversationId,
+                senderId: "admin",
+                senderType: "admin",
+                senderName: "Admin",
+                content: "Hello! Please write your issue so that we can solve it as soon as possible. We're here to help!",
+                createdAt: new Date().toISOString(),
+                read: false,
+              },
+            ],
             status: "active",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -103,8 +115,9 @@ export async function POST(req: NextRequest) {
       } else if (user.role === "doctor") {
         const doctor = await getDoctor(user.id);
         if (doctor) {
+          const conversationId = uuid();
           const conversation: LiveChatConversation = {
-            id: uuid(),
+            id: conversationId,
             userId: user.id,
             userType: "doctor",
             userName: doctor.name || name,
@@ -112,7 +125,18 @@ export async function POST(req: NextRequest) {
             userEmail: doctor.email || email,
             sessionId,
             ipAddress: getClientIP(req) || undefined,
-            messages: [],
+            messages: [
+              {
+                id: uuid(),
+                conversationId: conversationId,
+                senderId: "admin",
+                senderType: "admin",
+                senderName: "Admin",
+                content: "Hello! Please write your issue so that we can solve it as soon as possible. We're here to help!",
+                createdAt: new Date().toISOString(),
+                read: false,
+              },
+            ],
             status: "active",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -133,11 +157,25 @@ export async function POST(req: NextRequest) {
       userEmail: email,
       sessionId,
       ipAddress: getClientIP(req) || undefined,
-      messages: [],
+      messages: [
+        {
+          id: uuid(),
+          conversationId: "",
+          senderId: "admin",
+          senderType: "admin",
+          senderName: "Admin",
+          content: "Hello! Please write your issue so that we can solve it as soon as possible. We're here to help!",
+          createdAt: new Date().toISOString(),
+          read: false,
+        },
+      ],
       status: "active",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Update conversationId in the welcome message
+    conversation.messages[0].conversationId = conversation.id;
 
     await saveLiveChatConversation(conversation);
     return NextResponse.json({ conversation });

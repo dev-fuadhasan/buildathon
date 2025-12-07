@@ -97,11 +97,17 @@ export default function AdminLiveChatSection({ token }: Props) {
             new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
         );
         setConversations(sorted);
-        // Don't auto-select - only update if already selected
+        // Don't auto-select - only update if already selected (preserve selection)
         if (selectedConversation) {
           const updated = sorted.find((c: Conversation) => c.id === selectedConversation.id);
           if (updated) {
-            setSelectedConversation(updated);
+            // Only update if it's the same conversation (don't change selection)
+            setSelectedConversation(prev => {
+              if (prev && prev.id === updated.id) {
+                return updated; // Update existing selection
+              }
+              return prev; // Keep current selection
+            });
           }
         }
       }
@@ -115,7 +121,13 @@ export default function AdminLiveChatSection({ token }: Props) {
       const res = await fetch(`/api/live-chat/conversations/${id}`, { headers: headers() });
       if (res.ok) {
         const data = await res.json();
-        setSelectedConversation(data.conversation);
+        // Only update if this is the currently selected conversation
+        setSelectedConversation(prev => {
+          if (prev && prev.id === id) {
+            return data.conversation;
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error("Error loading conversation:", err);
@@ -227,10 +239,15 @@ export default function AdminLiveChatSection({ token }: Props) {
                   return (
                     <button
                       key={conv.id}
-                      onClick={() => {
-                        setSelectedConversation(conv);
-                        // Mark messages as read when conversation is selected
-                        markMessagesAsRead(conv.id);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Only set if different conversation
+                        if (selectedConversation?.id !== conv.id) {
+                          setSelectedConversation(conv);
+                          // Mark messages as read when conversation is selected
+                          markMessagesAsRead(conv.id);
+                        }
                       }}
                       className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                         selectedConversation?.id === conv.id
