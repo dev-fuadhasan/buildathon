@@ -14,14 +14,6 @@ import { detectTimezoneFromIP } from "@/lib/timezoneDetector";
  */
 export async function GET(req: NextRequest) {
   try {
-    // Optional: Add a secret key for security
-    const authHeader = req.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const mothers = await listAllMothers();
     const results = {
       processed: 0,

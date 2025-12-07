@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/generate-recommendations",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+
