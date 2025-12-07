@@ -39,6 +39,8 @@ export default function AdminLiveChatSection({ token }: Props) {
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   const headers = () => ({
     "Content-Type": "application/json",
@@ -83,9 +85,31 @@ export default function AdminLiveChatSection({ token }: Props) {
     }
   }, [selectedConversation?.id]);
 
+  // Auto-scroll only if user is near bottom of messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [selectedConversation?.messages]);
+    if (!messagesContainerRef.current || !shouldAutoScroll) return;
+    
+    const container = messagesContainerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedConversation?.messages, shouldAutoScroll]);
+
+  // Track scroll position to determine if user is manually scrolling
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      setShouldAutoScroll(isNearBottom);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [selectedConversation]);
 
   const loadConversations = async () => {
     try {
@@ -155,6 +179,7 @@ export default function AdminLiveChatSection({ token }: Props) {
       if (res.ok) {
         const data = await res.json();
         setSelectedConversation(data.conversation);
+        setShouldAutoScroll(true); // Enable auto-scroll after sending message
         loadConversations(); // Refresh list
       }
     } catch (err) {
@@ -244,6 +269,8 @@ export default function AdminLiveChatSection({ token }: Props) {
                         e.stopPropagation();
                         // Only set if different conversation
                         if (selectedConversation?.id !== conv.id) {
+                          setInputMessage(""); // Clear input when switching conversations
+                          setShouldAutoScroll(true); // Reset auto-scroll when switching
                           setSelectedConversation(conv);
                           // Mark messages as read when conversation is selected
                           markMessagesAsRead(conv.id);
@@ -332,7 +359,10 @@ export default function AdminLiveChatSection({ token }: Props) {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-3 mb-3 sm:mb-4 bg-gradient-to-b from-slate-50 to-white p-3 sm:p-4 rounded-lg min-h-0">
+                <div 
+                  ref={messagesContainerRef}
+                  className="flex-1 overflow-y-auto space-y-3 mb-3 sm:mb-4 bg-gradient-to-b from-slate-50 to-white p-3 sm:p-4 rounded-lg min-h-0"
+                >
                   {selectedConversation.messages.length === 0 ? (
                     <div className="text-center text-slate-500 py-8">
                       <p>No messages yet. Start the conversation!</p>

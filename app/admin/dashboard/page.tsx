@@ -1313,9 +1313,11 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             className="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-3 rounded transition-colors"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              setMotherActionModal({ motherId: m.id, action: "delete" });
+                              if (confirm(`Are you sure you want to delete mother "${m.name || m.email}"? This action cannot be undone.`)) {
+                                await deleteUser(m.id, "mother");
+                              }
                             }}
                           >
                             <span className="flex items-center gap-1">
