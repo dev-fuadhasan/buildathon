@@ -52,7 +52,7 @@ function ForgotPasswordForm() {
         isOpen: true,
         type: "success",
         title: "Email Sent",
-        message: data.message || "Password reset link has been sent to your email. Please check your inbox (and spam folder).",
+        message: "Password reset link has been sent to your email. Please wait up to 5 minutes for the email to arrive, then check your inbox (and spam folder). If you don't receive it after 5 minutes, you can request a new link.",
       });
 
       // Clear email field
@@ -82,6 +82,11 @@ function ForgotPasswordForm() {
           <p className="text-sm text-amber-600 mt-2 font-medium">
             ⚠️ Please enter the email address you used to register. If the email is not registered, you will not receive a reset link.
           </p>
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium">
+              ⏱️ <strong>Please wait:</strong> It may take up to 5 minutes to receive the email. Please check your inbox (and spam folder) after waiting 5 minutes before requesting again.
+            </p>
+          </div>
         </div>
 
         <MessagePopup

@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      message: "Password reset link has been sent to your email. Please check your inbox (and spam folder).",
+      message: "Password reset link has been sent to your email. Please wait up to 5 minutes for the email to arrive, then check your inbox (and spam folder). If you don't receive it after 5 minutes, you can request a new link.",
     });
   } catch (error: any) {
     console.error("Forgot password error:", error);
