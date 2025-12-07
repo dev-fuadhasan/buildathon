@@ -40,15 +40,14 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
 
   return (
     <>
-      {/* Mobile Menu Button - Always visible on mobile */}
+      {/* Mobile Menu Button - Only visible on mobile (hidden on lg and above) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="lg:hidden fixed top-20 right-4 z-50 bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+        className="fixed top-20 right-4 z-50 bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all lg:!hidden"
         aria-label="Open menu"
-        style={{ display: 'block' }}
       >
         {isOpen ? (
           <Icon name="close" size={24} className="brightness-0 invert" />
@@ -64,14 +63,14 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
       {/* Overlay */}
       {isOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40 lg:!hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar Menu */}
       <div
-        className={`mobile-menu-container lg:hidden fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`mobile-menu-container fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:!hidden ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
