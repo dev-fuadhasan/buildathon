@@ -407,11 +407,10 @@ Provide this calculation FIRST, then add context.`;
       throw new Error("Groq client is not initialized");
     }
 
-    // Use a vision-capable model if we have images, otherwise use a fast, accurate model
-    // Fallback to 8b-instant if 70b is not available
+    // Use a vision-capable model if we have images, otherwise use the 70B versatile model
     const model = prescriptionUrls && prescriptionUrls.length > 0
-      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model
-      : "llama-3.1-8b-instant"; // Fast and reliable model
+      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for prescription images
+      : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
 
     // Create timeout wrapper to prevent 502 errors
     const timeoutPromise = new Promise<never>((_, reject) => {
