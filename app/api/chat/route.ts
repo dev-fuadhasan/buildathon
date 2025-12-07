@@ -219,6 +219,11 @@ Medications: ${mother.medications || "N/A"}`;
       
     } catch (error: any) {
       console.error("AI chat error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       
       if (error.message && (error.message.includes("token") || error.message.includes("length") || error.message.includes("limit"))) {
         const errorMessage = userLanguage === "bn"
@@ -232,10 +237,36 @@ Medications: ${mother.medications || "N/A"}`;
         });
       }
       
-      // Generic error message
+      // Check for API key or configuration errors
+      if (error.message && (error.message.includes("API") || error.message.includes("configured") || error.message.includes("key"))) {
+        const errorMessage = userLanguage === "bn"
+          ? "সিস্টেম কনফিগারেশন সমস্যা। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+          : "System configuration issue. Please try again in a moment.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
+      
+      // Check for rate limiting
+      if (error.message && (error.message.includes("rate limit") || error.message.includes("busy"))) {
+        const errorMessage = userLanguage === "bn"
+          ? "সার্ভিস ব্যস্ত। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+          : "Service is busy. Please try again in a moment.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
+      
+      // Generic error message with more helpful info
       const errorMessage = userLanguage === "bn"
-        ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
-        : "Sorry, something went wrong. Please try again.";
+        ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+        : "Sorry, something went wrong. Please try again in a moment.";
       
       return NextResponse.json({
         reply: errorMessage,

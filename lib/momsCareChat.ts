@@ -196,9 +196,10 @@ Provide this calculation FIRST, then add context.`;
     }
 
     // Use a vision-capable model if we have images, otherwise use a fast, accurate model
+    // Fallback to 8b-instant if 70b is not available
     const model = prescriptionUrls && prescriptionUrls.length > 0
       ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model
-      : "llama-3.1-70b-versatile"; // Better model for accuracy
+      : "llama-3.1-8b-instant"; // Fast and reliable model
 
     const completion = await groq.chat.completions.create({
       model,
@@ -232,13 +233,30 @@ Provide this calculation FIRST, then add context.`;
     return cleanedReply;
   } catch (error: any) {
     console.error("Groq API error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      type: error.type,
+    });
     
     // Provide more specific error messages
-    if (error.message?.includes("rate limit")) {
+    if (error.message?.includes("rate limit") || error.status === 429) {
       throw new Error("Service is busy. Please try again in a moment.");
     }
-    if (error.message?.includes("token") || error.message?.includes("length")) {
+    if (error.message?.includes("token") || error.message?.includes("length") || error.status === 400) {
       throw new Error("Message is too long. Please shorten your question.");
+    }
+    if (error.message?.includes("API") || error.message?.includes("key") || error.status === 401) {
+      throw new Error("API configuration issue. Please contact support.");
+    }
+    if (error.message?.includes("model") || error.status === 404) {
+      throw new Error("Model not available. Please try again later.");
+    }
+    
+    // Re-throw with original message if it's informative
+    if (error.message && error.message.length > 10) {
+      throw error;
     }
     
     throw new Error(
