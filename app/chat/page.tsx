@@ -178,43 +178,43 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-120px)] sm:h-[calc(100vh-140px)] max-w-6xl mx-auto gap-2 sm:gap-3 px-2 sm:px-4">
-        {/* Header - Compact */}
-        <div className="flex items-center justify-between flex-shrink-0">
+      <div className="flex flex-col h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] max-w-6xl mx-auto gap-1 sm:gap-2 md:gap-3 px-1 sm:px-2 md:px-4">
+        {/* Header - Very Compact on Mobile */}
+        <div className="flex items-center justify-between flex-shrink-0 py-1 sm:py-2">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
+            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
               MomsCare AI Chat
             </h1>
-            <p className="text-sm text-slate-600 mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-600 mt-0.5 hidden sm:block">
               <span className="flex items-center gap-2">
-                <Icon name={isMother ? "ai" : "chat"} size={20} />
+                <Icon name={isMother ? "ai" : "chat"} size={16} className="sm:w-5 sm:h-5" />
                 {isMother ? "Personalized" : "Public"}
               </span>
             </p>
           </div>
           {!isMother && (
-            <Link href="/mother/login" className="btn-secondary text-sm px-4 py-2">
+            <Link href="/mother/login" className="btn-secondary text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2 hidden sm:inline-flex">
               Login for Personalized
             </Link>
           )}
         </div>
 
-        {/* Safety Disclaimer - Compact */}
-        <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 p-2.5 shadow-sm flex-shrink-0">
+        {/* Safety Disclaimer - Very Compact on Mobile */}
+        <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 p-1.5 sm:p-2 md:p-2.5 shadow-sm flex-shrink-0 hidden sm:block">
           <p className="text-xs text-yellow-900 font-medium">
-            <span className="flex items-start gap-2">
-              <Icon name="warning" size={20} className="mt-0.5" />
-              <span>
+            <span className="flex items-start gap-1.5 sm:gap-2">
+              <Icon name="warning" size={16} className="sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">
                 <strong>Important:</strong> This AI chatbot provides general information and is not a substitute for professional medical advice. For emergencies, contact your healthcare provider immediately.
               </span>
             </span>
           </p>
         </div>
 
-        {/* Main Chat Container - Takes Most Space */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-          {/* Chat Messages - Large Section */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50 to-white min-h-0">
+        {/* Main Chat Container - Takes Most Space, Especially on Mobile */}
+        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl border border-slate-200 overflow-hidden">
+          {/* Chat Messages - Large Section, Takes Most Screen on Mobile */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-slate-50 to-white min-h-0">
             {messages.map((msg, idx) => (
               <ChatBubble key={idx} role={msg.role} content={msg.content} />
             ))}
@@ -241,7 +241,7 @@ export default function ChatPage() {
           )}
 
           {/* Input Section - Compact */}
-          <div className="border-t border-slate-200 bg-white p-3 flex-shrink-0">
+          <div className="border-t border-slate-200 bg-white p-2 sm:p-3 flex-shrink-0">
             <ChatInput onSend={sendMessage} disabled={loading} />
             {/* Prescription Upload - Small, Collapsible */}
             {isMother && (
