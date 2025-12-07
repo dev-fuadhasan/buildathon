@@ -581,6 +581,8 @@ export default function MotherDashboard() {
     { id: "progress", label: t.mother.progress, icon: "progress" },
     { id: "journal", label: "Daily Entry", icon: "daily-entry" },
     { id: "notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
+    { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/mother/dashboard" },
+    { id: "logout", label: "Logout", action: "logout" as const },
   ];
 
   // Calculate days left to due date
@@ -726,7 +728,7 @@ export default function MotherDashboard() {
 
           {/* Tabs - Desktop Only */}
           <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-            {tabs.map((tab) => (
+            {tabs.filter(tab => tab.action !== "logout" && tab.action !== "navigate").map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
@@ -734,7 +736,7 @@ export default function MotherDashboard() {
                   activeTab === tab.id ? "tab-active" : "tab-inactive"
                 }`}
               >
-                <Icon name={tab.icon} size={20} />
+                {tab.icon && <Icon name={tab.icon} size={20} />}
                 <span>{tab.label}</span>
                 {tab.badge && tab.badge > 0 && (
                   <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
