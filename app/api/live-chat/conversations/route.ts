@@ -62,15 +62,28 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { userType, name, phone, email, sessionId } = body;
 
-    if (!userType || !name || !phone || !sessionId) {
-      return NextResponse.json(
-        { error: "userType, name, phone, and sessionId are required" },
-        { status: 400 }
-      );
+    // Check if user is logged in first
+    const user = await getUserFromRequest(req);
+    
+    // If logged in, userType and sessionId are required, but name/phone can come from profile
+    if (user) {
+      if (!userType || !sessionId) {
+        return NextResponse.json(
+          { error: "userType and sessionId are required" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Not logged in - all fields required
+      if (!userType || !name || !phone || !sessionId) {
+        return NextResponse.json(
+          { error: "userType, name, phone, and sessionId are required" },
+          { status: 400 }
+        );
+      }
     }
 
-    // Check if user is logged in
-    const user = await getUserFromRequest(req);
+    // User already checked above
     let userId: string | undefined;
     let userTypeFromAuth: "mother" | "doctor" | undefined;
 

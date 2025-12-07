@@ -38,46 +38,57 @@ export default function LiveChatWidget({ onClose }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionId, setSessionId] = useState<string>("");
 
-  // Get or create session ID
+  // Get or create session ID and initialize conversation
   useEffect(() => {
-    let sid = localStorage.getItem("liveChatSessionId");
-    if (!sid) {
-      // Generate a unique session ID
-      sid = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${Math.random().toString(36).substring(2, 15)}`;
-      localStorage.setItem("liveChatSessionId", sid);
-    }
-    setSessionId(sid);
-
-    // Check if user is logged in
-    const motherToken = localStorage.getItem("motherToken");
-    const doctorToken = localStorage.getItem("doctorToken");
-    
-    if (motherToken || doctorToken) {
-      // User is logged in, skip form and create/load conversation
-      try {
-        const token = motherToken || doctorToken || "";
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        
-        // Try to find existing conversation
-        checkExistingConversation(sid, payload.id).then((hasConversation) => {
-          if (!hasConversation) {
-            // Auto-create conversation for logged-in user
-            createConversationForLoggedInUser(sid, payload.id, motherToken ? "mother" : "doctor", token);
-          }
-        });
-      } catch (err) {
-        console.error("Error parsing token:", err);
-        // If error, show form
-        setShowForm(true);
+    const initializeChat = async () => {
+      let sid = localStorage.getItem("liveChatSessionId");
+      if (!sid) {
+        // Generate a unique session ID
+        sid = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${Math.random().toString(36).substring(2, 15)}`;
+        localStorage.setItem("liveChatSessionId", sid);
       }
-    } else {
-      // Check for existing conversation by session
-      checkExistingConversation(sid);
-    }
+      setSessionId(sid);
+
+      // Check if user is logged in
+      const motherToken = localStorage.getItem("motherToken");
+      const doctorToken = localStorage.getItem("doctorToken");
+      
+      if (motherToken || doctorToken) {
+        // User is logged in - auto-create or load conversation
+        try {
+          const token = motherToken || doctorToken || "";
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const userType = motherToken ? "mother" : "doctor";
+          
+          // First, check for existing conversation
+          const hasConversation = await checkExistingConversation(sid, payload.id);
+          
+          if (!hasConversation) {
+            // No existing conversation - create one automatically
+            await createConversationForLoggedInUser(sid, payload.id, userType, token);
+          }
+          // If conversation exists, checkExistingConversation already loaded it
+        } catch (err) {
+          console.error("Error initializing chat for logged-in user:", err);
+          // If error, show form as fallback
+          setShowForm(true);
+        }
+      } else {
+        // Not logged in - check for existing conversation by session
+        const hasConversation = await checkExistingConversation(sid);
+        if (!hasConversation) {
+          // No conversation found, show form
+          setShowForm(true);
+        }
+      }
+    };
+
+    initializeChat();
   }, []);
 
   const createConversationForLoggedInUser = async (sid: string, userId: string, userType: "mother" | "doctor", token: string) => {
     try {
+      setLoading(true);
       const res = await fetch("/api/live-chat/conversations", {
         method: "POST",
         headers: {
@@ -87,6 +98,10 @@ export default function LiveChatWidget({ onClose }: Props) {
         body: JSON.stringify({
           userType,
           sessionId: sid,
+          // For logged-in users, API will get name/phone/email from profile
+          name: "",
+          phone: "",
+          email: "",
         }),
       });
 
@@ -96,9 +111,20 @@ export default function LiveChatWidget({ onClose }: Props) {
         setMessages(data.conversation.messages || []);
         setShowForm(false);
         await checkAdminStatus();
+        // Load messages to ensure we have the latest
+        await loadMessages(data.conversation.id);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Error creating conversation:", errorData);
+        // On error, show form as fallback
+        setShowForm(true);
       }
     } catch (err) {
       console.error("Error creating conversation:", err);
+      // On error, show form as fallback
+      setShowForm(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,16 +145,14 @@ export default function LiveChatWidget({ onClose }: Props) {
         if (data.conversations && data.conversations.length > 0) {
           // Use most recent conversation
           const conv = data.conversations.sort((a: any, b: any) => 
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
           )[0];
           setConversationId(conv.id);
           setMessages(conv.messages || []);
           setShowForm(false);
-          loadMessages(conv.id);
+          await loadMessages(conv.id);
+          await checkAdminStatus();
           return true;
-        } else if (userId) {
-          // Logged in user, skip form
-          setShowForm(false);
         }
       }
       return false;
