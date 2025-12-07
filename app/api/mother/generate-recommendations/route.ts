@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, listDailyEntries, saveNotification, Notification } from "@/lib/data";
+import { getMother, listDailyEntries, saveNotification, getNotifications, Notification } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
@@ -112,6 +112,15 @@ export async function POST(req: NextRequest) {
         question: q.question,
         answer: q.answer,
       }));
+
+    // Get past recommendations to avoid duplicates
+    const pastNotifications = await getNotifications(user.id);
+    const pastRecommendations = pastNotifications
+      .filter(n => n.type === "morning_recommendation" || n.type === "evening_recommendation")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10) // Last 10 recommendations
+      .map(n => n.message || n.content || "")
+      .filter(Boolean);
     
     // Generate recommendation
     const recommendation = await generateJournalRecommendation(
@@ -119,7 +128,8 @@ export async function POST(req: NextRequest) {
       dailyEntries,
       timeOfDay,
       prescriptionUrls,
-      questionsAndAnswers
+      questionsAndAnswers,
+      pastRecommendations
     );
 
     // Create notification

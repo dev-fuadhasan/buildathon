@@ -109,17 +109,17 @@ export default function MotherDashboard() {
     fetchQuestions(t);
     fetchDailyEntries(t);
     fetchNotifications(t);
-    // Update pregnancy progress and check for daily tasks/recommendations
+    // Update pregnancy progress and check for daily tasks
+    // Recommendations are now sent automatically via cron job at 8 AM and 8 PM
     updatePregnancyProgress(t);
     checkDailyTask(t);
-    checkRecommendations(t);
     
-    // Set up interval to check for daily tasks and recommendations
-    // Check every 5 minutes to catch 8 AM and 8 PM recommendations
+    // Set up interval to check for daily tasks and update pregnancy progress
+    // Check every 5 minutes
     const interval = setInterval(() => {
       updatePregnancyProgress(t);
       checkDailyTask(t);
-      checkRecommendations(t);
+      fetchNotifications(t); // Refresh notifications to show new recommendations
     }, 5 * 60 * 1000); // Check every 5 minutes
     
     return () => clearInterval(interval);
@@ -238,17 +238,6 @@ export default function MotherDashboard() {
     }
   };
 
-  const checkRecommendations = async (t = token) => {
-    try {
-      await fetch("/api/mother/generate-recommendations", {
-        method: "POST",
-        headers: authHeaders(t),
-      });
-      fetchNotifications(t); // Refresh notifications
-    } catch (err) {
-      // Silent fail - this is a background check
-    }
-  };
 
   const saveDailyEntry = async () => {
     if (!selectedDate || !newEntryText.trim()) {
@@ -575,7 +564,7 @@ export default function MotherDashboard() {
         )}
 
         {/* Tabs - Redesigned */}
-        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2">
+        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2 scrollbar-hide">
           {[
             { id: "profile", label: t.mother.profile, icon: "profile" },
             { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
@@ -587,7 +576,7 @@ export default function MotherDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`tab flex items-center gap-2 px-6 py-3.5 ${
+              className={`tab flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap ${
                 activeTab === tab.id ? "tab-active" : "tab-inactive"
               }`}
             >

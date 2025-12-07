@@ -14,6 +14,7 @@ export default function Layout({ children }: Props) {
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check login state
@@ -80,8 +81,10 @@ export default function Layout({ children }: Props) {
               href="/doctor/login"
               className={`font-medium transition-colors px-3 py-2 rounded-lg ${
                 pathname === "/doctor/login"
-                  ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
-                  : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : pathname === "/doctor/register"
+                  ? "text-pink-600 border-2 border-pink-300 bg-transparent"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
               }`}
             >
               Login
@@ -90,8 +93,8 @@ export default function Layout({ children }: Props) {
               href="/doctor/register"
               className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
                 pathname === "/doctor/register"
-                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg"
-                  : "btn-primary"
+                  ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
+                  : "text-pink-600 border-2 border-pink-300 bg-transparent"
               }`}
             >
               Register
@@ -118,6 +121,8 @@ export default function Layout({ children }: Props) {
               className={`font-medium transition-colors px-3 py-2 rounded-lg ${
                 pathname === "/mother/login"
                   ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : pathname === "/mother/register"
+                  ? "text-pink-600 border-2 border-pink-300 bg-transparent"
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
               }`}
             >
@@ -128,7 +133,7 @@ export default function Layout({ children }: Props) {
               className={`text-sm px-4 py-2 rounded-xl font-semibold transition-all ${
                 pathname === "/mother/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
-                  : "btn-primary"
+                  : "text-pink-600 border-2 border-pink-300 bg-transparent"
               }`}
             >
               Register
@@ -145,17 +150,41 @@ export default function Layout({ children }: Props) {
       <header className="bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                <span className="text-white font-bold text-lg">M</span>
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                <span className="text-white font-bold text-base sm:text-lg">M</span>
               </div>
-              <span className="text-2xl font-bold gradient-text">MomsCare</span>
+              <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">
               {getNavItems()}
             </nav>
+            
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
+          
+          {/* Mobile menu */}
+          {mobileMenuOpen && (
+            <nav className="md:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-3">
+              {getNavItems()}
+            </nav>
+          )}
         </div>
       </header>
 

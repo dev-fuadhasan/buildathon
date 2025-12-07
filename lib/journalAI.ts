@@ -8,14 +8,15 @@ import { askMomsCare } from "./momsCareChat";
 import { getCurrentTimeInTimezone } from "./pregnancyTracker";
 
 /**
- * Generates AI recommendation based on journal entries, profile, prescriptions, and Q&A
+ * Generates AI recommendation based on journal entries, profile, prescriptions, Q&A, and past recommendations
  */
 export async function generateJournalRecommendation(
   mother: MotherProfile,
   dailyEntries: DailyEntry[],
   timeOfDay: "morning" | "evening",
   prescriptionUrls?: string[],
-  questionsAndAnswers?: Array<{ question: string; answer?: string }>
+  questionsAndAnswers?: Array<{ question: string; answer?: string }>,
+  pastRecommendations?: string[]
 ): Promise<string> {
   try {
     // Get recent daily entries (last 7 days, sorted by date and creation time)
@@ -90,6 +91,12 @@ Allergies: ${mother.allergies || "None"}
     
     if (prescriptionUrls && prescriptionUrls.length > 0) {
       fullContext += `\n\nNote: The mother has ${prescriptionUrls.length} prescription(s) on file. Consider medication compliance and any prescription-related advice.`;
+    }
+    
+    // Add past recommendations context to avoid duplicates
+    if (pastRecommendations && pastRecommendations.length > 0) {
+      fullContext += `\n\nPast Recommendations/Suggestions/Tips/Advice (to avoid repeating similar content):\n${pastRecommendations.slice(0, 10).join("\n\n---\n\n")}`;
+      fullContext += `\n\nIMPORTANT: Review the past recommendations above and ensure your new recommendation is different, fresh, and provides new value. Avoid repeating similar advice, tips, or suggestions.`;
     }
     
     fullContext += `\n\nPlease provide a personalized recommendation in the same language as the journal entries (English, Bengali, or Banglish).`;
