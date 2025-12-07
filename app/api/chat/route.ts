@@ -93,12 +93,25 @@ export async function POST(req: NextRequest) {
         if (mother) {
           const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+          const months = weeks ? Math.round(weeks / 4.33) : undefined;
           
-          profileContext = `
-Name: ${mother.name || "N/A"}
-Days pregnant: ${daysPregnant || "N/A"} (${weeks || "N/A"} weeks)
-Conditions: ${mother.conditions || "N/A"}
-Medications: ${mother.medications || "N/A"}`;
+          // Build comprehensive profile context for personalized AI
+          const profileParts: string[] = [];
+          
+          if (mother.name) profileParts.push(`নাম: ${mother.name}`);
+          if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
+          if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
+          if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
+          if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
+          if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
+          if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
+          if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
+          if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
+          if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
+          
+          profileContext = profileParts.length > 0 
+            ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
+            : undefined;
           weeksPregnant = weeks;
           
           try {
