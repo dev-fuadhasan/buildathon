@@ -6,6 +6,7 @@ import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
+import MobileDashboardMenu from "@/components/MobileDashboardMenu";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -207,14 +208,14 @@ export default function DoctorDashboard() {
         {/* Header - Redesigned */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-3">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold gradient-text mb-2 sm:mb-3">
               Doctor Dashboard
             </h1>
-            <p className="text-lg text-neutral-600">
+            <p className="text-sm sm:text-lg text-neutral-600">
               Answer questions from mothers with care and expertise.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Link href="/doctor/profile" className="btn-secondary flex items-center gap-2">
               <Icon name="profile" size={20} />
               My Profile
@@ -262,7 +263,7 @@ export default function DoctorDashboard() {
         )}
 
         {/* Stats - Redesigned */}
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3">
           <DashboardCard title={
             <span className="flex items-center gap-2">
               <Icon name="question" size={20} />

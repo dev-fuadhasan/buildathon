@@ -4,6 +4,7 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
+import MobileDashboardMenu from "@/components/MobileDashboardMenu";
 import Icon from "@/components/Icon";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -573,20 +574,32 @@ export default function MotherDashboard() {
     );
   }
 
+  const tabs = [
+    { id: "profile", label: t.mother.profile, icon: "profile" },
+    { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
+    { id: "questions", label: t.mother.questions, icon: "question" },
+    { id: "progress", label: t.mother.progress, icon: "progress" },
+    { id: "journal", label: "Daily Entry", icon: "daily-entry" },
+    { id: "notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
+  ];
+
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0 pb-20 lg:pb-0">
+        {/* Mobile Menu */}
+        <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
+
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-pink-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-pink-600">
               {t.mother.welcome}{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}!
             </h1>
-            <p className="text-slate-600 mt-1">
+            <p className="text-sm sm:text-base text-slate-600 mt-1">
               {t.home.mothersDesc}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Link href="/chat" className="btn-secondary flex items-center gap-2">
               <Icon name="chat" size={20} />
               {t.chat.title}
@@ -633,16 +646,9 @@ export default function MotherDashboard() {
           </div>
         )}
 
-        {/* Tabs - Redesigned */}
-        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-          {[
-            { id: "profile", label: t.mother.profile, icon: "profile" },
-            { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
-            { id: "questions", label: t.mother.questions, icon: "question" },
-            { id: "progress", label: t.mother.progress, icon: "progress" },
-            { id: "journal", label: "Daily Entry", icon: "daily-entry" },
-            { id: "notifications", label: "Notifications", icon: "notifications" },
-          ].map((tab) => (
+        {/* Tabs - Desktop Only */}
+        <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
@@ -652,9 +658,9 @@ export default function MotherDashboard() {
             >
               <Icon name={tab.icon} size={20} />
               <span>{tab.label}</span>
-              {tab.id === "notifications" && unreadCount > 0 && (
+              {tab.badge && tab.badge > 0 && (
                 <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {unreadCount}
+                  {tab.badge}
                 </span>
               )}
             </button>

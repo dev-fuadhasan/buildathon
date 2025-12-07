@@ -6,6 +6,7 @@ import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import MessagePopup from "@/components/MessagePopup";
 import AdminLiveChatSection from "@/components/AdminLiveChatSection";
+import MobileDashboardMenu from "@/components/MobileDashboardMenu";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -411,16 +412,27 @@ export default function AdminDashboard() {
     );
   }
 
+  const tabs = [
+    { id: "overview", label: "Overview", icon: "overview" },
+    { id: "analytics", label: "Analytics", icon: "progress" },
+    { id: "doctors", label: "Doctors", icon: "doctor" },
+    { id: "mothers", label: "Mothers", icon: "mom" },
+    { id: "reports", label: "Reports", icon: "reports", badge: reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length },
+    { id: "live-chat", label: "Live Chat", icon: "chat" },
+  ];
+
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-4 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0">
+        {/* Mobile Menu */}
+        <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
         {/* Header - Redesigned */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-3">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold gradient-text mb-2 sm:mb-3">
               Admin Dashboard
             </h1>
-            <p className="text-lg text-neutral-600">
+            <p className="text-sm sm:text-lg text-neutral-600">
               Full access to manage MomsCare platform
             </p>
           </div>
@@ -465,38 +477,25 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabs - Redesigned */}
-        <div className="flex gap-2 border-b-2 border-neutral-200 mb-8 overflow-x-auto pb-2">
-          {[
-            { id: "overview", label: "Overview", icon: "overview" },
-            { id: "analytics", label: "Analytics", icon: "progress" },
-            { id: "doctors", label: "Doctors", icon: "doctor" },
-            { id: "mothers", label: "Mothers", icon: "mom" },
-            { id: "reports", label: "Reports", icon: "reports" },
-            { id: "live-chat", label: "Live Chat", icon: "chat" },
-          ].map((tab) => {
-            const pendingReports = tab.id === "reports" 
-              ? reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending")
-              : [];
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap text-sm sm:text-base ${
-                  activeTab === tab.id ? "tab-active" : "tab-inactive"
-                }`}
-              >
-                {tab.icon && <Icon name={tab.icon} size={20} />}
-                <span>{tab.label}</span>
-                {tab.id === "reports" && pendingReports.length > 0 && (
-                  <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                    {pendingReports.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Tabs - Desktop Only */}
+        <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-4 sm:mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap text-sm sm:text-base ${
+                activeTab === tab.id ? "tab-active" : "tab-inactive"
+              }`}
+            >
+              {tab.icon && <Icon name={tab.icon} size={20} />}
+              <span>{tab.label}</span>
+              {tab.badge && tab.badge > 0 && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Overview Tab */}
