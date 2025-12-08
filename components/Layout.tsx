@@ -130,7 +130,7 @@ export default function Layout({ children }: Props) {
               onClick={(e) => { e.preventDefault(); scrollToSection("get-started"); }}
               className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-blue-600 cursor-pointer"
             >
-              For Doctors
+              For Health Workers
             </a>
             <a
               href="#features"

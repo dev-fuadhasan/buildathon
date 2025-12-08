@@ -135,8 +135,8 @@ export default function Home() {
                 icon: "doctor", 
                 text: t.home.feature2, 
                 color: "from-blue-500 to-cyan-500",
-                title: "Expert Doctors",
-                description: "Connect with verified healthcare professionals for personalized guidance."
+                title: "Expert Health Workers",
+                description: "Connect with verified healthcare professionals including doctors, nurses, and health workers."
               },
               { 
                 icon: "secure", 
@@ -170,7 +170,7 @@ export default function Home() {
               Get Started Today
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto font-medium px-2">
-              Choose your path and join thousands of mothers and doctors
+              Choose your path and join thousands of mothers and health workers
             </p>
           </div>
           
@@ -234,14 +234,14 @@ export default function Home() {
                         href="/doctor/register"
                         className="inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-blue-700 hover:to-cyan-700"
                       >
-                        <span className="whitespace-nowrap">Become a Verified Doctor</span>
+                        <span className="whitespace-nowrap">Join as Health Worker</span>
                         <span className="text-base sm:text-lg">→</span>
                       </Link>
                       <Link
                         href="/doctor/login"
                         className="inline-flex items-center justify-center text-sm sm:text-base font-semibold px-6 py-3 sm:px-8 sm:py-4 bg-white text-blue-600 rounded-lg sm:rounded-xl border-2 border-blue-300 shadow-md hover:shadow-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300"
                       >
-                        <span className="whitespace-nowrap">Doctor {t.common.login}</span>
+                        <span className="whitespace-nowrap">Health Worker {t.common.login}</span>
                       </Link>
                     </>
                   )}
@@ -290,7 +290,7 @@ export default function Home() {
                 </li>
                 <li>
                   <Link href="/doctor/register" className="text-neutral-400 hover:text-blue-400 text-sm transition-colors">
-                    For Doctors
+                    For Health Workers
                   </Link>
                 </li>
                 <li>

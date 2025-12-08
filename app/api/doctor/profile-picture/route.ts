@@ -7,8 +7,17 @@ import { v4 as uuid } from "uuid";
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
+    // Allow doctors, nurses, and others to upload profile picture
+    // Note: getUserFromRequest returns role as "doctor" for all health workers, we check actual role from database
     if (!user || user.role !== "doctor") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    // Verify it's actually a health worker (doctor, nurse, or others)
+    const { getDoctor } = await import("@/lib/data");
+    const healthWorker = await getDoctor(user.id);
+    if (!healthWorker) {
+      return NextResponse.json({ error: "Health worker not found" }, { status: 404 });
     }
 
     const form = await req.formData();

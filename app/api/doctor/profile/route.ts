@@ -5,6 +5,8 @@ import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
+  // Allow doctors, nurses, and others to access profile (they all use doctorToken)
+  // Note: getUserFromRequest returns role as "doctor" for all health workers
   if (!user || user.role !== "doctor") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -32,6 +34,8 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const user = await getUserFromRequest(req);
+  // Allow doctors, nurses, and others to update profile (they all use doctorToken)
+  // Note: getUserFromRequest returns role as "doctor" for all health workers
   if (!user || user.role !== "doctor") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

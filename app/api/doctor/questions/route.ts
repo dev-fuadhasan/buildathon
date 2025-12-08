@@ -9,6 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Only doctors can view questions, not nurses/others
+  const { getDoctor } = await import("@/lib/data");
+  const doctor = await getDoctor(user.id);
+  if (!doctor || doctor.role !== "doctor") {
+    return NextResponse.json({ error: "Only doctors can view questions" }, { status: 403 });
+  }
+
   const allQuestions = await listAllQuestions();
   
   // Filter: Only show unanswered questions OR questions answered by this doctor

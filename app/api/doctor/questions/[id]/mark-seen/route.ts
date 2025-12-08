@@ -10,10 +10,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user || user.role !== "doctor") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const user = await getUserFromRequest(req);
+  if (!user || user.role !== "doctor") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Only doctors can mark questions as seen, not nurses/others
+  const { getDoctor } = await import("@/lib/data");
+  const doctor = await getDoctor(user.id);
+  if (!doctor || doctor.role !== "doctor") {
+    return NextResponse.json({ error: "Only doctors can access questions" }, { status: 403 });
+  }
 
     const { id } = await params;
     const question = await getQuestion(id);
