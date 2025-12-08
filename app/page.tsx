@@ -105,16 +105,24 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row pt-1 sm:pt-2">
-                <Link
-                  href="/chat"
-                  className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-bold px-6 py-3.5 sm:px-8 sm:py-4 md:px-10 md:py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
-                >
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
-                    <Icon name="chat" size={20} className="sm:w-6 sm:h-6 brightness-0 invert" />
-                  </div>
-                  <span className="whitespace-nowrap">{t.home.chatButton}</span>
-                  <span className="text-xs sm:text-sm font-normal opacity-90 ml-1">→</span>
-                </Link>
+                <div className="flex flex-col gap-2">
+                  <Link
+                    href="/chat"
+                    className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-bold px-6 py-3.5 sm:px-8 sm:py-4 md:px-10 md:py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
+                  >
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
+                      <Icon name="chat" size={20} className="sm:w-6 sm:h-6 brightness-0 invert" />
+                    </div>
+                    <span className="whitespace-nowrap">{t.home.chatButton}</span>
+                    <span className="text-xs sm:text-sm font-normal opacity-90 ml-1">→</span>
+                  </Link>
+                  <button
+                    onClick={() => scrollToSection("get-started")}
+                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2 hover:underline-offset-4 transition-all text-center"
+                  >
+                    I am a health worker →
+                  </button>
+                </div>
                 <button
                   onClick={handleMotherClick}
                   className="inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold px-6 py-3.5 sm:px-8 sm:py-4 md:px-8 md:py-5 bg-white text-pink-600 rounded-xl sm:rounded-2xl border-2 border-pink-300 shadow-lg hover:shadow-xl hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"

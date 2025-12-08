@@ -425,11 +425,12 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
+        const displayType = userType === "doctor" ? "health worker" : userType;
         setPopup({
           isOpen: true,
           type: "success",
           title: pause ? "User Paused" : "User Unpaused",
-          message: `The ${userType} has been ${pause ? "paused" : "unpaused"} successfully. ${pause ? "They will be automatically logged out if currently logged in." : ""}`,
+          message: `The ${displayType} has been ${pause ? "paused" : "unpaused"} successfully. ${pause ? "They will be automatically logged out if currently logged in." : ""}`,
         });
         if (userType === "doctor") {
           loadAllDoctors();
@@ -513,13 +514,13 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage("✅ Doctor deleted successfully");
+        setMessage("✅ Health Worker deleted successfully");
         closeActionModal();
         loadPending();
         loadAllDoctors();
         loadOverview();
       } else {
-        setMessage(`❌ ${data.error || "Failed to delete doctor"}`);
+        setMessage(`❌ ${data.error || "Failed to delete health worker"}`);
       }
       return;
     }
@@ -536,13 +537,13 @@ export default function AdminDashboard() {
     });
     const data = await res.json();
     if (res.ok) {
-      setMessage(`✅ Doctor ${actionModal.action === "approve" ? "approved" : "rejected"} successfully`);
+      setMessage(`✅ Health Worker ${actionModal.action === "approve" ? "approved" : "rejected"} successfully`);
       closeActionModal();
       loadPending();
       loadAllDoctors();
       loadOverview();
     } else {
-      setMessage(`❌ ${data.error || "Failed to update doctor"}`);
+      setMessage(`❌ ${data.error || "Failed to update health worker"}`);
     }
   };
 
@@ -750,7 +751,7 @@ export default function AdminDashboard() {
             <DashboardCard title={
               <span className="flex items-center gap-2">
                 <Icon name="pending" size={20} />
-                Pending Doctor Approvals
+                Pending Health Worker Approvals
               </span>
             }>
               <div className="space-y-3">
