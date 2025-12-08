@@ -32,6 +32,20 @@ export default function NurseDashboard() {
   const [sortBy, setSortBy] = useState<"recent" | "priority" | "name">("recent");
   const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(10);
+
+  // Determine status for priority badges
+  const getStatus = (patient: PatientData) => {
+    const hasHighRisk =
+      patient.medicalHistory?.toLowerCase().includes("diabetes") ||
+      patient.medicalHistory?.toLowerCase().includes("hypertension") ||
+      patient.medicalHistory?.toLowerCase().includes("heart") ||
+      (patient.allergies && patient.allergies.length > 0);
+
+    if (hasHighRisk) return { label: "High Risk", variant: "error" as const };
+    const hasFiles = (patient.prescriptions?.length || 0) + (patient.reports?.length || 0) > 0;
+    if (hasFiles) return { label: "Active", variant: "info" as const };
+    return { label: "Normal", variant: "success" as const };
+  };
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [patientForm, setPatientForm] = useState({
@@ -488,7 +502,7 @@ export default function NurseDashboard() {
           <h1 className="text-3xl font-bold mb-4">Nurse Dashboard</h1>
           <p className="text-slate-600 mb-6">Please log in to continue.</p>
           <button
-            onClick={() => router.push("/doctor/login")}
+            onClick={() => router.push("/healthworker/login")}
             className="btn-primary inline-block"
           >
             Login
@@ -516,7 +530,7 @@ export default function NurseDashboard() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl font-bold">🏥</span>
+                  <Icon name="nurse" size={28} className="text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">
@@ -598,40 +612,40 @@ export default function NurseDashboard() {
                 </button>
               }
             >
-              {/* Search Bar */}
-              <div className="mb-4">
-                <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search patients by name or number..."
-                    className="input w-full pl-10"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1); // Reset to first page on search
-                    }}
-                  />
+              {/* Search + Sort */}
+              <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search patients by name or number..."
+                      className="input w-full pl-10"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1); // Reset to first page on search
+                      }}
+                    />
+                  </div>
                 </div>
-              </div>
-
-              {/* Sort Dropdown */}
-              <div className="mb-4 flex items-center gap-2">
-                <label className="text-sm text-slate-600 font-medium">Sort by:</label>
-                <select
-                  className="input text-sm py-1.5 px-3"
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value as "recent" | "priority" | "name");
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value="recent">Recent</option>
-                  <option value="priority">Priority</option>
-                  <option value="name">Name</option>
-                </select>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600 font-medium whitespace-nowrap">Sort by:</label>
+                  <select
+                    className="input text-sm py-1.5 px-3"
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value as "recent" | "priority" | "name");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="recent">Recent</option>
+                    <option value="priority">Priority</option>
+                    <option value="name">Name</option>
+                  </select>
+                </div>
               </div>
 
               {/* Patient List */}
@@ -643,7 +657,7 @@ export default function NurseDashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
                     {paginatedPatients.map((patient) => (
                       <PatientCard
                         key={patient.id}
@@ -721,7 +735,7 @@ export default function NurseDashboard() {
                   No priority patients at the moment.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
                   {priorityList.map((item, index) => (
                     <div
                       key={item.patient.id}
@@ -739,10 +753,16 @@ export default function NurseDashboard() {
                           <p className="text-sm text-blue-700 font-medium mb-2 leading-relaxed">
                             {item.priorityReason}
                           </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <Badge variant="priority" size="sm">
-                              Score: {item.priorityScore.toFixed(1)}
-                            </Badge>
+                          <div className="flex items-center justify-between gap-3 mt-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="priority" size="sm">
+                                Score: {item.priorityScore.toFixed(1)}
+                              </Badge>
+                              {(() => {
+                                const status = getStatus(item.patient);
+                                return <Badge variant={status.variant} size="sm">{status.label}</Badge>;
+                              })()}
+                            </div>
                             <button
                               onClick={async () => {
                                 const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
@@ -768,7 +788,7 @@ export default function NurseDashboard() {
                                   setShowEditModal(true);
                                 }
                               }}
-                              className="btn-primary text-xs px-3 py-1.5 font-semibold"
+                              className="btn-primary text-[11px] px-2.5 py-1.5 font-semibold"
                             >
                               View Details
                             </button>

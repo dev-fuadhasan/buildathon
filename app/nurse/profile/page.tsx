@@ -139,7 +139,7 @@ export default function NurseProfile() {
           <h1 className="text-3xl font-bold mb-4">Nurse Profile</h1>
           <p className="text-slate-600 mb-6">Please log in to continue.</p>
           <button
-            onClick={() => router.push("/doctor/login")}
+            onClick={() => router.push("/healthworker/login")}
             className="btn-primary inline-block"
           >
             Login

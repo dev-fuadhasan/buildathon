@@ -26,28 +26,8 @@ const getAvatarColor = (name: string): string => {
   return colors[index];
 };
 
-// Determine patient status
-const getPatientStatus = (patient: PatientData): { label: string; color: string } => {
-  const hasHighRisk = patient.medicalHistory?.toLowerCase().includes("diabetes") ||
-                     patient.medicalHistory?.toLowerCase().includes("hypertension") ||
-                     patient.medicalHistory?.toLowerCase().includes("heart") ||
-                     (patient.allergies && patient.allergies.length > 0);
-  
-  if (hasHighRisk) {
-    return { label: "High Risk", color: "bg-red-100 text-red-700 border-red-200" };
-  }
-  
-  const hasFiles = (patient.prescriptions?.length || 0) + (patient.reports?.length || 0) > 0;
-  if (hasFiles) {
-    return { label: "Active", color: "bg-blue-100 text-blue-700 border-blue-200" };
-  }
-  
-  return { label: "Normal", color: "bg-green-100 text-green-700 border-green-200" };
-};
-
 export default function PatientCard({ patient, onEdit, onDelete, onView }: PatientCardProps) {
   const avatarColor = getAvatarColor(patient.name);
-  const status = getPatientStatus(patient);
   const lastUpdated = patient.updatedAt || patient.createdAt;
 
   return (
@@ -76,10 +56,6 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
                 )}
               </div>
             </div>
-            {/* Status Badge */}
-            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${status.color} whitespace-nowrap`}>
-              {status.label}
-            </span>
           </div>
 
           {/* Metadata */}
@@ -116,20 +92,20 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
             {onView && (
               <button
                 onClick={onView}
-                className="btn-secondary text-xs px-3 py-1.5"
+                className="btn-secondary text-[11px] px-2.5 py-1.5"
               >
                 View
               </button>
             )}
             <button
               onClick={onEdit}
-              className="btn-secondary text-xs px-3 py-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="btn-secondary text-[11px] px-2.5 py-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
             >
               Edit
             </button>
             <button
               onClick={onDelete}
-              className="btn-ghost text-xs px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="btn-ghost text-[11px] px-2.5 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               Delete
             </button>

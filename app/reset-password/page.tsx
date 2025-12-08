@@ -103,7 +103,7 @@ function ResetPasswordForm() {
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        router.push(role === "doctor" ? "/doctor/login" : "/mother/login");
+        router.push(role === "doctor" ? "/healthworker/login" : "/mother/login");
       }, 2000);
     } catch (err: any) {
       setPopup({
@@ -127,7 +127,7 @@ function ResetPasswordForm() {
               No reset token provided. Please use the link from your email.
             </p>
             <Link
-              href={role === "doctor" ? "/doctor/login" : "/mother/login"}
+              href={role === "doctor" ? "/healthworker/login" : "/mother/login"}
               className="text-pink-600 hover:text-pink-700 font-medium underline"
             >
               Back to Login
@@ -238,7 +238,7 @@ function ResetPasswordForm() {
 
         <div className="text-center">
           <Link
-            href={role === "doctor" ? "/doctor/login" : "/mother/login"}
+            href={role === "doctor" ? "/healthworker/login" : "/mother/login"}
             className="text-pink-600 hover:text-pink-700 font-medium underline"
           >
             Back to Login

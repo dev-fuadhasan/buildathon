@@ -289,8 +289,8 @@ export default function Layout({ children }: Props) {
             </Link>
           </>
         );
-      } else if (pathname.startsWith("/doctor")) {
-        // Doctor context
+      } else if (pathname.startsWith("/doctor") || pathname.startsWith("/healthworker")) {
+        // Health worker context
         return (
           <>
             <Link
@@ -311,11 +311,11 @@ export default function Layout({ children }: Props) {
               MomsCare AI Chat
             </Link>
             <Link
-              href="/doctor/login"
+              href="/healthworker/login"
               className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
-                pathname === "/doctor/login"
+                pathname === "/healthworker/login" || pathname === "/doctor/login"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
-                  : pathname === "/doctor/register"
+                  : pathname === "/healthworker/register" || pathname === "/doctor/register"
                   ? "text-pink-600 border-2 border-pink-300 bg-transparent"
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
@@ -323,11 +323,11 @@ export default function Layout({ children }: Props) {
               Login
             </Link>
             <Link
-              href="/doctor/register"
+              href="/healthworker/register"
               className={`text-sm font-semibold transition-all px-4 py-2.5 rounded-lg cursor-pointer ${
-                pathname === "/doctor/register"
+                pathname === "/healthworker/register" || pathname === "/doctor/register"
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg"
-                  : pathname === "/doctor/login"
+                  : pathname === "/healthworker/login" || pathname === "/doctor/login"
                   ? "text-pink-600 border-2 border-pink-300 bg-transparent"
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}

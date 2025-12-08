@@ -254,22 +254,22 @@ export default function Home() {
               <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-blue-200 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
               <div className="relative">
                 <div className="mb-4 sm:mb-5 md:mb-6 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-xl">
-                  <Icon name="doctor" size={40} className="sm:w-12 sm:h-12 md:w-14 md:h-14 text-white" />
+                  <Icon name="nurse" size={40} className="sm:w-12 sm:h-12 md:w-14 md:h-14 text-white" />
                 </div>
                 <h3 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-extrabold text-neutral-900">{t.home.doctorsTitle}</h3>
                 <p className="mb-6 sm:mb-7 md:mb-8 text-sm sm:text-base md:text-lg text-neutral-700 leading-relaxed font-medium">{t.home.doctorsDesc}</p>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  {!isDoctor && (
+                  {(!isDoctor && !isNurse) && (
                     <>
                       <Link
-                        href="/doctor/register"
+                        href="/healthworker/register"
                         className="inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-blue-700 hover:to-cyan-700"
                       >
                         <span className="whitespace-nowrap">Join as Health Worker</span>
                         <span className="text-base sm:text-lg">→</span>
                       </Link>
                       <Link
-                        href="/doctor/login"
+                        href="/healthworker/login"
                         className="inline-flex items-center justify-center text-sm sm:text-base font-semibold px-6 py-3 sm:px-8 sm:py-4 bg-white text-blue-600 rounded-lg sm:rounded-xl border-2 border-blue-300 shadow-md hover:shadow-lg hover:bg-blue-50 transform hover:scale-105 transition-all duration-300"
                       >
                         <span className="whitespace-nowrap">Health Worker {t.common.login}</span>

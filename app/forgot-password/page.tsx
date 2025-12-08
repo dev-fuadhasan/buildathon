@@ -137,7 +137,7 @@ function ForgotPasswordForm() {
           <p className="text-slate-600">
             Remember your password?{" "}
             <Link
-              href={role === "doctor" ? "/doctor/login" : "/mother/login"}
+              href={role === "doctor" ? "/healthworker/login" : "/mother/login"}
               className="text-pink-600 hover:text-pink-700 font-medium underline"
             >
               Back to Login
