@@ -1,10 +1,11 @@
 import { groq, isGroqConfigured } from "./groqClient";
-import { getUnifiedSystemPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
 import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
-import { postProcessResponse } from "./responsePostProcessor";
+import { classifyQuestion, needsFollowUpQuestion } from "./chat/QuestionClassifier";
+import { buildSystemPrompt, type PromptContext } from "./chat/SystemPromptBuilder";
+import { validateAndCleanResponse } from "./chat/ResponseValidator";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -31,9 +32,6 @@ export async function askMomsCare(
     // Determine if user has profile data
     const hasProfile = !!(profileContext && profileContext.trim().length > 0);
     const userIsLoggedIn = isLoggedIn ?? hasProfile;
-    
-    // Get unified system prompt based on login status and profile availability
-    const unifiedPromptBase = getUnifiedSystemPrompt(userIsLoggedIn, hasProfile);
     
     // ==========================================
     // STEP 1: Get last user message for processing
@@ -87,65 +85,31 @@ export async function askMomsCare(
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
-    // Determine if question is general or personal (improved detection)
-    const generalKeywords = /\b(mayera|mothers|pregnant women|gorbhoboti|gorbho boti|manush|people|ki ki|what|kemon|how|kivabe|kkhon|when|kototi|how many|general|সাধারণ)\b/i;
-    const personalKeywords = /\b(amar|amake|ami|my|I have|I am|আমার|আমি|আমাকে)\b/i;
+    // Use modular question classifier
+    const classification = classifyQuestion(lastUserMessage, userIsLoggedIn);
+    const followUpCheck = needsFollowUpQuestion(lastUserMessage);
     
-    const hasGeneralKeywords = generalKeywords.test(lastUserMessage);
-    const hasPersonalKeywords = personalKeywords.test(lastUserMessage);
+    const isGeneralQuestion = classification.type === 'general';
+    const isPersonalQuestion = classification.type === 'personal';
+    const needsFollowUp = classification.needsFollowUp || followUpCheck.needed;
     
-    // Question is general if:
-    // 1. Has general keywords (mayera, ki ki, etc.) OR
-    // 2. No personal keywords (amar, ami) OR
-    // 3. Explicitly marked as general
-    const isGeneralQuestion = hasGeneralKeywords || (!hasPersonalKeywords && isPersonal === false) || (userIsLoggedIn && isPersonal === false);
+    console.log(`[Question Classification]`, {
+      type: classification.type,
+      needsFollowUp,
+      reason: classification.reason
+    });
     
-    // Question is personal only if:
-    // 1. Has personal keywords (amar, ami) AND
-    // 2. Not marked as general explicitly
-    const isPersonalizedMode = userIsLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA") && !isGeneralQuestion && (hasPersonalKeywords || isPersonal === true);
+    // Build system prompt using modular builder
+    const promptContext: PromptContext = {
+      isLoggedIn: userIsLoggedIn,
+      hasProfile,
+      isGeneralQuestion,
+      isPersonalQuestion,
+      language: userLanguage,
+      needsFollowUp
+    };
     
-    // Build complete system prompt using unified logic
-    let systemPrompt = unifiedPromptBase + languageInstruction;
-    
-    // Add health-related scope restriction
-    systemPrompt += `
-
-SCOPE:
-- Only answer health/pregnancy questions
-- Non-health questions: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
-`;
-    
-    // Add concise mode instruction (post-processor handles most validation)
-    if (userIsLoggedIn) {
-      if (isGeneralQuestion) {
-        systemPrompt += `\n\n🔵 MODE: GENERAL QUESTION
-User asking about "mothers/people" in general, NOT about herself.
-- Profile context excluded - answer generally
-- No emergency warnings unless question mentions specific emergency
-- Provide calm, educational pregnancy advice
-
-Examples:
-Q: "mayera ki ki mene cholbe?"
-A: "গর্ভবতী মায়েদের পুষ্টিকর খাবার খান, নিয়মিত চেকআপ করান..."
-
-Q: "pregnancy e vari jinis tola?"  
-A: "গর্ভাবস্থায় ভারী জিনিস তোলা এড়িয়ে চলা ভালো..."`;
-      } else if (isPersonalizedMode) {
-        systemPrompt += `\n\n🟢 MODE: PERSONAL QUESTION  
-User asking about HERSELF.
-- Use profile quietly to personalize
-- Never list prescriptions unless asked "amar prescription ki?"
-- Ask follow-up if ambiguous
-
-Example:
-Q: "amar pet betha"
-A: "কোথায় ব্যথা? কতক্ষণ ধরে?" (follow-up first)`;
-      }
-    } else {
-      systemPrompt += `\n\n⚪ MODE: LOGGED-OUT
-Answer as general pregnancy advice.`;
-    }
+    const systemPrompt = buildSystemPrompt(promptContext);
 
     // Extract weeks pregnant for RAG
     let trimester: number | undefined;
@@ -213,14 +177,17 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Only include profile context for PERSONAL questions, not GENERAL questions
-    const profileNote = (profileContext && isPersonalizedMode && !isGeneralQuestion)
+    // Only include profile context for PERSONAL questions
+    const profileNote = (profileContext && isPersonalQuestion && !isGeneralQuestion)
       ? `\n\n${profileContext}`
       : "";
     
     // Log for debugging
     if (profileContext && isGeneralQuestion) {
       console.log("[MomsCare] GENERAL question detected - profile context EXCLUDED");
+    }
+    if (isPersonalQuestion && profileContext) {
+      console.log("[MomsCare] PERSONAL question detected - profile context INCLUDED");
     }
 
     // Filter and format messages - only include user and assistant messages
@@ -354,10 +321,14 @@ Provide this calculation FIRST, then add context.`;
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
     
-    // Apply smart post-processing (fix question marks, remove inappropriate warnings, etc.)
-    const finalReply = postProcessResponse(cleanedReply, lastUserMessage, isGeneralQuestion);
+    // Apply modular validation and cleaning
+    const validation = validateAndCleanResponse(cleanedReply, lastUserMessage, isGeneralQuestion);
     
-    return finalReply;
+    if (validation.issues.length > 0) {
+      console.log("[Response Validation] Issues fixed:", validation.issues);
+    }
+    
+    return validation.cleaned;
   } catch (error: any) {
     console.error("Groq API error:", error);
     console.error("Error details:", {
