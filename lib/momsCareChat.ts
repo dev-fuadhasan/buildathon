@@ -1,5 +1,5 @@
 import { groq, isGroqConfigured } from "./groqClient";
-import { getSafetyPrompt } from "./safetyGuardrails";
+import { getUnifiedSystemPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
 import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
@@ -27,7 +27,12 @@ export async function askMomsCare(
   }
 
   try {
-    const safetyPrompt = getSafetyPrompt();
+    // Determine if user has profile data
+    const hasProfile = !!(profileContext && profileContext.trim().length > 0);
+    const userIsLoggedIn = isLoggedIn ?? hasProfile;
+    
+    // Get unified system prompt based on login status and profile availability
+    const unifiedPromptBase = getUnifiedSystemPrompt(userIsLoggedIn, hasProfile);
     
     // ==========================================
     // STEP 1: Get last user message for processing
@@ -82,38 +87,22 @@ export async function askMomsCare(
       : "";
     
     // Determine mode
-    const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
-    const isGeneralQuestion = isLoggedIn && isPersonal === false;
+    const isPersonalizedMode = userIsLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
+    const isGeneralQuestion = userIsLoggedIn && isPersonal === false;
     
-    // System prompt - MomsCare AI
-    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}
+    // Build complete system prompt using unified logic
+    let systemPrompt = unifiedPromptBase + languageInstruction;
+    
+    // Add health-related scope restriction
+    systemPrompt += `
 
-1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
-
-   If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
-
-2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
-
-3. Logged-in user: backend provides profile. Use it only when the question is about the user's own health. If the question is general, answer generally and say the answer is general.
-
-4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
-
-5. Do NOT give emergency warnings unless the user clearly mentions one of these:
-
-   heavy bleeding, severe abdominal pain, vomiting >24h without fluids, fainting, no fetal movement (20+ weeks), very high BP, seizures etc.
-
-6. Keep all answers short. No long explanations, no hormone details, no repetition, no medical lectures. One follow-up question only if needed.
-
-7. Do not assume anything not said by the user. Do not invent symptoms or repeat long lists.
-
-8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
-
-Goal: Provide short, calm, safe health guidance only.
-
-${safetyPrompt}`;
+SCOPE RESTRICTION:
+- Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
+- If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।" (in Bangla) or "I can only help with health and pregnancy-related questions." (in English)
+`;
     
     // Add specific instruction for current question type
-    if (isLoggedIn) {
+    if (userIsLoggedIn) {
       if (isGeneralQuestion) {
         systemPrompt += `\n\nCURRENT: Logged-in user, general question. Answer generally and state it is general.`;
       } else if (isPersonalizedMode) {
