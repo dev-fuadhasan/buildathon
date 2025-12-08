@@ -86,9 +86,23 @@ export async function askMomsCare(
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
-    // Determine mode
-    const isPersonalizedMode = userIsLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
-    const isGeneralQuestion = userIsLoggedIn && isPersonal === false;
+    // Determine if question is general or personal (improved detection)
+    const generalKeywords = /\b(mayera|mothers|pregnant women|gorbhoboti|gorbho boti|manush|people|ki ki|what|kemon|how|kivabe|kkhon|when|kototi|how many|general|সাধারণ)\b/i;
+    const personalKeywords = /\b(amar|amake|ami|my|I have|I am|আমার|আমি|আমাকে)\b/i;
+    
+    const hasGeneralKeywords = generalKeywords.test(lastUserMessage);
+    const hasPersonalKeywords = personalKeywords.test(lastUserMessage);
+    
+    // Question is general if:
+    // 1. Has general keywords (mayera, ki ki, etc.) OR
+    // 2. No personal keywords (amar, ami) OR
+    // 3. Explicitly marked as general
+    const isGeneralQuestion = hasGeneralKeywords || (!hasPersonalKeywords && isPersonal === false) || (userIsLoggedIn && isPersonal === false);
+    
+    // Question is personal only if:
+    // 1. Has personal keywords (amar, ami) AND
+    // 2. Not marked as general explicitly
+    const isPersonalizedMode = userIsLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA") && !isGeneralQuestion && (hasPersonalKeywords || isPersonal === true);
     
     // Build complete system prompt using unified logic
     let systemPrompt = unifiedPromptBase + languageInstruction;
@@ -99,17 +113,41 @@ export async function askMomsCare(
 SCOPE RESTRICTION:
 - Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
 - If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।" (in Bangla) or "I can only help with health and pregnancy-related questions." (in English)
+
+🚫 PRESCRIPTION DISPLAY RULES:
+- **NEVER show prescription details (medicine names, dosages, schedules) unless user explicitly asks:**
+  - "amar prescription ki?"
+  - "amar medicine ki?"
+  - "doctor ki medicine diyeche?"
+- You may USE prescription data internally to inform your answer
+- But DO NOT LIST medicines, dosages, or schedules in your response
+- Example: If user has diabetes medication, you can say "আপনার ডায়াবেটিসের ওষুধ নিয়মিত খান" but DON'T list "Metformin 500mg, 2x daily"
 `;
     
     // Add specific instruction for current question type
     if (userIsLoggedIn) {
       if (isGeneralQuestion) {
-        systemPrompt += `\n\nCURRENT: Logged-in user, general question. Answer generally and state it is general.`;
+        systemPrompt += `\n\n🔵 CURRENT MODE: GENERAL QUESTION
+- User is logged in but asking a GENERAL pregnancy question
+- Keywords detected: "mayera", "ki ki", "kemon", etc. (not "amar", "ami")
+- **DO NOT use profile, prescription, or personal data**
+- **DO NOT mention user's week, symptoms, medicines, or history**
+- Answer as if user is logged out
+- Provide general pregnancy advice only`;
       } else if (isPersonalizedMode) {
-        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Use profile data for personalized guidance.`;
+        systemPrompt += `\n\n🟢 CURRENT MODE: PERSONAL QUESTION
+- User is logged in and asking about HERSELF
+- Keywords detected: "amar", "ami", "my", etc.
+- Use profile data to personalize answer
+- **NEVER list prescription details unless user asks "amar prescription ki?"**
+- Use prescription info internally but DON'T display it
+- Check if follow-up needed before answering`;
       }
     } else {
-      systemPrompt += `\n\nCURRENT: Logged-out user. No personal information. Do not mention this unless directly asked. Answer questions directly.`;
+      systemPrompt += `\n\n⚪ CURRENT MODE: LOGGED-OUT USER
+- No personal information available
+- Answer questions directly as general advice
+- Do not mention lack of profile unless directly asked`;
     }
 
     // Extract weeks pregnant for RAG
