@@ -28,6 +28,7 @@ export default function NurseDashboard() {
   const [priorityList, setPriorityList] = useState<PriorityPatient[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [prioritySearchQuery, setPrioritySearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
   const [sortBy, setSortBy] = useState<"recent" | "priority" | "name">("recent");
   const [currentPage, setCurrentPage] = useState(1);
@@ -589,19 +590,45 @@ export default function NurseDashboard() {
           {/* AI Priority List (shown first/only on mobile by default) */}
           <div 
             ref={prioritySectionRef} 
-            className={`space-y-4 order-1 lg:order-2 ${activeTab !== "priority" ? "hidden lg:block" : "block"}`}
+            className={`space-y-4 order-1 lg:order-2 ${activeTab === "priority" ? "block" : "hidden"} lg:block`}
           >
             <DashboardCard title="AI Priority List">
               <p className="text-sm text-slate-600 mb-3">
                 Patients are automatically prioritized based on their medical data, urgency, and needs.
               </p>
+              
+              {/* Search Bar for Priority List */}
+              <div className="mb-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search priority patients..."
+                    className="input w-full pr-11 h-10"
+                    value={prioritySearchQuery}
+                    onChange={(e) => setPrioritySearchQuery(e.target.value)}
+                  />
+                  <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+
               {priorityList.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-sm">
                   No priority patients at the moment.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
-                  {priorityList.map((item, index) => (
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                  {priorityList
+                    .filter((item) => {
+                      if (!prioritySearchQuery) return true;
+                      const query = prioritySearchQuery.toLowerCase();
+                      return (
+                        item.patient.name.toLowerCase().includes(query) ||
+                        item.patient.phone.includes(query)
+                      );
+                    })
+                    .map((item, index) => (
                     <div
                       key={item.patient.id}
                       className="bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-2.5"
@@ -670,7 +697,7 @@ export default function NurseDashboard() {
           {/* Patient Management (hidden on mobile unless active) */}
           <div 
             ref={patientsSectionRef} 
-            className={`space-y-6 order-2 lg:order-1 ${activeTab !== "patients" ? "hidden lg:block" : "block"}`} 
+            className={`space-y-6 order-2 lg:order-1 ${activeTab === "patients" ? "block" : "hidden"} lg:block`} 
             id="patients"
           >
             <DashboardCard
