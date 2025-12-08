@@ -4,6 +4,7 @@ import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medica
 import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
+import { postProcessResponse } from "./responsePostProcessor";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -110,90 +111,40 @@ export async function askMomsCare(
     // Add health-related scope restriction
     systemPrompt += `
 
-SCOPE RESTRICTION:
-- Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
-- If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।" (in Bangla) or "I can only help with health and pregnancy-related questions." (in English)
-
-🚫 PRESCRIPTION DISPLAY RULES:
-- **NEVER show prescription details (medicine names, dosages, schedules) unless user explicitly asks:**
-  - "amar prescription ki?"
-  - "amar medicine ki?"
-  - "doctor ki medicine diyeche?"
-- You may USE prescription data internally to inform your answer
-- But DO NOT LIST medicines, dosages, or schedules in your response
-- Example: If user has diabetes medication, you can say "আপনার ডায়াবেটিসের ওষুধ নিয়মিত খান" but DON'T list "Metformin 500mg, 2x daily"
+SCOPE:
+- Only answer health/pregnancy questions
+- Non-health questions: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
 `;
     
-    // Add specific instruction for current question type
+    // Add concise mode instruction (post-processor handles most validation)
     if (userIsLoggedIn) {
       if (isGeneralQuestion) {
-        systemPrompt += `\n\n═══════════════════════════════════════════
-🔵 CURRENT MODE: GENERAL QUESTION
-═══════════════════════════════════════════
+        systemPrompt += `\n\n🔵 MODE: GENERAL QUESTION
+User asking about "mothers/people" in general, NOT about herself.
+- Profile context excluded - answer generally
+- No emergency warnings unless question mentions specific emergency
+- Provide calm, educational pregnancy advice
 
-**CRITICAL:** User asked about "mothers" or "people" in GENERAL, NOT about herself.
+Examples:
+Q: "mayera ki ki mene cholbe?"
+A: "গর্ভবতী মায়েদের পুষ্টিকর খাবার খান, নিয়মিত চেকআপ করান..."
 
-Question contains: "mayera", "gorbhoboti", "ki ki", "kemon" (GENERAL keywords)
-Question does NOT contain: "amar", "ami", "my" (PERSONAL keywords)
-
-**PROFILE CONTEXT HAS BEEN REMOVED - YOU HAVE NO ACCESS TO PERSONAL DATA**
-
-**STRICT RULES - YOU MUST FOLLOW:**
-❌ DO NOT use ANY profile data (you don't have access to it anyway)
-❌ DO NOT mention prescriptions, medicines, dosages
-❌ DO NOT mention user's pregnancy week
-❌ DO NOT mention user's symptoms or conditions
-❌ DO NOT mention user's medical history
-❌ DO NOT give personalized advice
-❌ DO NOT add emergency warnings unless question mentions specific emergency symptoms
-
-✅ ONLY provide general pregnancy advice
-✅ Answer as if user is logged out
-✅ Treat as educational/informational question
-✅ Give calm, general guidance
-✅ NO emergency warnings (unless question mentions specific emergency like "heavy bleeding")
-✅ Start your answer directly without "⚠️ HIGH PRIORITY" or similar warnings
-
-**Examples:**
-
-Question: "mayera ki ki mene cholbe?" (What should mothers follow?)
-❌ WRONG: "⚠️ HIGH PRIORITY... আপনার প্রেসক্রিপশনে Augmentin আছে..."
-❌ WRONG: "আপনি ৯ সপ্তাহের গর্ভবতী..."
-❌ WRONG: "আপনার ডেন্টাল ঔষধগুলি..."
-✅ RIGHT: "গর্ভবতী মায়েদের কিছু গুরুত্বপূর্ণ বিষয় মেনে চলা উচিত:
-১. পুষ্টিকর খাবার খান
-২. নিয়মিত চেকআপ করান
-৩. পর্যাপ্ত বিশ্রাম নিন
-৪. ডাক্তারের পরামর্শ মেনে চলুন"
-
-Question: "gorbhobosthay ki vitamin khawa uchit?" (What vitamins in pregnancy?)
-❌ WRONG: "আপনার প্রেসক্রিপশনে..."
-✅ RIGHT: "গর্ভাবস্থায় ফলিক এসিড, আয়রন, ক্যালসিয়াম, ভিটামিন ডি খাওয়া উচিত।"`;
+Q: "pregnancy e vari jinis tola?"  
+A: "গর্ভাবস্থায় ভারী জিনিস তোলা এড়িয়ে চলা ভালো..."`;
       } else if (isPersonalizedMode) {
-        systemPrompt += `\n\n═══════════════════════════════════════════
-🟢 CURRENT MODE: PERSONAL QUESTION
-═══════════════════════════════════════════
+        systemPrompt += `\n\n🟢 MODE: PERSONAL QUESTION  
+User asking about HERSELF.
+- Use profile quietly to personalize
+- Never list prescriptions unless asked "amar prescription ki?"
+- Ask follow-up if ambiguous
 
-User asked about HERSELF specifically.
-
-Question contains: "amar", "ami", "my" (PERSONAL keywords)
-
-**RULES:**
-✅ Use profile data to personalize answer
-✅ Consider her week, symptoms, conditions
-❌ NEVER list prescription details unless user asks "amar prescription ki?"
-❌ Use prescription info internally but DON'T display it
-✅ Check if follow-up needed before answering
-
-**Prescription Privacy:**
-User asks: "amar pet betha" → You check she has diabetes → Say "ডায়াবেটিস আছে, ডাক্তারকে জানান" ✅
-DON'T say: "Metformin 500mg খান" ❌`;
+Example:
+Q: "amar pet betha"
+A: "কোথায় ব্যথা? কতক্ষণ ধরে?" (follow-up first)`;
       }
     } else {
-      systemPrompt += `\n\n⚪ CURRENT MODE: LOGGED-OUT USER
-- No personal information available
-- Answer questions directly as general advice
-- Do not mention lack of profile unless directly asked`;
+      systemPrompt += `\n\n⚪ MODE: LOGGED-OUT
+Answer as general pregnancy advice.`;
     }
 
     // Extract weeks pregnant for RAG
@@ -403,7 +354,10 @@ Provide this calculation FIRST, then add context.`;
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
     
-    return cleanedReply;
+    // Apply smart post-processing (fix question marks, remove inappropriate warnings, etc.)
+    const finalReply = postProcessResponse(cleanedReply, lastUserMessage, isGeneralQuestion);
+    
+    return finalReply;
   } catch (error: any) {
     console.error("Groq API error:", error);
     console.error("Error details:", {
