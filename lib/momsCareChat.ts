@@ -9,6 +9,24 @@ import { validateAndCleanResponse } from "./chat/ResponseValidator";
 import { detectIntent, generateFollowUpQuestion } from "./chat/IntentDetector";
 import { handleSimpleQuery, ensureQuestionMarks } from "./chat/SimpleResponseHandler";
 
+// Lightweight fallback for logged-out general questions to avoid crashes and delays
+function generalFallbackResponse(question: string, language: Language): string {
+  const lower = question.toLowerCase();
+  const isBangla = language === "bn" || /[\u0980-\u09FF]/.test(question);
+
+  // Travel safety
+  if (/(long journey|long travel|long trip|vromon|ভ্রমণ|জার্নি|দীর্ঘ)/i.test(lower)) {
+    return isBangla
+      ? "গর্ভাবস্থায় দীর্ঘ ভ্রমণ সাধারণত সম্ভব, তবে কয়েকটি সতর্কতা মানুন: পর্যাপ্ত পানি পান করুন, প্রতি ১-২ ঘণ্টা অন্তর নড়াচড়া করুন, সিটবেল্ট পেটে নয়, নিতম্বের নিচে বাঁধুন, আরামদায়ক পোশাক পরুন, কোনো ঝুঁকির ইতিহাস থাকলে ডাক্তারের পরামর্শ নিন।"
+      : "Long travel in pregnancy is usually possible with precautions: stay hydrated, move every 1-2 hours, place the seatbelt below the belly, wear comfortable clothes, and consult your doctor if you have any risk factors.";
+  }
+
+  // Generic pregnancy safety
+  return isBangla
+    ? "গর্ভাবস্থায় নিরাপদ থাকতে সুষম খাবার, পর্যাপ্ত পানি, নিয়মিত হালকা ব্যায়াম, পর্যাপ্ত বিশ্রাম এবং ডাক্তারের নিয়মিত পরামর্শ মেনে চলুন। কোনো অস্বাভাবিক লক্ষণ হলে দ্রুত চিকিৎসকের পরামর্শ নিন।"
+    : "For pregnancy safety: eat balanced meals, stay hydrated, do light exercise, rest well, and follow your doctor's advice. If you notice unusual symptoms, seek medical care promptly.";
+}
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -120,9 +138,15 @@ export async function askMomsCare(
       }
     }
     
-    const datasetContext = relevantDatasetItems.length > 0 
+    const datasetContext = relevantDatasetItems.length > 0
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
+
+    // FAST EXIT: logged-out general questions with no dataset → use safe fallback (no AI call)
+    if (!userIsLoggedIn && quickIntent.intent === "ask_general_info" && relevantDatasetItems.length === 0) {
+      console.log("[Fallback] Logged-out general question - returning safe fallback response");
+      return generalFallbackResponse(lastUserMessage, userLanguage);
+    }
     
     // Use the quick intent we already detected
     const intent = quickIntent;
