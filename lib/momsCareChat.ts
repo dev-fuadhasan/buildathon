@@ -48,16 +48,9 @@ export async function askMomsCare(
     // ==========================================
     // STEP 3: Search dual dataset based on language
     // ==========================================
-    // Check if text has Bengali script or is Banglish (romanized)
-    const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
-    
-    // For Banglish (detected as "bn" but no Bengali script), search English dataset
-    // This is because Banglish uses Roman letters, so keyword matching works better with English dataset
-    const searchLanguage: Language = (userLanguage === "bn" && !hasBengaliScript) ? "en" : userLanguage;
-    
-    const relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, searchLanguage, 3); // Get top 3 relevant Q&A pairs
+    const relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, userLanguage, 3); // Get top 3 relevant Q&A pairs
     const datasetContext = relevantDatasetItems.length > 0 
-      ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's language (Bangla for Banglish)
+      ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) 
       : "";
     
     // Determine mode
