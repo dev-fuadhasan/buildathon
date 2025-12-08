@@ -8,7 +8,7 @@ import PatientCard from "@/components/PatientCard";
 import Badge from "@/components/Badge";
 import Icon from "@/components/Icon";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PatientData } from "@/lib/data";
 
@@ -32,6 +32,8 @@ export default function NurseDashboard() {
   const [sortBy, setSortBy] = useState<"recent" | "priority" | "name">("recent");
   const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(10);
+  const prioritySectionRef = useRef<HTMLDivElement | null>(null);
+  const patientsSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Determine status for priority badges
   const getStatus = (patient: PatientData) => {
@@ -490,7 +492,8 @@ export default function NurseDashboard() {
   );
 
   const tabs = [
-    { id: "dashboard", label: "Priority & Patients", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
+    { id: "priority", label: "Priority List", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
+    { id: "patients", label: "Patient Management", icon: "profile", action: "navigate" as const, href: "/nurse/dashboard#patients" },
     { id: "profile", label: "Profile", icon: "profile", action: "navigate" as const, href: "/nurse/profile" },
     { id: "logout", label: "Logout", action: "logout" as const },
   ];
@@ -516,13 +519,19 @@ export default function NurseDashboard() {
     <Layout>
       <div className="space-y-6">
         {/* Mobile Menu */}
-        <MobileDashboardMenu tabs={tabs} activeTab="dashboard" onTabChange={(id) => {
-          if (id === "dashboard") {
-            router.push("/nurse/dashboard");
-          } else if (id === "profile") {
-            router.push("/nurse/profile");
-          }
-        }} />
+        <MobileDashboardMenu
+          tabs={tabs}
+          activeTab="priority"
+          onTabChange={(id) => {
+            if (id === "priority") {
+              prioritySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else if (id === "patients") {
+              patientsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else if (id === "profile") {
+              router.push("/nurse/profile");
+            }
+          }}
+        />
 
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-blue-50 via-white to-cyan-50 rounded-2xl border-2 border-blue-100 p-6 sm:p-8 mb-6 shadow-sm">
@@ -577,7 +586,7 @@ export default function NurseDashboard() {
         {/* Main Content - Two Column Layout (priority first on mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Right Side - AI Priority List (shown first on mobile) */}
-          <div className="space-y-4 order-1 lg:order-2">
+          <div ref={prioritySectionRef} className="space-y-4 order-1 lg:order-2">
             <DashboardCard title="AI Priority List">
               <p className="text-sm text-slate-600 mb-3">
                 Patients are automatically prioritized based on their medical data, urgency, and needs.
@@ -655,7 +664,7 @@ export default function NurseDashboard() {
           </div>
 
           {/* Left Side - Patient Management */}
-          <div className="space-y-6 order-2 lg:order-1">
+          <div ref={patientsSectionRef} className="space-y-6 order-2 lg:order-1" id="patients">
             <DashboardCard
               title="Patient Management"
               action={
