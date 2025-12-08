@@ -102,28 +102,10 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      // Detect language
+      // Detect language (for safety check only)
       const userLanguage = detectLanguage(lastUserMessage);
       
-      // Translate messages for AI
-      const translatedMessages = await Promise.all(
-        messages.map(async (m: any) => {
-          if (m.role === "user") {
-            const msgLanguage = detectLanguage(m.content);
-            if (msgLanguage === "bn") {
-              try {
-                const translated = await translateToEnglish(m.content);
-                return { ...m, content: translated };
-              } catch (error) {
-                return m;
-              }
-            }
-          }
-          return m;
-        })
-      );
-      
-      // Translate last message for safety check
+      // Translate only for safety check (safety check needs English)
       let translatedUserMessage = lastUserMessage;
       if (userLanguage === "bn") {
         try {
@@ -133,7 +115,7 @@ export async function POST(req: NextRequest) {
         }
       }
       
-      // Safety check
+      // Safety check (uses translated message)
       const safetyCheck = checkSafety(translatedUserMessage, undefined);
       
       if (safetyCheck.requiresEmergency) {
@@ -156,8 +138,9 @@ export async function POST(req: NextRequest) {
           setTimeout(() => reject(new Error("Request timeout")), 55000);
         });
         
+        // Send messages directly to AI in original language (no translation)
         reply = await Promise.race([
-          askMomsCare(translatedMessages, undefined, [], undefined, false, false),
+          askMomsCare(messages, undefined, [], undefined, false, false),
           timeoutPromise
         ]) as string;
         
@@ -186,19 +169,10 @@ export async function POST(req: NextRequest) {
         reply = `${safetyCheck.recommendation}\n\n${reply}`;
       }
       
-      // Translate response back
-      let finalReply = reply;
-      if (userLanguage === "bn") {
-        try {
-          finalReply = await translateToBangla(reply);
-        } catch (error) {
-          finalReply = reply;
-        }
-      }
-      
+      // AI responds directly in user's language (no translation needed)
       // DO NOT store chat history for logged-out users
       return NextResponse.json({
-        reply: finalReply.trim(),
+        reply: reply.trim(),
         safetyWarning: safetyCheck.riskLevel !== "low",
         riskLevel: safetyCheck.riskLevel,
       });
@@ -401,8 +375,9 @@ export async function POST(req: NextRequest) {
         setTimeout(() => reject(new Error("Request timeout")), 55000);
       });
       
+      // Send messages directly to AI in original language (no translation)
       reply = await Promise.race([
-        askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
+        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
         timeoutPromise
       ]) as string;
       
@@ -490,16 +465,7 @@ export async function POST(req: NextRequest) {
       reply = `${safetyCheck.recommendation}\n\n${reply}`;
     }
     
-    // Translate response back to Bangla if user asked in Bangla/Banglish
-    let finalReply = reply;
-    if (userLanguage === "bn") {
-      try {
-        finalReply = await translateToBangla(reply);
-      } catch (error) {
-        finalReply = reply;
-      }
-    }
-    
+    // AI responds directly in user's language (no translation needed)
     // Store chat history for logged-in mothers only
     try {
       const updatedMessages: ChatMessage[] = messages.map((m: any) => ({
@@ -511,7 +477,7 @@ export async function POST(req: NextRequest) {
       // Add the new assistant response
       updatedMessages.push({
         role: "assistant",
-        content: finalReply.trim(),
+        content: reply.trim(),
         timestamp: new Date().toISOString(),
       });
       
@@ -522,7 +488,7 @@ export async function POST(req: NextRequest) {
     }
     
     return NextResponse.json({
-      reply: finalReply.trim(),
+      reply: reply.trim(),
       safetyWarning: safetyCheck.riskLevel !== "low",
       riskLevel: safetyCheck.riskLevel,
     });
