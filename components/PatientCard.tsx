@@ -31,19 +31,19 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
   const lastUpdated = patient.updatedAt || patient.createdAt;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-4">
-      <div className="flex items-start gap-4">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-3">
+      <div className="flex items-start gap-3">
         {/* Avatar */}
-        <div className={`flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white font-bold text-lg shadow-md`}>
+        <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white font-semibold text-base shadow-md`}>
           {patient.name.charAt(0).toUpperCase()}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="flex-1">
-              <h3 className="font-semibold text-slate-800 text-base mb-1">{patient.name}</h3>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+              <h3 className="font-semibold text-slate-800 text-sm mb-0.5">{patient.name}</h3>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <span className="flex items-center gap-1">
                   <Icon name="profile" size={14} className="text-slate-400" />
                   {patient.phone}
@@ -59,7 +59,7 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
           </div>
 
           {/* Metadata */}
-          <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-2">
+          <div className="flex flex-wrap gap-3 text-[11px] text-slate-500 mb-2">
             <span className="flex items-center gap-1">
               <Icon name="prescription" size={12} />
               {patient.prescriptions?.length || 0} Prescriptions
@@ -75,7 +75,7 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
           </div>
 
           {/* Added by & Last Updated */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-2">
+          <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-1.5">
             {patient.createdByName && (
               <span>Added by: {patient.createdByName}</span>
             )}
@@ -88,24 +88,24 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-2">
             {onView && (
               <button
                 onClick={onView}
-                className="btn-secondary text-[11px] px-2.5 py-1.5"
+                className="btn-secondary text-[11px] px-2.5 py-1"
               >
                 View
               </button>
             )}
             <button
               onClick={onEdit}
-              className="btn-secondary text-[11px] px-2.5 py-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="btn-secondary text-[11px] px-2.5 py-1 border-blue-300 text-blue-700 hover:bg-blue-50"
             >
               Edit
             </button>
             <button
               onClick={onDelete}
-              className="btn-ghost text-[11px] px-2.5 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="btn-ghost text-[11px] px-2.5 py-1 text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               Delete
             </button>

@@ -490,7 +490,7 @@ export default function NurseDashboard() {
   );
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
+    { id: "dashboard", label: "Priority & Patients", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
     { id: "profile", label: "Profile", icon: "profile", action: "navigate" as const, href: "/nurse/profile" },
     { id: "logout", label: "Logout", action: "logout" as const },
   ];
@@ -574,10 +574,88 @@ export default function NurseDashboard() {
           message={popup.message}
         />
 
-        {/* Main Content - Two Column Layout */}
+        {/* Main Content - Two Column Layout (priority first on mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Right Side - AI Priority List (shown first on mobile) */}
+          <div className="space-y-4 order-1 lg:order-2">
+            <DashboardCard title="AI Priority List">
+              <p className="text-sm text-slate-600 mb-3">
+                Patients are automatically prioritized based on their medical data, urgency, and needs.
+              </p>
+              {priorityList.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm">
+                  No priority patients at the moment.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+                  {priorityList.map((item, index) => (
+                    <div
+                      key={item.patient.id}
+                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border-2 border-blue-200">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-800 text-sm mb-0.5">{item.patient.name}</h3>
+                          <p className="text-xs text-slate-600 mb-1">
+                            📞 {item.patient.phone}
+                          </p>
+                          <p className="text-xs text-blue-700 font-medium mb-1 leading-relaxed">
+                            {item.priorityReason}
+                          </p>
+                          <div className="flex items-center justify-between gap-2 mt-1.5 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="priority" size="sm">
+                                Score: {item.priorityScore.toFixed(1)}
+                              </Badge>
+                              {(() => {
+                                const status = getStatus(item.patient);
+                                return <Badge variant={status.variant} size="sm">{status.label}</Badge>;
+                              })()}
+                            </div>
+                            <button
+                              onClick={async () => {
+                                const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
+                                  headers: headers(),
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setSelectedPatient(data.patient);
+                                  setPatientForm({
+                                    name: data.patient.name || "",
+                                    age: data.patient.age?.toString() || "",
+                                    phone: data.patient.phone || "",
+                                    email: data.patient.email || "",
+                                    address: data.patient.address || "",
+                                    bloodGroup: data.patient.bloodGroup || "",
+                                    medicalHistory: data.patient.medicalHistory || "",
+                                    allergies: data.patient.allergies || "",
+                                    currentMedications: data.patient.currentMedications || "",
+                                    emergencyContact: data.patient.emergencyContact || "",
+                                    emergencyPhone: data.patient.emergencyPhone || "",
+                                    notes: data.patient.notes || "",
+                                  });
+                                  setShowEditModal(true);
+                                }
+                              }}
+                              className="btn-primary text-[11px] px-2.5 py-1 font-semibold"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </DashboardCard>
+          </div>
+
           {/* Left Side - Patient Management */}
-          <div className="space-y-6">
+          <div className="space-y-6 order-2 lg:order-1">
             <DashboardCard
               title="Patient Management"
               action={
@@ -616,13 +694,13 @@ export default function NurseDashboard() {
               <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input
                       type="text"
                       placeholder="Search patients by name or number..."
-                      className="input w-full pl-10"
+                      className="input w-full pl-11 h-11"
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -657,7 +735,7 @@ export default function NurseDashboard() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
+                  <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
                     {paginatedPatients.map((patient) => (
                       <PatientCard
                         key={patient.id}

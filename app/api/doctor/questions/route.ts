@@ -18,10 +18,18 @@ export async function GET(req: NextRequest) {
 
   const allQuestions = await listAllQuestions();
   
-  // Filter: Only show unanswered questions OR questions answered by this doctor
-  const filteredQuestions = allQuestions.filter(
-    (q) => !q.answer || q.doctorId === user.id
-  );
+  // Filter: hide any question that has been answered or commented by another doctor
+  const filteredQuestions = allQuestions.filter((q) => {
+    const answeredByOther = q.answer && q.doctorId && q.doctorId !== user.id;
+    const commentedByOtherDoctor = q.comments?.some(
+      (c) => c.authorRole === "doctor" && c.authorId && c.authorId !== user.id
+    );
+    // Keep if not answered/commented by other doctors, or if it's this doctor's own question
+    if (answeredByOther || commentedByOtherDoctor) {
+      return q.doctorId === user.id;
+    }
+    return true;
+  });
 
   const enriched = await Promise.all(
     filteredQuestions.map(async (q) => {
