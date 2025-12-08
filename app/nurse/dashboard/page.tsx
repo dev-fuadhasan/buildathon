@@ -4,7 +4,10 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import MessagePopup from "@/components/MessagePopup";
 import MobileDashboardMenu from "@/components/MobileDashboardMenu";
+import PatientCard from "@/components/PatientCard";
+import Badge from "@/components/Badge";
 import Icon from "@/components/Icon";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PatientData } from "@/lib/data";
@@ -26,6 +29,9 @@ export default function NurseDashboard() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
+  const [sortBy, setSortBy] = useState<"recent" | "priority" | "name">("recent");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [patientsPerPage] = useState(10);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [patientForm, setPatientForm] = useState({
@@ -111,7 +117,13 @@ export default function NurseDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPatients(data.patients || []);
+        // Sort patients: newest first
+        const sortedPatients = (data.patients || []).sort((a: PatientData, b: PatientData) => {
+          const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+          const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        });
+        setPatients(sortedPatients);
       }
     } catch (err) {
       console.error("Failed to load patients:", err);
@@ -429,15 +441,39 @@ export default function NurseDashboard() {
     }
   };
 
-  const filteredPatients = patients.filter((p) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(query) ||
-      p.phone.includes(query) ||
-      (p.email && p.email.toLowerCase().includes(query))
-    );
-  });
+  // Filter and sort patients
+  const filteredAndSortedPatients = patients
+    .filter((p) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(query) ||
+        p.phone.includes(query) ||
+        (p.email && p.email.toLowerCase().includes(query))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "recent") {
+        const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+        const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+        return dateB - dateA; // Newest first
+      } else if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "priority") {
+        // Find priority score from priority list
+        const priorityA = priorityList.find(p => p.patient.id === a.id)?.priorityScore || 0;
+        const priorityB = priorityList.find(p => p.patient.id === b.id)?.priorityScore || 0;
+        return priorityB - priorityA; // Higher priority first
+      }
+      return 0;
+    });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedPatients.length / patientsPerPage);
+  const paginatedPatients = filteredAndSortedPatients.slice(
+    (currentPage - 1) * patientsPerPage,
+    currentPage * patientsPerPage
+  );
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
@@ -474,15 +510,45 @@ export default function NurseDashboard() {
           }
         }} />
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold gradient-text mb-2 sm:mb-3">
-              Nurse Dashboard
-            </h1>
-            <p className="text-sm sm:text-lg text-neutral-600">
-              {hospitalClinicName && `Hospital/Clinic: ${hospitalClinicName}`}
-            </p>
+        {/* Hero Section */}
+        <div className="bg-gradient-to-br from-blue-50 via-white to-cyan-50 rounded-2xl border-2 border-blue-100 p-6 sm:p-8 mb-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-2xl font-bold">🏥</span>
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold gradient-text">
+                    Nurse Dashboard
+                  </h1>
+                  {hospitalClinicName && (
+                    <p className="text-sm sm:text-base text-neutral-600 mt-1 flex items-center gap-2">
+                      <span className="text-blue-500">🏥</span>
+                      {hospitalClinicName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="hidden md:flex flex-wrap gap-2 sm:gap-3">
+              <button
+                onClick={() => router.push("/nurse/profile")}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Icon name="profile" size={20} />
+                My Profile
+              </button>
+              <button
+                className="btn-ghost text-sm"
+                onClick={() => {
+                  localStorage.removeItem("doctorToken");
+                  location.href = "/";
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
@@ -525,106 +591,121 @@ export default function NurseDashboard() {
                     });
                     setShowAddModal(true);
                   }}
-                  className="btn-primary text-sm flex items-center gap-2"
+                  className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold px-4 py-2.5 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
                 >
-                  <Icon name="add" size={16} />
+                  <Icon name="add" size={18} />
                   Add Patient
                 </button>
               }
             >
               {/* Search Bar */}
               <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="🔍 Search by name or mobile number..."
-                  className="input w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search patients by name or number..."
+                    className="input w-full pl-10"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1); // Reset to first page on search
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Sort Dropdown */}
+              <div className="mb-4 flex items-center gap-2">
+                <label className="text-sm text-slate-600 font-medium">Sort by:</label>
+                <select
+                  className="input text-sm py-1.5 px-3"
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as "recent" | "priority" | "name");
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="recent">Recent</option>
+                  <option value="priority">Priority</option>
+                  <option value="name">Name</option>
+                </select>
               </div>
 
               {/* Patient List */}
               {loading ? (
                 <div className="text-center py-8 text-slate-500">Loading patients...</div>
-              ) : filteredPatients.length === 0 ? (
+              ) : filteredAndSortedPatients.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   {searchQuery ? "No patients found matching your search." : "No patients added yet. Click 'Add Patient' to get started."}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {filteredPatients.map((patient) => (
-                    <div
-                      key={patient.id}
-                      className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-800">{patient.name}</h3>
-                          <p className="text-sm text-slate-600 mt-1">
-                            📞 {patient.phone}
-                            {patient.age && ` • Age: ${patient.age}`}
-                          </p>
-                          {patient.medicalHistory && (
-                            <p className="text-xs text-slate-500 mt-2 line-clamp-2">
-                              {patient.medicalHistory}
-                            </p>
-                          )}
-                          <div className="flex gap-2 mt-2 text-xs text-slate-500">
-                            <span>Prescriptions: {patient.prescriptions?.length || 0}</span>
-                            <span>•</span>
-                            <span>Reports: {patient.reports?.length || 0}</span>
-                            <span>•</span>
-                            <span>Documents: {patient.documents?.length || 0}</span>
-                          </div>
-                          {patient.createdByName && (
-                            <p className="text-xs text-slate-400 mt-1">
-                              Added by: {patient.createdByName}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2 ml-4">
-                          <button
-                            onClick={async () => {
-                              setSelectedPatient(patient);
-                              // Load full patient details
-                              const res = await fetch(`/api/nurse/patients/${patient.id}`, {
-                                headers: headers(),
-                              });
-                              if (res.ok) {
-                                const data = await res.json();
-                                setSelectedPatient(data.patient);
-                                setPatientForm({
-                                  name: data.patient.name || "",
-                                  age: data.patient.age?.toString() || "",
-                                  phone: data.patient.phone || "",
-                                  email: data.patient.email || "",
-                                  address: data.patient.address || "",
-                                  bloodGroup: data.patient.bloodGroup || "",
-                                  medicalHistory: data.patient.medicalHistory || "",
-                                  allergies: data.patient.allergies || "",
-                                  currentMedications: data.patient.currentMedications || "",
-                                  emergencyContact: data.patient.emergencyContact || "",
-                                  emergencyPhone: data.patient.emergencyPhone || "",
-                                  notes: data.patient.notes || "",
-                                });
-                                setShowEditModal(true);
-                              }
-                            }}
-                            className="btn-secondary text-xs px-3 py-1"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeletePatient(patient.id)}
-                            className="btn-ghost text-xs px-3 py-1 text-red-600 hover:text-red-700"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                <>
+                  <div className="space-y-3">
+                    {paginatedPatients.map((patient) => (
+                      <PatientCard
+                        key={patient.id}
+                        patient={patient}
+                        onEdit={async () => {
+                          setSelectedPatient(patient);
+                          const res = await fetch(`/api/nurse/patients/${patient.id}`, {
+                            headers: headers(),
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setSelectedPatient(data.patient);
+                            setPatientForm({
+                              name: data.patient.name || "",
+                              age: data.patient.age?.toString() || "",
+                              phone: data.patient.phone || "",
+                              email: data.patient.email || "",
+                              address: data.patient.address || "",
+                              bloodGroup: data.patient.bloodGroup || "",
+                              medicalHistory: data.patient.medicalHistory || "",
+                              allergies: data.patient.allergies || "",
+                              currentMedications: data.patient.currentMedications || "",
+                              emergencyContact: data.patient.emergencyContact || "",
+                              emergencyPhone: data.patient.emergencyPhone || "",
+                              notes: data.patient.notes || "",
+                            });
+                            setShowEditModal(true);
+                          }
+                        }}
+                        onDelete={() => handleDeletePatient(patient.id)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+                      <p className="text-sm text-slate-600">
+                        Showing {(currentPage - 1) * patientsPerPage + 1} to {Math.min(currentPage * patientsPerPage, filteredAndSortedPatients.length)} of {filteredAndSortedPatients.length} patients
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="btn-secondary text-sm px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="flex items-center px-3 py-1 text-sm text-slate-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="btn-secondary text-sm px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </DashboardCard>
           </div>
@@ -644,52 +725,55 @@ export default function NurseDashboard() {
                   {priorityList.map((item, index) => (
                     <div
                       key={item.patient.id}
-                      className="border border-slate-200 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-white"
+                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg border-2 border-blue-200">
                           {index + 1}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-800">{item.patient.name}</h3>
-                          <p className="text-sm text-slate-600 mt-1">📞 {item.patient.phone}</p>
-                          <p className="text-sm text-blue-700 mt-2 font-medium">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-800 text-base mb-1">{item.patient.name}</h3>
+                          <p className="text-sm text-slate-600 mb-2">
+                            📞 {item.patient.phone}
+                          </p>
+                          <p className="text-sm text-blue-700 font-medium mb-2 leading-relaxed">
                             {item.priorityReason}
                           </p>
-                          <div className="mt-2 text-xs text-slate-500">
-                            Priority Score: {item.priorityScore.toFixed(1)}
+                          <div className="flex items-center justify-between mt-2">
+                            <Badge variant="priority" size="sm">
+                              Score: {item.priorityScore.toFixed(1)}
+                            </Badge>
+                            <button
+                              onClick={async () => {
+                                const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
+                                  headers: headers(),
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setSelectedPatient(data.patient);
+                                  setPatientForm({
+                                    name: data.patient.name || "",
+                                    age: data.patient.age?.toString() || "",
+                                    phone: data.patient.phone || "",
+                                    email: data.patient.email || "",
+                                    address: data.patient.address || "",
+                                    bloodGroup: data.patient.bloodGroup || "",
+                                    medicalHistory: data.patient.medicalHistory || "",
+                                    allergies: data.patient.allergies || "",
+                                    currentMedications: data.patient.currentMedications || "",
+                                    emergencyContact: data.patient.emergencyContact || "",
+                                    emergencyPhone: data.patient.emergencyPhone || "",
+                                    notes: data.patient.notes || "",
+                                  });
+                                  setShowEditModal(true);
+                                }
+                              }}
+                              className="btn-primary text-xs px-3 py-1.5 font-semibold"
+                            >
+                              View Details
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={async () => {
-                            // Load full patient details
-                            const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
-                              headers: headers(),
-                            });
-                            if (res.ok) {
-                              const data = await res.json();
-                              setSelectedPatient(data.patient);
-                              setPatientForm({
-                                name: data.patient.name || "",
-                                age: data.patient.age?.toString() || "",
-                                phone: data.patient.phone || "",
-                                email: data.patient.email || "",
-                                address: data.patient.address || "",
-                                bloodGroup: data.patient.bloodGroup || "",
-                                medicalHistory: data.patient.medicalHistory || "",
-                                allergies: data.patient.allergies || "",
-                                currentMedications: data.patient.currentMedications || "",
-                                emergencyContact: data.patient.emergencyContact || "",
-                                emergencyPhone: data.patient.emergencyPhone || "",
-                                notes: data.patient.notes || "",
-                              });
-                              setShowEditModal(true);
-                            }
-                          }}
-                          className="btn-secondary text-xs px-3 py-1"
-                        >
-                          View
-                        </button>
                       </div>
                     </div>
                   ))}
@@ -1374,6 +1458,18 @@ export default function NurseDashboard() {
           </div>
         )}
       </div>
+
+      {/* Floating Chat Button */}
+      <Link
+        href="/chat"
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-200 group"
+        title="Chat with MomsCare AI"
+      >
+        <Icon name="chat" size={24} className="text-white" />
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          AI
+        </span>
+      </Link>
     </Layout>
   );
 }

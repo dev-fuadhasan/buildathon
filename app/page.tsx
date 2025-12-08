@@ -12,12 +12,41 @@ export default function Home() {
   const router = useRouter();
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
+  const [isNurse, setIsNurse] = useState(false);
+  const [userRole, setUserRole] = useState<"doctor" | "nurse" | "others" | null>(null);
 
   useEffect(() => {
     const motherToken = localStorage.getItem("motherToken");
     const doctorToken = localStorage.getItem("doctorToken");
     setIsMother(!!motherToken);
     setIsDoctor(!!doctorToken);
+    
+    // Check if doctor token belongs to nurse/others
+    if (doctorToken) {
+      const checkRole = async () => {
+        try {
+          const res = await fetch("/api/doctor/profile", {
+            headers: { Authorization: `Bearer ${doctorToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const role = data.profile?.role;
+            if (role === "nurse" || role === "others") {
+              setIsNurse(true);
+              setIsDoctor(false);
+              setUserRole(role);
+            } else {
+              setIsNurse(false);
+              setIsDoctor(true);
+              setUserRole("doctor");
+            }
+          }
+        } catch {
+          setIsNurse(false);
+        }
+      };
+      checkRole();
+    }
   }, []);
 
   const handleMotherClick = (e: React.MouseEvent) => {
@@ -31,7 +60,9 @@ export default function Home() {
 
   const handleDoctorClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isDoctor) {
+    if (isNurse) {
+      router.push("/nurse/dashboard");
+    } else if (isDoctor) {
       router.push("/doctor/dashboard");
     } else {
       router.push("/doctor/register");
@@ -245,7 +276,7 @@ export default function Home() {
                       </Link>
                     </>
                   )}
-                  {isDoctor && (
+                  {(isDoctor || isNurse) && (
                     <button
                       onClick={handleDoctorClick}
                       className="inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"

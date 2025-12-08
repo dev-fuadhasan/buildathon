@@ -12,6 +12,7 @@ export default function Layout({ children }: Props) {
   const isHome = pathname === "/";
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
+  const [isNurse, setIsNurse] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -24,6 +25,30 @@ export default function Layout({ children }: Props) {
     setIsMother(!!motherToken);
     setIsDoctor(!!doctorToken);
     setIsAdmin(!!adminToken);
+    
+    // Check if doctor token belongs to nurse/others
+    if (doctorToken) {
+      const checkNurseRole = async () => {
+        try {
+          const res = await fetch("/api/doctor/profile", {
+            headers: { Authorization: `Bearer ${doctorToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.profile?.role === "nurse" || data.profile?.role === "others") {
+              setIsNurse(true);
+              setIsDoctor(false);
+            } else {
+              setIsNurse(false);
+              setIsDoctor(true);
+            }
+          }
+        } catch {
+          setIsNurse(false);
+        }
+      };
+      checkNurseRole();
+    }
 
     // Redirect logged-in users to their dashboards if on home page
     if (isHome) {
@@ -105,8 +130,98 @@ export default function Layout({ children }: Props) {
           </button>
         </>
       );
-    } else if (isDoctor || isAdmin) {
-      // Logged in as doctor or admin - show chat link
+    } else if (isNurse) {
+      // Logged in as nurse - show full navigation
+      return (
+        <>
+          <Link
+            href="/nurse/dashboard"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/nurse/dashboard"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/nurse/dashboard"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/nurse/dashboard"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Manage Patients
+          </Link>
+          <Link
+            href="/nurse/profile"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/nurse/profile"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Profile
+          </Link>
+          <button
+            onClick={() => {
+              localStorage.removeItem("doctorToken");
+              location.href = "/";
+            }}
+            className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        </>
+      );
+    } else if (isDoctor) {
+      // Logged in as doctor - show navigation
+      return (
+        <>
+          <Link
+            href="/doctor/dashboard"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/doctor/dashboard"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/doctor/dashboard"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/doctor/dashboard"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Q&A
+          </Link>
+          <Link
+            href="/doctor/profile"
+            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+              pathname === "/doctor/profile"
+                ? "text-blue-600 bg-blue-50 font-semibold"
+                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
+            }`}
+          >
+            Profile
+          </Link>
+          <button
+            onClick={() => {
+              localStorage.removeItem("doctorToken");
+              location.href = "/";
+            }}
+            className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        </>
+      );
+    } else if (isAdmin) {
+      // Logged in as admin - show chat link
       return (
         <>
           <Link
@@ -292,6 +407,7 @@ export default function Layout({ children }: Props) {
             {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
             {pathname.startsWith("/mother/dashboard") || 
              pathname.startsWith("/doctor/dashboard") || 
+             pathname.startsWith("/nurse/dashboard") ||
              pathname.startsWith("/admin/dashboard") ? (
               <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden"></div>
             ) : (
@@ -313,8 +429,11 @@ export default function Layout({ children }: Props) {
             )}
           </div>
           
-          {/* Mobile menu - Hide on mother dashboard (handled by MobileDashboardMenu) */}
-          {mobileMenuOpen && !pathname.startsWith("/mother/dashboard") && (
+          {/* Mobile menu - Hide on dashboards (handled by MobileDashboardMenu) */}
+          {mobileMenuOpen && !pathname.startsWith("/mother/dashboard") && 
+           !pathname.startsWith("/doctor/dashboard") && 
+           !pathname.startsWith("/nurse/dashboard") && 
+           !pathname.startsWith("/admin/dashboard") && (
             <nav className="lg:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-2">
               {getNavItems()}
             </nav>
