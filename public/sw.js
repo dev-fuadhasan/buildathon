@@ -1,6 +1,6 @@
 // Service Worker for Offline Support
 // Version updates with each deployment to force cache refresh
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v2.1.0';
 const CACHE_NAME = `momscare-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline';
 
@@ -50,6 +50,16 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Skip unsupported schemes (chrome-extension, chrome, about, data, blob, etc.)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Skip cross-origin requests (only cache same-origin)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // Skip API calls - always use network
   if (url.pathname.startsWith('/api/')) {
     return;
@@ -91,10 +101,21 @@ self.addEventListener('fetch', (event) => {
           // Return cached version, but also update cache in background
           fetch(event.request)
             .then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
+              if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                 const responseToCache = networkResponse.clone();
                 caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(event.request, responseToCache);
+                  // Extra safety check before caching
+                  try {
+                    const requestUrl = new URL(event.request.url);
+                    // Only cache http/https and same-origin
+                    if (requestUrl.protocol.startsWith('http') && requestUrl.origin === self.location.origin) {
+                      cache.put(event.request, responseToCache).catch((err) => {
+                        console.warn('Failed to update cache:', event.request.url, err);
+                      });
+                    }
+                  } catch (err) {
+                    console.warn('Cache update error:', err);
+                  }
                 });
               }
             })
@@ -107,11 +128,22 @@ self.addEventListener('fetch', (event) => {
         // Not in cache, fetch from network
         return fetch(event.request)
           .then((response) => {
-            // Only cache successful responses
+            // Only cache successful responses from same origin
             if (response && response.status === 200 && response.type === 'basic') {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, responseToCache);
+                // Extra safety check before caching
+                try {
+                  const requestUrl = new URL(event.request.url);
+                  // Only cache http/https and same-origin
+                  if (requestUrl.protocol.startsWith('http') && requestUrl.origin === self.location.origin) {
+                    cache.put(event.request, responseToCache).catch((err) => {
+                      console.warn('Failed to cache:', event.request.url, err);
+                    });
+                  }
+                } catch (err) {
+                  console.warn('Cache put error:', err);
+                }
               });
             }
             return response;
