@@ -60,7 +60,7 @@ export async function askMomsCare(
     const simpleResponse = handleSimpleQuery(lastUserMessage, userIsLoggedIn, userLanguage);
     if (simpleResponse.handled) {
       console.log('[SimpleHandler] Instant response - no AI API calls needed');
-      return ensureQuestionMarks(simpleResponse.response!);
+      return simpleResponse.response!; // Already properly formatted
     }
     
     // ==========================================
@@ -70,7 +70,7 @@ export async function askMomsCare(
       const followUp = generateFollowUpQuestion(lastUserMessage, quickIntent);
       if (followUp) {
         console.log('[FollowUp] Asking for clarification');
-        return ensureQuestionMarks(followUp);
+        return followUp; // Already has proper ? marks
       }
     }
     
@@ -82,31 +82,42 @@ export async function askMomsCare(
     const isBanglish = userLanguage === "bn" && !hasBengaliScript;
     
     let searchQuery = lastUserMessage;
-    let relevantDatasetItems;
+    let relevantDatasetItems: any[] = [];
     
-    // SMART TRANSLATION: Only translate when it adds value
-    const shouldTranslate = isBanglish && userIsLoggedIn && quickIntent.intent !== 'ask_profile_info';
+    // SMART TRANSLATION: Skip for logged-out users (prevent crashes)
+    const shouldTranslate = isBanglish && userIsLoggedIn && quickIntent.intent !== 'ask_profile_info' && quickIntent.intent !== 'ask_general_info';
     
     if (shouldTranslate) {
       try {
-        console.log(`[Banglish] Translating for better search...`);
+        console.log(`[Banglish] Translating for personalized query...`);
         const translatedQuery = await translateToEnglish(lastUserMessage);
         searchQuery = translatedQuery || lastUserMessage;
         console.log(`[Banglish] Translated: ${searchQuery}`);
         relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 2);
       } catch (error) {
-        console.warn("Banglish translation failed, using fallback:", error);
-        // Fallback: search both datasets without translation
-        const enResults = searchDatasetByLanguage(lastUserMessage, "en", 2);
-        const bnResults = searchDatasetByLanguage(lastUserMessage, "bn", 2);
-        relevantDatasetItems = enResults.length > 0 ? enResults : bnResults;
+        console.warn("Banglish translation failed, using direct search:", error);
+        // Fallback: direct search without translation
+        relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "en", 2);
       }
     } else {
-      // Direct search (faster, no API call)
+      // Direct search (faster, no API call needed)
+      // For Banglish, try English first as many keywords match
       const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
-      const searchLang = isBanglish ? "en" : userLanguage; // Search English for Banglish
-      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, searchLang, numResults);
-      console.log(`[Dataset] Direct search in ${searchLang}: ${relevantDatasetItems.length} results`);
+      const searchLang = isBanglish ? "en" : userLanguage;
+      
+      try {
+        relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, searchLang, numResults);
+        console.log(`[Dataset] Direct search in ${searchLang}: ${relevantDatasetItems.length} results`);
+        
+        // If no results and it's Banglish, try Bangla too
+        if (relevantDatasetItems.length === 0 && isBanglish) {
+          relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "bn", numResults);
+          console.log(`[Dataset] Fallback search in bn: ${relevantDatasetItems.length} results`);
+        }
+      } catch (error) {
+        console.error("Dataset search error:", error);
+        relevantDatasetItems = []; // Continue without dataset context
+      }
     }
     
     const datasetContext = relevantDatasetItems.length > 0 

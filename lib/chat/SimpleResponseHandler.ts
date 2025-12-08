@@ -51,8 +51,9 @@ export function handleSimpleQuery(
     }
   }
   
-  // Logged-out users asking personal questions → redirect to general
-  if (!isLoggedIn && /^amar|^ami/.test(lower)) {
+  // Logged-out users asking personal medical questions → redirect to login
+  // Only intercept clear medical questions needing personal data
+  if (!isLoggedIn && /^(amar|ami) (ki|kemon|koto)/.test(lower) && /(alargy|allergy|medicine|oshudh|betha|pain|problem)/.test(lower)) {
     return {
       handled: true,
       response: userLanguage === 'bn'
@@ -65,44 +66,40 @@ export function handleSimpleQuery(
 }
 
 /**
- * Fix missing question marks AGGRESSIVELY
+ * Fix missing question marks - SIMPLE and SAFE
+ * Only adds ? to obvious questions that are missing it
  */
 export function ensureQuestionMarks(text: string): string {
-  // Split into sentences
-  const sentences = text.split(/([।.?!\n]+)/);
+  // SIMPLE APPROACH: Only fix obvious missing question marks
+  // Don't mess with existing punctuation
   
-  let fixed = '';
-  for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i].trim();
-    if (!sentence) continue;
-    
-    // Skip punctuation marks themselves
-    if (/^[।.?!\n]+$/.test(sentence)) {
-      fixed += sentence;
-      continue;
-    }
-    
-    // Check if it's a question
-    const isBanglaQuestion = /^(কি|কে|কেন|কখন|কোথায|কোথায়|কেমন|কত|কী|কোন|কার)/.test(sentence) ||
-                             /(কি|কেন|কখন|কোথায়|কেমন|কত|কী|পারি|পারেন|পারব)$/.test(sentence);
-    
-    const isEnglishQuestion = /^(what|who|when|where|why|how|which|can|could|should|do|does|did|is|are|will|would)/i.test(sentence) ||
-                              /(help|assist|\?)$/.test(sentence);
-    
-    const hasQuestionMark = /[?।।]$/.test(sentence);
-    
-    if ((isBanglaQuestion || isEnglishQuestion) && !hasQuestionMark) {
-      fixed += sentence + '?';
-    } else {
-      fixed += sentence;
-    }
-    
-    // Add space between sentences if needed
-    if (i < sentences.length - 1 && !/[\n]/.test(sentence)) {
-      fixed += ' ';
-    }
+  if (!text || text.trim().length === 0) {
+    return text;
   }
   
-  return fixed.trim();
+  // Split by line breaks to handle each line separately
+  const lines = text.split('\n');
+  const fixed = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+    
+    // Already has question mark or ends with punctuation? Leave it alone
+    if (/[?।.]$/.test(trimmed)) {
+      return line;
+    }
+    
+    // Check if it's clearly a question (starts with question word)
+    const isBanglaQuestion = /^(কি |কে |কেন |কখন |কোথায় |কেমন |কত |কী |কোন |কার )/.test(trimmed);
+    const isEnglishQuestion = /^(what |who |when |where |why |how |which |can |could |should |do |does |did |is |are |will |would )/i.test(trimmed);
+    
+    // Only add ? if it's clearly a question AND doesn't have punctuation
+    if ((isBanglaQuestion || isEnglishQuestion) && !/[।.?!]$/.test(trimmed)) {
+      return line + '?';
+    }
+    
+    return line;
+  });
+  
+  return fixed.join('\n');
 }
 
