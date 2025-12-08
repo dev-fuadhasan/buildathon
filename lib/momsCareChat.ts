@@ -1,8 +1,9 @@
 import { groq, isGroqConfigured } from "./groqClient";
 import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
-import { searchDataset, formatKnowledgeContext } from "./knowledgeBase";
+import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage } from "./translation";
+import { getForcedLanguage } from "./datasetConfig";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -36,18 +37,21 @@ export async function askMomsCare(
       .pop()?.content || "";
     
     // ==========================================
-    // STEP 2: Detect language from user message
+    // STEP 2: Detect language from user message (or use forced language from config)
     // ==========================================
-    const userLanguage = detectLanguage(lastUserMessage);
+    const forcedLanguage = getForcedLanguage();
+    const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
     const languageInstruction = userLanguage === "bn"
       ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
       : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
     
     // ==========================================
-    // STEP 3: Search knowledge base dataset
+    // STEP 3: Search dual dataset based on language
     // ==========================================
-    const relevantChunks = searchDataset(lastUserMessage, 2); // Get top 2 relevant chunks
-    const datasetContext = relevantChunks ? formatKnowledgeContext(relevantChunks) : "";
+    const relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, userLanguage, 3); // Get top 3 relevant Q&A pairs
+    const datasetContext = relevantDatasetItems.length > 0 
+      ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) 
+      : "";
     
     // Determine mode
     const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
