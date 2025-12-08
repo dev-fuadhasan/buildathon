@@ -783,7 +783,7 @@ export default function AdminDashboard() {
                           {d.name ? d.name.charAt(0).toUpperCase() : "D"}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-lg">{d.name || "Unnamed doctor"}</p>
+                          <p className="font-semibold text-lg">{d.name || "Unnamed health worker"}</p>
                           <p className="text-sm text-slate-600">{d.email}</p>
                           {d.specialty && (
                             <p className="text-xs text-slate-500 mt-1">Specialty: {d.specialty}</p>
@@ -1078,7 +1078,7 @@ export default function AdminDashboard() {
                 }).map((d) => (
                   <ListCard
                     key={d.id}
-                    title={d.name || "Unnamed doctor"}
+                    title={d.name || "Unnamed health worker"}
                     subtitle={d.email}
                     badge={
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -1493,11 +1493,11 @@ export default function AdminDashboard() {
           </DashboardCard>
         )}
 
-        {/* Doctor Details Modal */}
+        {/* Health Worker Details Modal */}
         <DetailModal
           isOpen={!!selectedDoctor}
           onClose={() => setSelectedDoctor(null)}
-          title={`Doctor Details: ${selectedDoctor?.name || "N/A"}`}
+          title={`Health Worker Details: ${selectedDoctor?.name || "N/A"}`}
         >
           {selectedDoctor && (
             <div className="space-y-4">
@@ -2022,20 +2022,20 @@ export default function AdminDashboard() {
                   ? (
                     <span className="flex items-center gap-2">
                       <Icon name="approve" size={18} />
-                      Approve Doctor
+                      Approve Health Worker
                     </span>
                   )
                   : actionModal.action === "reject"
                   ? (
                     <span className="flex items-center gap-2">
                       <Icon name="reject" size={18} />
-                      Reject Doctor
+                      Reject Health Worker
                     </span>
                   )
                   : (
                     <span className="flex items-center gap-2">
                       <Icon name="delete" size={18} />
-                      Delete Doctor
+                      Delete Health Worker
                     </span>
                   )}
               </h2>
@@ -2044,7 +2044,7 @@ export default function AdminDashboard() {
                   <p className="text-red-600 font-semibold mb-4">
                     <span className="flex items-start gap-2">
                       <Icon name="warning" size={20} className="mt-0.5" />
-                      <span>Are you sure you want to delete this doctor? This action cannot be undone.</span>
+                      <span>Are you sure you want to delete this health worker? This action cannot be undone.</span>
                     </span>
                   </p>
                   <div className="flex gap-3">
@@ -2066,7 +2066,7 @@ export default function AdminDashboard() {
                 <>
                   <p className="text-slate-600 mb-4">
                     {actionModal.action === "approve"
-                      ? "Add an optional comment for the doctor:"
+                      ? "Add an optional comment for the health worker:"
                       : "Please provide a reason for rejection (required):"}
                   </p>
                   <textarea

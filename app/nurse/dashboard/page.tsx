@@ -614,6 +614,10 @@ export default function NurseDashboard() {
               ) : (
                 <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
                   {priorityList
+                    .map((item, originalIndex) => ({
+                      ...item,
+                      originalIndex,
+                    }))
                     .filter((item) => {
                       if (!prioritySearchQuery) return true;
                       const query = prioritySearchQuery.toLowerCase();
@@ -622,14 +626,14 @@ export default function NurseDashboard() {
                         item.patient.phone.includes(query)
                       );
                     })
-                    .map((item, index) => (
+                    .map((item) => (
                     <div
                       key={item.patient.id}
                       className="bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-2.5"
                     >
                       <div className="flex items-start gap-2.5">
                         <div className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border-2 border-blue-200">
-                          {index + 1}
+                          {item.originalIndex + 1}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-slate-800 text-[13px] mb-0.5">{item.patient.name}</h3>
