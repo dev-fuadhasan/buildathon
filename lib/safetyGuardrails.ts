@@ -78,12 +78,47 @@ const MEDIUM_RISK_FLAGS = [
 ];
 
 /**
+ * Check if message is a routine pregnancy question (not an emergency)
+ */
+function isRoutineQuestion(message: string): boolean {
+  const routinePatterns = [
+    // Appointments and checkups
+    /\b(appointment|checkup|check-up|visit|schedule|antenatal|prenatal|postnatal)\b/gi,
+    /\b(how many|how much|kototi|kotota|kotogulo|koto)\b/gi,
+    /\b(should i|can i|is it safe|is it okay|ami ki|ki kora)\b/gi,
+    
+    // Educational questions
+    /\b(what is|what are|how does|how do|why|when should|ki|kemon|kivabe|kkhon)\b/gi,
+    /\b(learn|know|understand|prepare|plan|jante|bujhte|shikha)\b/gi,
+    
+    // Routine pregnancy topics
+    /\b(diet|nutrition|exercise|vitamins|supplements|food|khabar|khana)\b/gi,
+    /\b(weight gain|baby movement|growth|development|bari|briddhi)\b/gi,
+    /\b(scan|ultrasound|test|report|result|porikkha)\b/gi,
+    
+    // General advice
+    /\b(advice|suggestion|recommend|tips|guide|poramorsho|upodesh)\b/gi,
+  ];
+  
+  for (const pattern of routinePatterns) {
+    if (pattern.test(message)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
  * Analyzes user input for red flags and dangerous situations
  */
 export function checkSafety(userMessage: string, profileContext?: string): SafetyCheck {
   const message = userMessage.toLowerCase();
   const context = (profileContext || "").toLowerCase();
   const combined = `${message} ${context}`;
+  
+  // Check if this is a routine question first
+  const isRoutine = isRoutineQuestion(message);
   
   const criticalFlags: string[] = [];
   const highFlags: string[] = [];
@@ -92,6 +127,16 @@ export function checkSafety(userMessage: string, profileContext?: string): Safet
   // Check for critical red flags
   for (const flag of CRITICAL_RED_FLAGS) {
     if (combined.includes(flag.toLowerCase())) {
+      // If it's a routine question, only add VERY specific emergency keywords
+      // Exclude generic words like "immediately", "urgent", "emergency" for routine questions
+      const genericEmergencyWords = ["emergency", "urgent", "immediately", "right now", "asap"];
+      
+      if (isRoutine && genericEmergencyWords.includes(flag.toLowerCase())) {
+        // Skip generic emergency words in routine questions
+        continue;
+      }
+      
+      // If it's a specific medical emergency symptom, always flag it
       criticalFlags.push(flag);
     }
   }

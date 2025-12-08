@@ -14,8 +14,16 @@ export function detectLanguage(text: string): "en" | "bn" {
   
   // Check for common Banglish patterns (Bengali words written in English)
   const banglishPatterns = [
-    /\b(ami|tumi|apni|kemon|koto|ki|kake|karo|kore|hobe|hoy|ache|nei|jabe|asbe|khabe|kheye|koreche|korche|korbe|hoyechhe|hoyche|hoybe)\b/gi,
-    /\b(mas|saptah|din|ghonta|minit|bochor|shomoy|kotha|bari|ghor|khana|pani|bhalo|kharap|sundor|bhalobasha)\b/gi,
+    // Common verbs and pronouns
+    /\b(ami|tumi|apni|kemon|koto|kototi|ki|kake|karo|kore|hobe|hoy|ache|nei|jabe|asbe|khabe|kheye|koreche|korche|korbe|hoyechhe|hoyche|hoybe)\b/gi,
+    // Time and place
+    /\b(mas|mash|saptah|soptaho|din|ghonta|minit|bochor|bochhor|shomoy|somoy|kotha|bari|ghor|khana|pani|bhalo|valo|kharap|sundor|bhalobasha)\b/gi,
+    // Pregnancy specific
+    /\b(gorbho|gorbhobostha|gorbhabostha|prosob|proshob|prosuti|baby|baccha|shishu|hospital|dakter|daktar|doctor|appointment|dikkat|problem|byatha|betha)\b/gi,
+    // Questions words
+    /\b(kivabe|kibhabe|kkhon|kokhon|keno|kothay|kar|kisher|kothai|kotota|kotogulo)\b/gi,
+    // Medical terms in Banglish
+    /\b(amar|amake|amader|tomar|apnar|purbo|purba|lokho|lokkho|rakha|uchit|ucit)\b/gi,
   ];
   
   for (const pattern of banglishPatterns) {
