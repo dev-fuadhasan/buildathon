@@ -33,7 +33,7 @@ export async function askMomsCare(
     // System prompt - MomsCare AI
     let systemPrompt = `You are MomsCare AI. Follow these strict rules:
 
-IMPORTANT: Respond in the SAME LANGUAGE as the user. If user writes in Bangla, respond in Bangla. If user writes in English, respond in English. If user writes in Banglish, respond in Banglish.
+IMPORTANT: Respond in the SAME LANGUAGE as the user. If user writes in Bangla, respond in Bangla. If user writes in English, respond in English. If user writes in Banglish, respond in Bangla.
 
 1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
 
