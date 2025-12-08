@@ -104,8 +104,8 @@ export default function Home() {
                 {t.home.subtitle}
               </p>
               
-              <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row pt-1 sm:pt-2">
-                <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 sm:gap-3 pt-1 sm:pt-2">
+                <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row">
                   <Link
                     href="/chat"
                     className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-bold px-6 py-3.5 sm:px-8 sm:py-4 md:px-10 md:py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
@@ -117,18 +117,18 @@ export default function Home() {
                     <span className="text-xs sm:text-sm font-normal opacity-90 ml-1">→</span>
                   </Link>
                   <button
-                    onClick={() => scrollToSection("get-started")}
-                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2 hover:underline-offset-4 transition-all text-center"
+                    onClick={handleMotherClick}
+                    className="inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold px-6 py-3.5 sm:px-8 sm:py-4 md:px-8 md:py-5 bg-white text-pink-600 rounded-xl sm:rounded-2xl border-2 border-pink-300 shadow-lg hover:shadow-xl hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"
                   >
-                    I am a health worker →
+                    <Icon name="mom" size={20} className="sm:w-6 sm:h-6 text-pink-600" />
+                    <span className="whitespace-nowrap text-sm sm:text-base md:text-lg">{isMother ? "Go to Dashboard" : "Get Started as a Mother"}</span>
                   </button>
                 </div>
                 <button
-                  onClick={handleMotherClick}
-                  className="inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold px-6 py-3.5 sm:px-8 sm:py-4 md:px-8 md:py-5 bg-white text-pink-600 rounded-xl sm:rounded-2xl border-2 border-pink-300 shadow-lg hover:shadow-xl hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"
+                  onClick={() => scrollToSection("get-started")}
+                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2 hover:underline-offset-4 transition-all text-left"
                 >
-                  <Icon name="mom" size={20} className="sm:w-6 sm:h-6 text-pink-600" />
-                  <span className="whitespace-nowrap text-sm sm:text-base md:text-lg">{isMother ? "Go to Dashboard" : "Get Started as a Mother"}</span>
+                  I am a health worker →
                 </button>
               </div>
               
