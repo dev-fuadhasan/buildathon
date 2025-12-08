@@ -6,6 +6,7 @@ import { getForcedLanguage } from "./datasetConfig";
 import { classifyQuestion, needsFollowUpQuestion } from "./chat/QuestionClassifier";
 import { buildSystemPrompt, type PromptContext } from "./chat/SystemPromptBuilder";
 import { validateAndCleanResponse } from "./chat/ResponseValidator";
+import { detectIntent, generateFollowUpQuestion } from "./chat/IntentDetector";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -85,19 +86,43 @@ export async function askMomsCare(
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
-    // Use modular question classifier
-    const classification = classifyQuestion(lastUserMessage, userIsLoggedIn);
-    const followUpCheck = needsFollowUpQuestion(lastUserMessage);
+    // Step 1: Detect user intent (what do they ACTUALLY want?)
+    const intent = detectIntent(lastUserMessage, userIsLoggedIn);
     
-    const isGeneralQuestion = classification.type === 'general';
-    const isPersonalQuestion = classification.type === 'personal';
-    const needsFollowUp = classification.needsFollowUp || followUpCheck.needed;
-    
-    console.log(`[Question Classification]`, {
-      type: classification.type,
-      needsFollowUp,
-      reason: classification.reason
+    console.log(`[Intent Detection]`, {
+      intent: intent.intent,
+      confidence: intent.confidence,
+      reason: intent.reason,
+      shouldShowProfile: intent.shouldShowProfile,
+      shouldShowPrescription: intent.shouldShowPrescription
     });
+    
+    // Step 2: Handle special intents immediately
+    if (intent.intent === 'ask_for_question') {
+      // User wants AI to ask them a question
+      const followUp = generateFollowUpQuestion(lastUserMessage, intent) || 
+        "আপনার গর্ভাবস্থার কোন বিষয়ে আমি আপনাকে সাহায্য করতে পারি?";
+      return followUp;
+    }
+    
+    if (intent.intent === 'greeting') {
+      return userLanguage === 'bn' 
+        ? "আসসালামু আলাইকুম! আমি MomsCare AI। আমি আপনাকে গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত পরামর্শ দিতে পারি। আপনার কি কোনো প্রশ্ন আছে?"
+        : "Hello! I'm MomsCare AI. I can help you with pregnancy and health advice. How can I assist you?";
+    }
+    
+    // Step 3: Check if follow-up needed
+    if (intent.needsFollowUp) {
+      const followUp = generateFollowUpQuestion(lastUserMessage, intent);
+      if (followUp) {
+        return followUp;
+      }
+    }
+    
+    // Step 4: Use modular question classifier for remaining logic
+    const classification = classifyQuestion(lastUserMessage, userIsLoggedIn);
+    const isGeneralQuestion = classification.type === 'general' || intent.intent === 'ask_general_info';
+    const isPersonalQuestion = classification.type === 'personal' && intent.intent !== 'ask_general_info';
     
     // Build system prompt using modular builder
     const promptContext: PromptContext = {
@@ -106,10 +131,33 @@ export async function askMomsCare(
       isGeneralQuestion,
       isPersonalQuestion,
       language: userLanguage,
-      needsFollowUp
+      needsFollowUp: false  // Already handled above
     };
     
-    const systemPrompt = buildSystemPrompt(promptContext);
+    let systemPrompt = buildSystemPrompt(promptContext);
+    
+    // Add intent-specific instructions
+    if (intent.intent === 'ask_profile_info') {
+      systemPrompt += `\n\n**INTENT: User asking for SPECIFIC profile information only.**
+- Answer ONLY what they asked (age, blood group, pregnancy duration, etc.)
+- DO NOT add prescriptions, medical advice, or warnings
+- Keep answer SHORT and DIRECT
+- Example: Q: "amar boyos?" A: "আপনার বয়স ৩০ বছর।" (STOP HERE)`;
+    }
+    
+    if (intent.intent === 'ask_prescription') {
+      systemPrompt += `\n\n**INTENT: User explicitly asking for prescription details.**
+- NOW you CAN show prescription details
+- List all medicines with dosages
+- Provide clear instructions`;
+    }
+    
+    if (!intent.shouldShowPrescription && intent.shouldShowProfile) {
+      systemPrompt += `\n\n**CRITICAL: DO NOT show prescription details.**
+- User asked a medical question but did NOT ask for prescriptions
+- Use prescription data internally if needed
+- But DO NOT list medicines in your response`;
+    }
 
     // Extract weeks pregnant for RAG
     let trimester: number | undefined;
@@ -177,17 +225,52 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Only include profile context for PERSONAL questions
-    const profileNote = (profileContext && isPersonalQuestion && !isGeneralQuestion)
-      ? `\n\n${profileContext}`
-      : "";
+    // Use intent-based decision for profile context
+    let profileNote = "";
     
-    // Log for debugging
-    if (profileContext && isGeneralQuestion) {
-      console.log("[MomsCare] GENERAL question detected - profile context EXCLUDED");
-    }
-    if (isPersonalQuestion && profileContext) {
-      console.log("[MomsCare] PERSONAL question detected - profile context INCLUDED");
+    if (profileContext && intent.shouldShowProfile) {
+      // For specific profile info requests, extract only what they asked
+      if (intent.intent === 'ask_profile_info') {
+        const lower = lastUserMessage.toLowerCase();
+        
+        if (/boyos|age/.test(lower)) {
+          // Extract only age
+          const ageMatch = profileContext.match(/বয়স:\s*(\d+)/);
+          if (ageMatch) {
+            profileNote = `\n\nUSER AGE: ${ageMatch[1]} years`;
+          }
+        }
+        
+        if (/rokter group|blood group/.test(lower)) {
+          // Extract only blood group
+          const bgMatch = profileContext.match(/রক্তের গ্রুপ:\s*([A-Z+\-]+)/);
+          if (bgMatch) {
+            profileNote += `\n\nUSER BLOOD GROUP: ${bgMatch[1]}`;
+          }
+        }
+        
+        if (/pregnancy.*kotodin|koto mas/.test(lower)) {
+          // Extract only pregnancy duration
+          const weekMatch = profileContext.match(/সপ্তাহ:\s*(\d+)/);
+          if (weekMatch) {
+            profileNote += `\n\nPREGNANCY DURATION: ${weekMatch[1]} weeks`;
+          }
+        }
+        
+        // If nothing matched, include minimal profile
+        if (!profileNote && profileContext) {
+          profileNote = `\n\n${profileContext}`;
+        }
+      } else {
+        // For medical advice, include full profile but mark prescription as DO NOT SHOW
+        profileNote = `\n\n${profileContext}\n\n**IMPORTANT: User did NOT ask for prescription details. DO NOT list medicines unless specifically asked.**`;
+      }
+      
+      console.log("[MomsCare] Profile context INCLUDED (intent-based)");
+    } else if (profileContext && isGeneralQuestion) {
+      console.log("[MomsCare] GENERAL question - profile context EXCLUDED");
+    } else {
+      console.log("[MomsCare] No profile context needed for this query");
     }
 
     // Filter and format messages - only include user and assistant messages
@@ -321,8 +404,13 @@ Provide this calculation FIRST, then add context.`;
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
     
-    // Apply modular validation and cleaning
-    const validation = validateAndCleanResponse(cleanedReply, lastUserMessage, isGeneralQuestion);
+    // Apply modular validation and cleaning (intent-aware)
+    const validation = validateAndCleanResponse(
+      cleanedReply, 
+      lastUserMessage, 
+      isGeneralQuestion,
+      intent.shouldShowPrescription
+    );
     
     if (validation.issues.length > 0) {
       console.log("[Response Validation] Issues fixed:", validation.issues);

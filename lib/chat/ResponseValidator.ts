@@ -125,7 +125,8 @@ function fixQuestionMarks(response: string): string {
 export function validateAndCleanResponse(
   response: string,
   userQuestion: string,
-  isGeneralQuestion: boolean
+  isGeneralQuestion: boolean,
+  shouldShowPrescription: boolean = false
 ): ValidationResult {
   let cleaned = response;
   const issues: string[] = [];
@@ -133,11 +134,11 @@ export function validateAndCleanResponse(
   // 1. Fix question marks
   cleaned = fixQuestionMarks(cleaned);
   
-  // 2. Remove prescriptions for general questions
-  if (isGeneralQuestion) {
+  // 2. Remove prescriptions unless explicitly allowed
+  if (!shouldShowPrescription) {
     const prescriptionCheck = validateNoPrescriptions(cleaned);
     if (!prescriptionCheck.valid) {
-      issues.push('Removed prescription details from general question');
+      issues.push('Removed prescription details (not requested)');
     }
     cleaned = prescriptionCheck.cleaned;
   }
@@ -149,7 +150,25 @@ export function validateAndCleanResponse(
   }
   cleaned = warningCheck.cleaned;
   
-  // 4. Final cleanup
+  // 4. For profile info requests, ensure response is concise
+  if (/boyos|age|rokter group|blood group|pregnancy.*kotodin/i.test(userQuestion)) {
+    // Remove long explanations
+    const lines = cleaned.split('\n');
+    const relevantLines = lines.filter(line => {
+      const lower = line.toLowerCase();
+      return (
+        /বয়স|age|রক্তের গ্রুপ|blood group|সপ্তাহ|weeks|গর্ভবতী|pregnant/.test(lower) ||
+        line.trim().length < 50
+      );
+    });
+    
+    if (relevantLines.length > 0 && relevantLines.length < lines.length) {
+      cleaned = relevantLines.join('\n');
+      issues.push('Removed unnecessary details from profile info response');
+    }
+  }
+  
+  // 5. Final cleanup
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   cleaned = cleaned.trim();
   
