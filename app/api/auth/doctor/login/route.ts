@@ -38,10 +38,15 @@ export async function POST(req: NextRequest) {
   const token = signAuthToken({ id: doctor.id, email: doctor.email, role: "doctor" });
   const { passwordHash, ...safe } = doctor;
   
+  // Determine dashboard route based on role
+  const dashboardRoute = doctor.role === "doctor" ? "/doctor/dashboard" : "/nurse/dashboard";
+  
   return NextResponse.json({ 
     token, 
     doctor: safe,
     status: doctor.status,
+    role: doctor.role,
+    dashboardRoute,
   });
 }
 

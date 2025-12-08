@@ -12,6 +12,8 @@ export default function DoctorRegister() {
     email: "",
     phone: "",
     password: "",
+    role: "doctor" as "doctor" | "nurse" | "others",
+    hospitalClinicName: "",
     specialty: "",
     bmdcNumber: "",
     clinicName: "",
@@ -78,12 +80,13 @@ export default function DoctorRegister() {
         profilePictureUrl = picData.key; // Store the key, not the URL
       }
 
-      // Then register doctor
+      // Then register health worker
       const res = await fetch("/api/auth/doctor/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          hospitalClinicName: form.hospitalClinicName || form.clinicName, // Use hospitalClinicName if set, otherwise clinicName
           profilePicture: profilePictureUrl,
         }),
       });
@@ -120,11 +123,75 @@ export default function DoctorRegister() {
     <Layout>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">Doctor Application</h1>
+          <h1 className="text-4xl font-bold text-blue-600 mb-2">Health Worker Application</h1>
           <p className="text-slate-600">Submit your details for admin approval</p>
         </div>
 
         <form onSubmit={onSubmit} className="card space-y-6">
+          {/* Role Selection */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Role Selection</h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="flex items-center space-x-2 cursor-pointer p-4 border-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="role"
+                  value="doctor"
+                  checked={form.role === "doctor"}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-slate-700 font-medium">Doctor</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer p-4 border-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="role"
+                  value="nurse"
+                  checked={form.role === "nurse"}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-slate-700 font-medium">Nurse</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer p-4 border-2 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="radio"
+                  name="role"
+                  value="others"
+                  checked={form.role === "others"}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-slate-700 font-medium">Others</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Hospital/Clinic Name */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Hospital/Clinic Information</h3>
+            <div className="grid gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Hospital/Clinic Name *
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="Enter hospital or clinic name"
+                  value={form.hospitalClinicName}
+                  onChange={(e) => setForm({ ...form, hospitalClinicName: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {form.role === "nurse" || form.role === "others" 
+                    ? "If your hospital/clinic already exists, you'll be added to the same dashboard."
+                    : "For doctors, this is your clinic/hospital name."}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Personal Information */}
           <div>
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
@@ -204,93 +271,85 @@ export default function DoctorRegister() {
             </div>
           </div>
 
-          {/* Professional Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Professional Information</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Specialty *
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="e.g., Obstetrics & Gynecology"
-                  value={form.specialty}
-                  onChange={(e) => setForm({ ...form, specialty: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  BMDC Registration Number *
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="BMDC-12345"
-                  value={form.bmdcNumber}
-                  onChange={(e) => setForm({ ...form, bmdcNumber: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Medical Qualifications *
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="e.g., MBBS, FCPS"
-                  value={form.qualification}
-                  onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Years of Experience *
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="e.g., 10"
-                  type="number"
-                  min="0"
-                  value={form.experience}
-                  onChange={(e) => setForm({ ...form, experience: e.target.value })}
-                  required
-                />
+          {/* Professional Information - Only for Doctors */}
+          {form.role === "doctor" && (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Professional Information</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Specialty *
+                  </label>
+                  <input
+                    className="input w-full"
+                    placeholder="e.g., Obstetrics & Gynecology"
+                    value={form.specialty}
+                    onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    BMDC Registration Number *
+                  </label>
+                  <input
+                    className="input w-full"
+                    placeholder="BMDC-12345"
+                    value={form.bmdcNumber}
+                    onChange={(e) => setForm({ ...form, bmdcNumber: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Medical Qualifications *
+                  </label>
+                  <input
+                    className="input w-full"
+                    placeholder="e.g., MBBS, FCPS"
+                    value={form.qualification}
+                    onChange={(e) => setForm({ ...form, qualification: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Years of Experience *
+                  </label>
+                  <input
+                    className="input w-full"
+                    placeholder="e.g., 10"
+                    type="number"
+                    min="0"
+                    value={form.experience}
+                    onChange={(e) => setForm({ ...form, experience: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Clinic Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Clinic/Hospital Information</h3>
-            <div className="grid gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Clinic/Hospital Name *
-                </label>
-                <input
-                  className="input w-full"
-                  placeholder="e.g., City Hospital"
-                  value={form.clinicName}
-                  onChange={(e) => setForm({ ...form, clinicName: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Clinic Address *
-                </label>
-                <textarea
-                  className="input w-full h-24"
-                  placeholder="Full address of your clinic/hospital"
-                  value={form.clinicAddress}
-                  onChange={(e) => setForm({ ...form, clinicAddress: e.target.value })}
-                  required
-                />
+          {/* Clinic Address - Only for Doctors */}
+          {form.role === "doctor" && (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Clinic Information</h3>
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Clinic Address *
+                  </label>
+                  <textarea
+                    className="input w-full h-24"
+                    placeholder="Full address of your clinic/hospital"
+                    value={form.clinicAddress}
+                    onChange={(e) => setForm({ ...form, clinicAddress: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Profile Picture */}
           <div>

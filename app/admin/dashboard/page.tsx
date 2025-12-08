@@ -22,9 +22,11 @@ type Doctor = {
   name?: string;
   email: string;
   phone?: string;
+  role?: "doctor" | "nurse" | "others";
   specialty?: string;
   bmdcNumber?: string;
   clinicName?: string;
+  hospitalClinicName?: string;
   clinicAddress?: string;
   qualification?: string;
   experience?: string;
@@ -93,9 +95,10 @@ export default function AdminDashboard() {
   const [pending, setPending] = useState<Doctor[]>([]);
   const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
   const [allMothers, setAllMothers] = useState<Mother[]>([]);
+  const [allNurses, setAllNurses] = useState<Doctor[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "reports" | "live-chat" | "editors" | "activity-logs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "nurses" | "reports" | "live-chat" | "editors" | "activity-logs">("overview");
   const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [allActivities, setAllActivities] = useState<AdminActivity[]>([]); // Store all activities for client-side filtering
   const [editors, setEditors] = useState<Editor[]>([]);
@@ -123,6 +126,7 @@ export default function AdminDashboard() {
   } | null>(null);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [motherSearch, setMotherSearch] = useState("");
+  const [nurseSearch, setNurseSearch] = useState("");
   const [analyticsFilter, setAnalyticsFilter] = useState<{
     riskLevel?: "low" | "medium" | "high";
     trimester?: "first" | "second" | "third";
@@ -180,7 +184,7 @@ export default function AdminDashboard() {
       
       // Restore active tab from localStorage
       const savedTab = localStorage.getItem("adminDashboardTab");
-      if (savedTab && ["overview", "analytics", "doctors", "mothers", "reports", "live-chat", "editors", "activity-logs"].includes(savedTab)) {
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "nurses", "reports", "live-chat", "editors", "activity-logs"].includes(savedTab)) {
         setActiveTab(savedTab as any);
       }
       
@@ -188,6 +192,7 @@ export default function AdminDashboard() {
       loadOverview(t);
       loadAllDoctors(t);
       loadAllMothers(t);
+      loadAllNurses(t);
       loadAnalytics(t);
       loadReports(t);
       
@@ -206,6 +211,7 @@ export default function AdminDashboard() {
         loadOverview(t);
         loadAllDoctors(t);
         loadAllMothers(t);
+        loadAllNurses(t);
       }, 2 * 60 * 1000); // Every 2 minutes
       
       // Less frequent updates (every 5 minutes) - for analytics
@@ -274,6 +280,14 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setAllMothers(data.mothers || []);
+    }
+  };
+
+  const loadAllNurses = async (t = token) => {
+    const res = await fetch("/api/admin/nurses", { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setAllNurses(data.nurses || []);
     }
   };
 
@@ -548,6 +562,7 @@ export default function AdminDashboard() {
     { id: "analytics", label: "Analytics", icon: "progress" },
     { id: "doctors", label: "Doctors", icon: "doctor" },
     { id: "mothers", label: "Mothers", icon: "mom" },
+    { id: "nurses", label: "Nurses/Others", icon: "nurse" },
     { id: "reports", label: "Reports", icon: "reports", badge: reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length },
     { id: "live-chat", label: "Live Chat", icon: "chat" },
     ...(adminType === "super_admin" ? [
@@ -1335,6 +1350,112 @@ export default function AdminDashboard() {
               </div>
             </DashboardCard>
           </div>
+        )}
+
+        {/* Nurses Tab */}
+        {activeTab === "nurses" && (
+          <DashboardCard title="All Nurses/Others">
+            {/* Search Bar */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="🔍 Search nurses by name, email, hospital/clinic..."
+                className="input w-full"
+                value={nurseSearch}
+                onChange={(e) => setNurseSearch(e.target.value)}
+              />
+            </div>
+            <div className="space-y-3">
+              {allNurses.filter(n => {
+                if (!nurseSearch) return true;
+                const search = nurseSearch.toLowerCase();
+                return (
+                  n.name?.toLowerCase().includes(search) ||
+                  n.email.toLowerCase().includes(search) ||
+                  n.hospitalClinicName?.toLowerCase().includes(search) ||
+                  n.clinicName?.toLowerCase().includes(search) ||
+                  n.phone?.toLowerCase().includes(search)
+                );
+              }).length === 0 ? (
+                <p className="text-slate-500 text-center py-8">
+                  {nurseSearch ? "No nurses found matching your search." : "No nurses/others registered yet."}
+                </p>
+              ) : (
+                allNurses.filter(n => {
+                  if (!nurseSearch) return true;
+                  const search = nurseSearch.toLowerCase();
+                  return (
+                    n.name?.toLowerCase().includes(search) ||
+                    n.email.toLowerCase().includes(search) ||
+                    n.hospitalClinicName?.toLowerCase().includes(search) ||
+                    n.clinicName?.toLowerCase().includes(search) ||
+                    n.phone?.toLowerCase().includes(search)
+                  );
+                }).map((n) => (
+                  <ListCard
+                    key={n.id}
+                    title={n.name || "Unnamed nurse"}
+                    subtitle={n.email}
+                    badge={
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        n.status === "approved" 
+                          ? "bg-green-100 text-green-700"
+                          : n.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {n.status}
+                      </span>
+                    }
+                    onClick={() => loadDoctorDetails(n.id)}
+                  >
+                    <p className="text-xs text-slate-500 mt-1">
+                      Role: {n.role === "nurse" ? "Nurse" : "Other Health Worker"}
+                    </p>
+                    {n.hospitalClinicName && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Hospital/Clinic: {n.hospitalClinicName}
+                      </p>
+                    )}
+                    {n.phone && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        📞 {n.phone}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <button
+                        className={`${
+                          n.status === "approved"
+                            ? "bg-orange-500 hover:bg-orange-600"
+                            : "bg-green-500 hover:bg-green-600"
+                        } text-white text-xs py-1 px-3 rounded transition-colors`}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setActionModal({ doctorId: n.id, action: n.status === "approved" ? "reject" : "approve", comment: "" });
+                        }}
+                      >
+                        {n.status === "approved" ? "Reject" : "Approve"}
+                      </button>
+                      <button
+                        className="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-3 rounded transition-colors"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to delete "${n.name || n.email}"? This action cannot be undone.`)) {
+                            setActionModal({ doctorId: n.id, action: "delete", comment: "" });
+                          }
+                        }}
+                      >
+                        <span className="flex items-center gap-1">
+                          <Icon name="delete" size={16} />
+                          Delete
+                        </span>
+                      </button>
+                    </div>
+                  </ListCard>
+                ))
+              )}
+            </div>
+          </DashboardCard>
         )}
 
         {/* Doctor Details Modal */}

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { hashPassword } from "@/lib/auth";
-import { findDoctorByEmail, saveDoctor } from "@/lib/data";
+import { findDoctorByEmail, saveDoctor, listAllDoctors } from "@/lib/data";
 import { copyObject, getJson as getR2Json } from "@/lib/r2Client";
+import { findMatchingHospitalName, getAllHospitalNames } from "@/lib/hospitalNameMatcher";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,9 +23,11 @@ export async function POST(req: NextRequest) {
       password,
       name,
       phone,
+      role, // "doctor" | "nurse" | "others"
+      hospitalClinicName, // New field
       specialty,
       bmdcNumber,
-      clinicName,
+      clinicName, // Keep for backward compatibility
       clinicAddress,
       profilePicture,
       qualification,
@@ -35,20 +38,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
     }
 
-    if (!name || !phone || !specialty || !bmdcNumber || !clinicName || !clinicAddress || !qualification || !experience) {
-      return NextResponse.json(
-        { error: "All required fields must be filled" },
-        { status: 400 }
-      );
+    // Validate role
+    const validRole = role === "doctor" || role === "nurse" || role === "others";
+    if (!validRole) {
+      return NextResponse.json({ error: "Invalid role. Must be doctor, nurse, or others" }, { status: 400 });
     }
 
-    // Check for existing doctor
-    // Note: findDoctorByEmail now returns null on error instead of throwing
-    // This allows registration to proceed even if R2 check fails
+    // Hospital/clinic name is required
+    const finalHospitalClinicName = hospitalClinicName || clinicName;
+    if (!finalHospitalClinicName) {
+      return NextResponse.json({ error: "Hospital/Clinic name is required" }, { status: 400 });
+    }
+
+    // For doctors, all fields are required. For nurses/others, some fields are optional
+    if (role === "doctor") {
+      if (!name || !phone || !specialty || !bmdcNumber || !clinicAddress || !qualification || !experience) {
+        return NextResponse.json(
+          { error: "All required fields must be filled" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Nurses/others: name, phone, and hospital/clinic name are required
+      if (!name || !phone) {
+        return NextResponse.json(
+          { error: "Name and phone are required" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check for existing health worker
     const existing = await findDoctorByEmail(email);
     
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    }
+
+    // For nurses/others: Check if hospital/clinic name matches existing ones
+    let matchedHospitalName = finalHospitalClinicName;
+    if (role === "nurse" || role === "others") {
+      const existingHospitalNames = await getAllHospitalNames();
+      const match = await findMatchingHospitalName(finalHospitalClinicName, existingHospitalNames);
+      if (match) {
+        matchedHospitalName = match; // Use the matched name for consistency
+      }
     }
 
     // Hash password
@@ -92,13 +126,16 @@ export async function POST(req: NextRequest) {
       email,
       name,
       phone,
-      specialty,
-      bmdcNumber,
-      clinicName,
-      clinicAddress,
+      role: role as "doctor" | "nurse" | "others",
+      specialty: role === "doctor" ? specialty : undefined,
+      bmdcNumber: role === "doctor" ? bmdcNumber : undefined,
+      hospitalClinicName: matchedHospitalName, // Normalized/matched name
+      hospitalClinicNameOriginal: finalHospitalClinicName, // Original as entered
+      clinicName: matchedHospitalName, // Keep for backward compatibility
+      clinicAddress: role === "doctor" ? clinicAddress : undefined,
       profilePicture: finalProfilePictureKey, // Store the key
-      qualification,
-      experience,
+      qualification: role === "doctor" ? qualification : undefined,
+      experience: role === "doctor" ? experience : undefined,
       passwordHash,
       status: "pending" as const,
       pendingVerification: false,

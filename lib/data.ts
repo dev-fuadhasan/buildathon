@@ -34,26 +34,74 @@ export type ProfileChange = {
   newValue: string | undefined;
 };
 
+export type HealthWorkerRole = "doctor" | "nurse" | "others";
+export type HealthWorkerStatus = "pending" | "approved" | "rejected" | "paused";
+
 export type DoctorProfile = {
   id: string;
   email: string;
   passwordHash: string;
   name?: string;
   phone?: string;
+  role: HealthWorkerRole; // "doctor" | "nurse" | "others"
   specialty?: string;
   bmdcNumber?: string; // BMDC Registration Number
-  clinicName?: string; // Clinic/Hospital name
+  hospitalClinicName?: string; // Hospital/Clinic name (normalized for matching)
+  hospitalClinicNameOriginal?: string; // Original name as entered by user
+  clinicName?: string; // Keep for backward compatibility (same as hospitalClinicName)
   clinicAddress?: string;
   profilePicture?: string; // URL to profile picture in R2
   qualification?: string; // Medical qualifications
   experience?: string; // Years of experience
-  status: "pending" | "approved" | "rejected" | "paused";
+  status: HealthWorkerStatus;
   verificationComment?: string; // Admin's comment on verification
   pendingVerification?: boolean; // True when profile is edited and needs re-verification
   previousValues?: Partial<DoctorProfile>; // Store previous values before changes
   changes?: ProfileChange[]; // Track what fields were changed
   createdAt: string;
   updatedAt: string;
+};
+
+// Patient data for nurses/others
+export type PatientData = {
+  id: string;
+  hospitalClinicName: string; // Which hospital/clinic this patient belongs to
+  name: string;
+  age?: number;
+  phone: string;
+  email?: string;
+  address?: string;
+  bloodGroup?: string;
+  medicalHistory?: string;
+  allergies?: string;
+  currentMedications?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  notes?: string;
+  prescriptions: PatientFile[]; // Prescription files
+  reports: PatientFile[]; // Lab reports, test results
+  documents: PatientFile[]; // Other medical documents
+  createdBy: string; // Health worker ID who created this patient
+  createdByName?: string; // Name of health worker who created
+  createdAt: string;
+  updatedBy?: string; // Health worker ID who last updated
+  updatedByName?: string; // Name of health worker who last updated
+  updatedAt: string;
+  lastPriorityCheck?: string; // When AI last checked priority
+  priorityScore?: number; // AI-generated priority score (higher = more urgent)
+  priorityReason?: string; // AI-generated reason for priority
+};
+
+export type PatientFile = {
+  id: string;
+  key: string; // R2 storage key
+  url: string; // Signed URL
+  fileName: string;
+  fileType: string; // "prescription" | "report" | "document"
+  uploadedBy: string; // Health worker ID
+  uploadedByName?: string; // Name of health worker
+  uploadedAt: string;
+  description?: string;
 };
 
 export type Comment = {
@@ -178,6 +226,7 @@ const doctorKey = (id: string) => `doctors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
 const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
+const patientKey = (hospitalClinicName: string, patientId: string) => `patients/${encodeURIComponent(hospitalClinicName)}/${patientId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
 const adminActivityKey = (id: string) => `admin-activities/${id}.json`;
@@ -673,6 +722,61 @@ export async function markTokenAsUsed(token: string): Promise<void> {
     }
   } catch (err) {
     console.error("Error marking token as used:", err);
+  }
+}
+
+// Patient Data Functions (for nurses/others)
+export async function savePatient(patient: PatientData): Promise<void> {
+  try {
+    await putJson(patientKey(patient.hospitalClinicName, patient.id), patient);
+  } catch (err) {
+    console.error("Error saving patient:", err);
+    throw err;
+  }
+}
+
+export async function getPatient(hospitalClinicName: string, patientId: string): Promise<PatientData | null> {
+  try {
+    return await getJson<PatientData>(patientKey(hospitalClinicName, patientId));
+  } catch (err) {
+    console.error("Error getting patient:", err);
+    return null;
+  }
+}
+
+export async function listPatients(hospitalClinicName: string): Promise<PatientData[]> {
+  try {
+    return await listJson<PatientData>(`patients/${encodeURIComponent(hospitalClinicName)}/`);
+  } catch (err) {
+    console.error("Error listing patients:", err);
+    return [];
+  }
+}
+
+export async function deletePatient(hospitalClinicName: string, patientId: string): Promise<void> {
+  try {
+    const key = patientKey(hospitalClinicName, patientId);
+    const { deleteObject } = await import("./r2Client");
+    await deleteObject(key);
+  } catch (err) {
+    console.error("Error deleting patient:", err);
+    throw err;
+  }
+}
+
+export async function searchPatients(hospitalClinicName: string, query: string): Promise<PatientData[]> {
+  try {
+    const allPatients = await listPatients(hospitalClinicName);
+    const lowerQuery = query.toLowerCase();
+    return allPatients.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lowerQuery) ||
+        p.phone.includes(query) ||
+        (p.email && p.email.toLowerCase().includes(lowerQuery))
+    );
+  } catch (err) {
+    console.error("Error searching patients:", err);
+    return [];
   }
 }
 

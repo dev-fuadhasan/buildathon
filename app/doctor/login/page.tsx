@@ -46,7 +46,9 @@ export default function DoctorLogin() {
         return;
       }
       localStorage.setItem("doctorToken", data.token);
-      router.push("/doctor/dashboard");
+      // Route based on role: doctor -> /doctor/dashboard, nurse/others -> /nurse/dashboard
+      const dashboardRoute = data.dashboardRoute || (data.role === "doctor" ? "/doctor/dashboard" : "/nurse/dashboard");
+      router.push(dashboardRoute);
     } catch (err: any) {
       setError(err.message || "An error occurred. Please try again.");
     } finally {
