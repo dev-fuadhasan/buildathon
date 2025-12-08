@@ -85,6 +85,8 @@ export default function NurseDashboard() {
     Authorization: `Bearer ${t}`,
   });
 
+  const [nurseProfile, setNurseProfile] = useState<any>(null);
+  
   const loadNurseProfile = async (t = token) => {
     try {
       const res = await fetch("/api/doctor/profile", {
@@ -92,8 +94,9 @@ export default function NurseDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setNurseName(data.doctor?.name || "");
-        setHospitalClinicName(data.doctor?.hospitalClinicName || "");
+        setNurseProfile(data.profile);
+        setNurseName(data.profile?.name || "");
+        setHospitalClinicName(data.profile?.hospitalClinicName || "");
       }
     } catch (err) {
       console.error("Failed to load nurse profile:", err);
@@ -181,6 +184,7 @@ export default function NurseDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
+        const newPatientId = data.patient?.id;
         setPopup({
           isOpen: true,
           type: "success",
@@ -188,6 +192,7 @@ export default function NurseDashboard() {
           message: "Patient added successfully",
         });
         setShowAddModal(false);
+        // Reset form completely
         setPatientForm({
           name: "",
           age: "",
@@ -202,8 +207,27 @@ export default function NurseDashboard() {
           emergencyPhone: "",
           notes: "",
         });
+        setUploadFileDescriptions({
+          prescription: "",
+          report: "",
+          document: "",
+        });
         loadPatients();
-        loadPriorityList();
+        // Trigger priority update only after save
+        if (hospitalClinicName) {
+          try {
+            const priorityRes = await fetch("/api/nurse/update-priority", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...headers() },
+              body: JSON.stringify({ hospitalClinicName }),
+            });
+            if (priorityRes.ok) {
+              loadPriorityList();
+            }
+          } catch (err) {
+            console.error("Failed to update priority:", err);
+          }
+        }
       } else {
         setPopup({
           isOpen: true,
@@ -248,7 +272,19 @@ export default function NurseDashboard() {
         setShowEditModal(false);
         setSelectedPatient(null);
         loadPatients();
-        loadPriorityList();
+        // Trigger priority update only after save
+        try {
+          const res = await fetch("/api/nurse/update-priority", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...headers() },
+            body: JSON.stringify({ hospitalClinicName }),
+          });
+          if (res.ok) {
+            loadPriorityList();
+          }
+        } catch (err) {
+          console.error("Failed to update priority:", err);
+        }
       } else {
         setPopup({
           isOpen: true,
@@ -318,7 +354,7 @@ export default function NurseDashboard() {
         setUploadFileDescriptions({ ...uploadFileDescriptions, [fileType]: "" });
         e.target.value = "";
         loadPatients();
-        loadPriorityList();
+        // Don't trigger priority update on file upload - only on save
         // Reload selected patient to get updated file list
         const patientRes = await fetch(`/api/nurse/patients/${selectedPatient.id}`, {
           headers: headers(),
@@ -365,7 +401,7 @@ export default function NurseDashboard() {
           message: "File deleted successfully",
         });
         loadPatients();
-        loadPriorityList();
+        // Don't trigger priority update on file delete - only on save
         // Reload selected patient
         const patientRes = await fetch(`/api/nurse/patients/${selectedPatient.id}`, {
           headers: headers(),
@@ -405,6 +441,7 @@ export default function NurseDashboard() {
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
+    { id: "profile", label: "Profile", icon: "profile", action: "navigate" as const, href: "/nurse/profile" },
     { id: "logout", label: "Logout", action: "logout" as const },
   ];
 
@@ -432,6 +469,8 @@ export default function NurseDashboard() {
         <MobileDashboardMenu tabs={tabs} activeTab="dashboard" onTabChange={(id) => {
           if (id === "dashboard") {
             router.push("/nurse/dashboard");
+          } else if (id === "profile") {
+            router.push("/nurse/profile");
           }
         }} />
 
@@ -463,7 +502,29 @@ export default function NurseDashboard() {
               title="Patient Management"
               action={
                 <button
-                  onClick={() => setShowAddModal(true)}
+                  onClick={() => {
+                    // Reset form when opening add modal
+                    setPatientForm({
+                      name: "",
+                      age: "",
+                      phone: "",
+                      email: "",
+                      address: "",
+                      bloodGroup: "",
+                      medicalHistory: "",
+                      allergies: "",
+                      currentMedications: "",
+                      emergencyContact: "",
+                      emergencyPhone: "",
+                      notes: "",
+                    });
+                    setUploadFileDescriptions({
+                      prescription: "",
+                      report: "",
+                      document: "",
+                    });
+                    setShowAddModal(true);
+                  }}
                   className="btn-primary text-sm flex items-center gap-2"
                 >
                   <Icon name="add" size={16} />
@@ -648,6 +709,7 @@ export default function NurseDashboard() {
                   <button
                     onClick={() => {
                       setShowAddModal(false);
+                      // Reset form completely when closing
                       setPatientForm({
                         name: "",
                         age: "",
@@ -661,6 +723,11 @@ export default function NurseDashboard() {
                         emergencyContact: "",
                         emergencyPhone: "",
                         notes: "",
+                      });
+                      setUploadFileDescriptions({
+                        prescription: "",
+                        report: "",
+                        document: "",
                       });
                     }}
                     className="text-slate-500 hover:text-slate-700"
@@ -791,11 +858,135 @@ export default function NurseDashboard() {
                       placeholder="Additional notes..."
                     />
                   </div>
+
+                  {/* File Upload Section for Add Patient */}
+                  <div className="border-t border-slate-200 pt-4 mt-4">
+                    <h3 className="text-lg font-semibold mb-4">Upload Files (Optional)</h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      You can add files after creating the patient, or upload them now. Files will be attached after patient is created.
+                    </p>
+                    
+                    {/* Prescriptions */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Prescriptions
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Description (optional)"
+                            className="input text-sm w-48"
+                            value={uploadFileDescriptions.prescription}
+                            onChange={(e) => setUploadFileDescriptions({ ...uploadFileDescriptions, prescription: e.target.value })}
+                          />
+                          <label className="btn-secondary text-sm cursor-pointer">
+                            <Icon name="upload" size={16} />
+                            Upload
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  setPopup({
+                                    isOpen: true,
+                                    type: "info",
+                                    title: "Info",
+                                    message: "Please create the patient first, then upload files in the edit modal.",
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reports */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Reports
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Description (optional)"
+                            className="input text-sm w-48"
+                            value={uploadFileDescriptions.report}
+                            onChange={(e) => setUploadFileDescriptions({ ...uploadFileDescriptions, report: e.target.value })}
+                          />
+                          <label className="btn-secondary text-sm cursor-pointer">
+                            <Icon name="upload" size={16} />
+                            Upload
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  setPopup({
+                                    isOpen: true,
+                                    type: "info",
+                                    title: "Info",
+                                    message: "Please create the patient first, then upload files in the edit modal.",
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Documents */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Documents
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Description (optional)"
+                            className="input text-sm w-48"
+                            value={uploadFileDescriptions.document}
+                            onChange={(e) => setUploadFileDescriptions({ ...uploadFileDescriptions, document: e.target.value })}
+                          />
+                          <label className="btn-secondary text-sm cursor-pointer">
+                            <Icon name="upload" size={16} />
+                            Upload
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  setPopup({
+                                    isOpen: true,
+                                    type: "info",
+                                    title: "Info",
+                                    message: "Please create the patient first, then upload files in the edit modal.",
+                                  });
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-3 justify-end">
                     <button
                       type="button"
                       onClick={() => {
                         setShowAddModal(false);
+                        // Reset form completely
                         setPatientForm({
                           name: "",
                           age: "",
@@ -809,6 +1000,11 @@ export default function NurseDashboard() {
                           emergencyContact: "",
                           emergencyPhone: "",
                           notes: "",
+                        });
+                        setUploadFileDescriptions({
+                          prescription: "",
+                          report: "",
+                          document: "",
                         });
                       }}
                       className="btn-secondary"

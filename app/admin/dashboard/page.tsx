@@ -629,25 +629,59 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabs - Desktop Only */}
-        <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-4 sm:mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap text-sm sm:text-base ${
-                activeTab === tab.id ? "tab-active" : "tab-inactive"
-              }`}
-            >
-              {tab.icon && <Icon name={tab.icon} size={20} />}
-              <span>{tab.label}</span>
-              {tab.badge && tab.badge > 0 && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tabs - Desktop Only with Arrow Navigation */}
+        <div className="hidden lg:flex items-center gap-2 border-b-2 border-neutral-200 mb-4 sm:mb-6 overflow-x-auto pb-2 scrollbar-hide relative">
+          {/* Left Arrow */}
+          <button
+            onClick={() => {
+              const currentIndex = tabs.findIndex(t => t.id === activeTab);
+              if (currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1].id as any);
+              }
+            }}
+            className="flex-shrink-0 p-2 hover:bg-neutral-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled={tabs.findIndex(t => t.id === activeTab) === 0}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          </button>
+          
+          <div className="flex gap-2 flex-1 overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap text-sm sm:text-base ${
+                  activeTab === tab.id ? "tab-active" : "tab-inactive"
+                }`}
+              >
+                {tab.icon && <Icon name={tab.icon} size={20} />}
+                <span>{tab.label}</span>
+                {tab.badge && tab.badge > 0 && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          
+          {/* Right Arrow */}
+          <button
+            onClick={() => {
+              const currentIndex = tabs.findIndex(t => t.id === activeTab);
+              if (currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1].id as any);
+              }
+            }}
+            className="flex-shrink-0 p-2 hover:bg-neutral-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled={tabs.findIndex(t => t.id === activeTab) === tabs.length - 1}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
 
         {/* Overview Tab */}
@@ -2171,14 +2205,36 @@ export default function AdminDashboard() {
                           Delete
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedEditor(editor);
-                            loadActivities(undefined, editor.id);
-                            setActiveTab("activity-logs");
+                          onClick={async () => {
+                            // Check if editor is also a nurse/other health worker
+                            try {
+                              const res = await fetch(`/api/admin/doctor-details?email=${encodeURIComponent(editor.email)}`, {
+                                headers: headers(),
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                if (data.doctor && (data.doctor.role === "nurse" || data.doctor.role === "others")) {
+                                  setSelectedDoctor(data.doctor);
+                                  setActiveTab("nurses");
+                                } else {
+                                  setSelectedEditor(editor);
+                                  loadActivities(undefined, editor.id);
+                                  setActiveTab("activity-logs");
+                                }
+                              } else {
+                                setSelectedEditor(editor);
+                                loadActivities(undefined, editor.id);
+                                setActiveTab("activity-logs");
+                              }
+                            } catch {
+                              setSelectedEditor(editor);
+                              loadActivities(undefined, editor.id);
+                              setActiveTab("activity-logs");
+                            }
                           }}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                         >
-                          View Logs
+                          View {editors.find(e => e.id === editor.id) ? "Profile" : "Logs"}
                         </button>
                       </div>
                     </div>

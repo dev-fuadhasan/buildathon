@@ -59,6 +59,19 @@ export async function POST(req: NextRequest) {
 }
 
 async function calculateAIPriority(patient: PatientData): Promise<{ score: number; reason: string }> {
+  // Analyze file contents if available
+  const prescriptionSummary = patient.prescriptions?.length 
+    ? `Prescriptions: ${patient.prescriptions.length} file(s)${patient.prescriptions.map(p => p.description ? ` - ${p.description}` : "").join("")}`
+    : "No prescriptions";
+  
+  const reportSummary = patient.reports?.length
+    ? `Reports: ${patient.reports.length} file(s)${patient.reports.map(r => r.description ? ` - ${r.description}` : "").join("")}`
+    : "No reports";
+  
+  const documentSummary = patient.documents?.length
+    ? `Documents: ${patient.documents.length} file(s)${patient.documents.map(d => d.description ? ` - ${d.description}` : "").join("")}`
+    : "No documents";
+
   const patientSummary = `
 Patient: ${patient.name}
 Age: ${patient.age || "Not specified"}
@@ -67,9 +80,9 @@ Medical History: ${patient.medicalHistory || "None"}
 Allergies: ${patient.allergies || "None"}
 Current Medications: ${patient.currentMedications || "None"}
 Blood Group: ${patient.bloodGroup || "Not specified"}
-Prescriptions: ${patient.prescriptions?.length || 0} files
-Reports: ${patient.reports?.length || 0} files
-Documents: ${patient.documents?.length || 0} files
+${prescriptionSummary}
+${reportSummary}
+${documentSummary}
 Emergency Contact: ${patient.emergencyContact ? "Yes" : "No"}
 Notes: ${patient.notes || "None"}
   `.trim();
@@ -87,12 +100,14 @@ Respond in JSON format:
 Priority factors:
 - Critical medical conditions (diabetes, hypertension, heart disease, etc.)
 - Missing emergency contact information
-- Number of medical records (indicates active care needs)
+- Number of medical records (prescriptions, reports, documents - indicates active care needs)
+- Content analysis of uploaded files (prescriptions may indicate ongoing treatment, reports may show test results, documents may contain important medical information)
 - Age (elderly patients may need more attention)
 - Allergies and medication needs
 - Recent activity or lack thereof
+- File descriptions and types (urgent prescriptions, critical reports, important documents)
 
-Higher score = higher priority.`;
+Analyze all uploaded files (prescriptions, reports, documents) to understand the patient's medical needs. Higher score = higher priority.`;
 
   const response = await groq.chat.completions.create({
     messages: [

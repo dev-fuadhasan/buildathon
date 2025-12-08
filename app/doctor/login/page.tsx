@@ -60,9 +60,9 @@ export default function DoctorLogin() {
     <Layout>
       <div className="mx-auto max-w-xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Doctor Login</h1>
+          <h1 className="text-3xl font-bold">Health Workers Login</h1>
           <p className="text-slate-600">
-            Approved doctors can access incoming questions here.
+            Approved health workers (doctors, nurses, and others) can access their dashboards here.
           </p>
         </div>
         <MessagePopup
@@ -129,7 +129,7 @@ export default function DoctorLogin() {
           <p className="text-slate-600">
             Don't have an account?{" "}
             <Link href="/doctor/register" className="text-blue-600 hover:text-blue-700 font-medium underline">
-              Register as Doctor
+              Register as Health Worker
             </Link>
           </p>
         </div>

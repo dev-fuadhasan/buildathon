@@ -31,7 +31,27 @@ export default function Layout({ children }: Props) {
         router.push("/mother/dashboard");
         return;
       } else if (doctorToken) {
-        router.push("/doctor/dashboard");
+        // Check role from token to route correctly
+        const checkRoleAndRoute = async () => {
+          try {
+            const res = await fetch("/api/doctor/profile", {
+              headers: { Authorization: `Bearer ${doctorToken}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.profile?.role === "nurse" || data.profile?.role === "others") {
+                router.push("/nurse/dashboard");
+              } else {
+                router.push("/doctor/dashboard");
+              }
+            } else {
+              router.push("/doctor/dashboard");
+            }
+          } catch {
+            router.push("/doctor/dashboard");
+          }
+        };
+        checkRoleAndRoute();
         return;
       } else if (adminToken) {
         router.push("/admin/dashboard");
