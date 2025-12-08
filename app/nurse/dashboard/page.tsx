@@ -34,6 +34,7 @@ export default function NurseDashboard() {
   const [patientsPerPage] = useState(10);
   const prioritySectionRef = useRef<HTMLDivElement | null>(null);
   const patientsSectionRef = useRef<HTMLDivElement | null>(null);
+  const [activeMobileSection, setActiveMobileSection] = useState<"priority" | "patients">("priority");
 
   // Determine status for priority badges
   const getStatus = (patient: PatientData) => {
@@ -524,8 +525,10 @@ export default function NurseDashboard() {
           activeTab="priority"
           onTabChange={(id) => {
             if (id === "priority") {
+              setActiveMobileSection("priority");
               prioritySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
             } else if (id === "patients") {
+              setActiveMobileSection("patients");
               patientsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
             } else if (id === "profile") {
               router.push("/nurse/profile");
@@ -585,8 +588,11 @@ export default function NurseDashboard() {
 
         {/* Main Content - Two Column Layout (priority first on mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Right Side - AI Priority List (shown first on mobile) */}
-          <div ref={prioritySectionRef} className="space-y-4 order-1 lg:order-2">
+          {/* Priority List */}
+          <div
+            ref={prioritySectionRef}
+            className={`space-y-4 order-1 lg:order-2 ${activeMobileSection === "priority" ? "" : "hidden lg:block"}`}
+          >
             <DashboardCard title="AI Priority List">
               <p className="text-sm text-slate-600 mb-3">
                 Patients are automatically prioritized based on their medical data, urgency, and needs.
@@ -649,7 +655,7 @@ export default function NurseDashboard() {
                                   setShowEditModal(true);
                                 }
                               }}
-                              className="btn-primary text-[11px] px-2.5 py-1 font-semibold"
+                              className="btn-primary text-[10px] px-2 py-1 font-semibold"
                             >
                               View Details
                             </button>
@@ -663,8 +669,12 @@ export default function NurseDashboard() {
             </DashboardCard>
           </div>
 
-          {/* Left Side - Patient Management */}
-          <div ref={patientsSectionRef} className="space-y-6 order-2 lg:order-1" id="patients">
+          {/* Patient Management */}
+          <div
+            ref={patientsSectionRef}
+            className={`space-y-6 order-2 lg:order-1 ${activeMobileSection === "patients" ? "" : "hidden lg:block"}`}
+            id="patients"
+          >
             <DashboardCard
               title="Patient Management"
               action={
