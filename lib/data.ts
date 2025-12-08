@@ -147,6 +147,16 @@ export type ChatHistory = {
   updatedAt: string;
 };
 
+// New: Multiple conversation support
+export type Conversation = {
+  id: string; // UUID
+  motherId: string;
+  title: string; // Auto-generated from first user message
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 // Live Chat Types
 export type LiveChatUser = {
   userId?: string; // If logged in (mother/doctor ID)
@@ -514,6 +524,91 @@ export async function updateChatHistory(motherId: string, messages: ChatMessage[
     updatedAt: new Date().toISOString(),
   };
   return saveChatHistory(history);
+}
+
+// Conversation Functions (Multi-conversation support)
+const conversationKey = (motherId: string, conversationId: string) =>
+  `conversations/${motherId}/${conversationId}.json`;
+
+const conversationsListKey = (motherId: string) =>
+  `conversations/${motherId}/list.json`;
+
+export async function getConversationsList(motherId: string): Promise<{ id: string; title: string; updatedAt: string; }[]> {
+  try {
+    const list = await getJson<{ conversations: { id: string; title: string; updatedAt: string; }[] }>(conversationsListKey(motherId));
+    return list?.conversations || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function saveConversationsList(motherId: string, conversations: { id: string; title: string; updatedAt: string; }[]) {
+  return putJson(conversationsListKey(motherId), { conversations });
+}
+
+export async function getConversation(motherId: string, conversationId: string): Promise<Conversation | null> {
+  try {
+    return await getJson<Conversation>(conversationKey(motherId, conversationId));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveConversation(conversation: Conversation) {
+  // Save the conversation
+  await putJson(conversationKey(conversation.motherId, conversation.id), conversation);
+  
+  // Update the conversations list
+  const list = await getConversationsList(conversation.motherId);
+  const existingIndex = list.findIndex(c => c.id === conversation.id);
+  
+  const listItem = {
+    id: conversation.id,
+    title: conversation.title,
+    updatedAt: conversation.updatedAt,
+  };
+  
+  if (existingIndex >= 0) {
+    list[existingIndex] = listItem;
+  } else {
+    list.unshift(listItem); // Add to beginning
+  }
+  
+  await saveConversationsList(conversation.motherId, list);
+}
+
+export async function deleteConversation(motherId: string, conversationId: string) {
+  const { deleteObject } = await import("./r2Client");
+  
+  // Delete the conversation file
+  await deleteObject(conversationKey(motherId, conversationId));
+  
+  // Update the list
+  const list = await getConversationsList(motherId);
+  const filtered = list.filter(c => c.id !== conversationId);
+  await saveConversationsList(motherId, filtered);
+}
+
+export async function createConversation(motherId: string, firstUserMessage: string): Promise<Conversation> {
+  const { v4: uuid } = await import("uuid");
+  const conversationId = uuid();
+  
+  // Generate title from first message (first 50 chars)
+  const title = firstUserMessage.length > 50 
+    ? firstUserMessage.substring(0, 50) + "..." 
+    : firstUserMessage;
+  
+  const conversation: Conversation = {
+    id: conversationId,
+    motherId,
+    title,
+    messages: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  
+  await saveConversation(conversation);
+  return conversation;
 }
 
 // Daily Entry Functions
