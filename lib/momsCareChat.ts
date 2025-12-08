@@ -1,6 +1,8 @@
 import { groq, isGroqConfigured } from "./groqClient";
 import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
+import { searchDataset, formatKnowledgeContext } from "./knowledgeBase";
+import { detectLanguage } from "./translation";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -26,14 +28,33 @@ export async function askMomsCare(
   try {
     const safetyPrompt = getSafetyPrompt();
     
+    // ==========================================
+    // STEP 1: Get last user message for processing
+    // ==========================================
+    const lastUserMessage = messages
+      .filter((m) => m.role === "user")
+      .pop()?.content || "";
+    
+    // ==========================================
+    // STEP 2: Detect language from user message
+    // ==========================================
+    const userLanguage = detectLanguage(lastUserMessage);
+    const languageInstruction = userLanguage === "bn"
+      ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
+      : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
+    
+    // ==========================================
+    // STEP 3: Search knowledge base dataset
+    // ==========================================
+    const relevantChunks = searchDataset(lastUserMessage, 2); // Get top 2 relevant chunks
+    const datasetContext = relevantChunks ? formatKnowledgeContext(relevantChunks) : "";
+    
     // Determine mode
     const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
     const isGeneralQuestion = isLoggedIn && isPersonal === false;
     
     // System prompt - MomsCare AI
-    let systemPrompt = `You are MomsCare AI. Follow these strict rules:
-
-IMPORTANT: Respond in the SAME LANGUAGE as the user. If user writes in Bangla, respond in Bangla. If user writes in English, respond in English. If user writes in Banglish, respond in Bangla.
+    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}
 
 1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
 
@@ -72,9 +93,6 @@ ${safetyPrompt}`;
 
     // Extract weeks pregnant for RAG
     let trimester: number | undefined;
-    const lastUserMessage = messages
-      .filter((m) => m.role === "user")
-      .pop()?.content || "";
     
     if (weeksPregnant) {
       trimester = weeksPregnant;
@@ -210,7 +228,7 @@ Provide this calculation FIRST, then add context.`;
         messages: [
           { 
             role: "system", 
-            content: systemPrompt + profileNote + guidelinesContext + calculationContext 
+            content: systemPrompt + profileNote + guidelinesContext + calculationContext + datasetContext 
           },
           ...formattedMessages,
         ],
