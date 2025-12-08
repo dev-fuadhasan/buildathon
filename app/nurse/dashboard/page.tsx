@@ -711,19 +711,19 @@ export default function NurseDashboard() {
               <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="relative">
-                    <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
                     <input
                       type="text"
                       placeholder="Search patients by name or number..."
-                      className="input w-full pl-11 h-11"
+                      className="input w-full pr-11 h-11"
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         setCurrentPage(1); // Reset to first page on search
                       }}
                     />
+                    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
