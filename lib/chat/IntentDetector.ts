@@ -28,6 +28,46 @@ export interface IntentResult {
 export function detectIntent(question: string, isLoggedIn: boolean): IntentResult {
   const lower = question.toLowerCase().trim();
   
+  // CRITICAL: Logged-out users can NEVER have personal intents
+  // Handle this at the START to prevent any downstream issues
+  if (!isLoggedIn) {
+    // Check if it's a greeting
+    if (/^(hello|hi|hey|assalamualaikum|salam)$/i.test(lower)) {
+      return {
+        intent: 'greeting',
+        confidence: 0.95,
+        shouldShowProfile: false,
+        shouldShowPrescription: false,
+        needsFollowUp: false,
+        reason: 'Greeting from logged-out user'
+      };
+    }
+    
+    // Check if they want AI to ask a question
+    if (/amake.*proshno|ask me.*question|proshno koro|question koro/i.test(lower)) {
+      return {
+        intent: 'ask_for_question',
+        confidence: 0.95,
+        shouldShowProfile: false,
+        shouldShowPrescription: false,
+        needsFollowUp: false,
+        reason: 'Logged-out user wants a question'
+      };
+    }
+    
+    // ALL other logged-out queries are general information requests
+    return {
+      intent: 'ask_general_info',
+      confidence: 0.9,
+      shouldShowProfile: false,
+      shouldShowPrescription: false,
+      needsFollowUp: false,
+      reason: 'Logged-out user - all queries treated as general'
+    };
+  }
+  
+  // From here, user IS logged in
+  
   // Intent 1: User asking AI to ask them a question
   if (/amake.*proshno|ask me.*question|proshno koro|question koro/i.test(lower)) {
     return {
@@ -129,7 +169,7 @@ export function detectIntent(question: string, isLoggedIn: boolean): IntentResul
     };
   }
   
-  // Intent 8: Greeting
+  // Intent 8: Greeting (for logged-in users)
   if (/^(hello|hi|hey|assalamualaikum|salam)$/i.test(lower)) {
     return {
       intent: 'greeting',
@@ -141,26 +181,15 @@ export function detectIntent(question: string, isLoggedIn: boolean): IntentResul
     };
   }
   
-  // Intent 9: Logged out user - always general
-  if (!isLoggedIn) {
-    return {
-      intent: 'ask_general_info',
-      confidence: 0.7,
-      shouldShowProfile: false,
-      shouldShowPrescription: false,
-      needsFollowUp: false,
-      reason: 'User not logged in - treat as general'
-    };
-  }
-  
-  // Default: Unknown intent
+  // Default: Unknown intent (for logged-in users)
+  // If we reach here, the query doesn't match any pattern
   return {
-    intent: 'unknown',
-    confidence: 0.5,
+    intent: 'ask_general_info',  // Safer to treat as general than unknown
+    confidence: 0.6,
     shouldShowProfile: false,
     shouldShowPrescription: false,
     needsFollowUp: false,
-    reason: 'Could not determine clear intent'
+    reason: 'No clear pattern matched - treating as general for safety'
   };
 }
 
@@ -174,26 +203,40 @@ export function generateFollowUpQuestion(question: string, intent: IntentResult)
   
   const lower = question.toLowerCase();
   
+  // Detect language
+  const isBangla = /[\u0980-\u09FF]/.test(question) || /amar|ami|ki|kivabe|kemon/.test(lower);
+  
   // Medicine without symptom
-  if (/medicine|oshudh/.test(lower) && !/allergy|alargy|betha|pain/.test(lower)) {
-    return "কি সমস্যার জন্য ওষুধ লাগবে? (অ্যালার্জি/ব্যথা/জ্বর?)";
+  if (/medicine|oshudh/.test(lower) && !/allergy|alargy|betha|pain|jor|fever/.test(lower)) {
+    return isBangla
+      ? "কি সমস্যার জন্য ওষুধ লাগবে? (অ্যালার্জি/ব্যথা/জ্বর?)"
+      : "What problem do you need medicine for? (Allergy/Pain/Fever?)";
   }
   
   // Allergy medicine without type
   if (/(alargy|allergy).*medicine/.test(lower)) {
-    return "কি ধরনের অ্যালার্জি? (খাবার/ত্বক/ধুলো?)";
+    return isBangla
+      ? "কি ধরনের অ্যালার্জি? (খাবার/ত্বক/ধুলো?)"
+      : "What type of allergy? (Food/Skin/Dust?)";
   }
   
   // Pain without location
-  if (/(betha|pain)/.test(lower) && !/pet|matha|pith|head|back/.test(lower)) {
-    return "কোথায় ব্যথা করছে? (পেট/মাথা/পিঠ?)";
+  if (/(betha|pain)/.test(lower) && !/pet|matha|pith|head|back|kothai/.test(lower)) {
+    return isBangla
+      ? "কোথায় ব্যথা করছে? (পেট/মাথা/পিঠ?)"
+      : "Where is the pain? (Stomach/Head/Back?)";
   }
   
   // Discharge without details
-  if (/discharge/.test(lower) && !/white|sada|yellow|holud|color/.test(lower)) {
-    return "কি রঙের discharge? কতদিন ধরে?";
+  if (/discharge/.test(lower) && !/white|sada|yellow|holud|color|rong/.test(lower)) {
+    return isBangla
+      ? "কি রঙের discharge? কতদিন ধরে?"
+      : "What color is the discharge? How long has it been?";
   }
   
-  return "আপনার প্রশ্নটি একটু বিস্তারিত করুন।";
+  // Generic follow-up
+  return isBangla
+    ? "আপনার প্রশ্নটি একটু বিস্তারিত করুন।"
+    : "Please provide more details about your question.";
 }
 

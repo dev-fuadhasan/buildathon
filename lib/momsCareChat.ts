@@ -418,35 +418,69 @@ Provide this calculation FIRST, then add context.`;
     
     return validation.cleaned;
   } catch (error: any) {
-    console.error("Groq API error:", error);
-    console.error("Error details:", {
+    console.error("MomsCare AI error:", error);
+    console.error("Error context:", {
       message: error.message,
       status: error.status,
       code: error.code,
       type: error.type,
+      errorStack: error.stack?.substring(0, 200)
     });
+    
+    // Detect language for error messages from the last message if available
+    const lastMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
+    const isBangla = /[\u0980-\u09FF]/.test(lastMsg) || /amar|ami|ki|kemon/.test(lastMsg.toLowerCase());
     
     // Provide more specific error messages
     if (error.message?.includes("rate limit") || error.status === 429) {
-      throw new Error("Service is busy. Please try again in a moment.");
+      const msg = isBangla 
+        ? "সার্ভিস ব্যস্ত আছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+        : "Service is busy. Please try again in a moment.";
+      throw new Error(msg);
     }
+    
     if (error.message?.includes("token") || error.message?.includes("length") || error.status === 400) {
-      throw new Error("Message is too long. Please shorten your question.");
+      const msg = isBangla
+        ? "প্রশ্নটি খুব বড়। অনুগ্রহ করে ছোট করুন।"
+        : "Message is too long. Please shorten your question.";
+      throw new Error(msg);
     }
-    if (error.message?.includes("API") || error.message?.includes("key") || error.status === 401) {
-      throw new Error("API configuration issue. Please contact support.");
+    
+    if (error.message?.includes("API") || error.message?.includes("key") || error.status === 401 || error.status === 403) {
+      const msg = isBangla
+        ? "সার্ভিস কনফিগারেশন সমস্যা। সাপোর্টে যোগাযোগ করুন।"
+        : "Service configuration error. Please contact support.";
+      throw new Error(msg);
     }
+    
     if (error.message?.includes("model") || error.status === 404) {
-      throw new Error("Model not available. Please try again later.");
+      const msg = isBangla
+        ? "মডেল উপলব্ধ নেই। পরে আবার চেষ্টা করুন।"
+        : "Model not available. Please try again later.";
+      throw new Error(msg);
     }
     
-    // Re-throw with original message if it's informative
-    if (error.message && error.message.length > 10) {
-      throw error;
+    if (error.message?.includes("timeout") || error.message?.includes("Request timeout")) {
+      const msg = isBangla
+        ? "রেসপন্স পেতে দেরি হচ্ছে। ছোট প্রশ্ন করুন।"
+        : "Response took too long. Please try a shorter question.";
+      throw new Error(msg);
     }
     
-    throw new Error(
-      error.message || "Failed to get response from AI. Please try again."
-    );
+    // Check for profile/context errors (logged-out users)
+    if (error.message?.includes("profile") || error.message?.includes("undefined") || error.message?.includes("null")) {
+      console.error("[Critical] Possible data access error - logged-out user or missing profile");
+      const msg = isBangla
+        ? "দুঃখিত, আমি এই প্রশ্নের উত্তর দিতে পারছি না। আরও সাধারণ প্রশ্ন করুন।"
+        : "Sorry, I cannot answer this question. Please ask a more general question.";
+      throw new Error(msg);
+    }
+    
+    // Generic fallback with language support
+    const fallbackMessage = isBangla
+      ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+      : "Sorry, something went wrong. Please try again in a moment.";
+    
+    throw new Error(fallbackMessage);
   }
 }
