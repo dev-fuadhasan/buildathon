@@ -127,21 +127,67 @@ SCOPE RESTRICTION:
     // Add specific instruction for current question type
     if (userIsLoggedIn) {
       if (isGeneralQuestion) {
-        systemPrompt += `\n\n🔵 CURRENT MODE: GENERAL QUESTION
-- User is logged in but asking a GENERAL pregnancy question
-- Keywords detected: "mayera", "ki ki", "kemon", etc. (not "amar", "ami")
-- **DO NOT use profile, prescription, or personal data**
-- **DO NOT mention user's week, symptoms, medicines, or history**
-- Answer as if user is logged out
-- Provide general pregnancy advice only`;
+        systemPrompt += `\n\n═══════════════════════════════════════════
+🔵 CURRENT MODE: GENERAL QUESTION
+═══════════════════════════════════════════
+
+**CRITICAL:** User asked about "mothers" or "people" in GENERAL, NOT about herself.
+
+Question contains: "mayera", "gorbhoboti", "ki ki", "kemon" (GENERAL keywords)
+Question does NOT contain: "amar", "ami", "my" (PERSONAL keywords)
+
+**PROFILE CONTEXT HAS BEEN REMOVED - YOU HAVE NO ACCESS TO PERSONAL DATA**
+
+**STRICT RULES - YOU MUST FOLLOW:**
+❌ DO NOT use ANY profile data (you don't have access to it anyway)
+❌ DO NOT mention prescriptions, medicines, dosages
+❌ DO NOT mention user's pregnancy week
+❌ DO NOT mention user's symptoms or conditions
+❌ DO NOT mention user's medical history
+❌ DO NOT give personalized advice
+❌ DO NOT add emergency warnings unless question mentions specific emergency symptoms
+
+✅ ONLY provide general pregnancy advice
+✅ Answer as if user is logged out
+✅ Treat as educational/informational question
+✅ Give calm, general guidance
+✅ NO emergency warnings (unless question mentions specific emergency like "heavy bleeding")
+✅ Start your answer directly without "⚠️ HIGH PRIORITY" or similar warnings
+
+**Examples:**
+
+Question: "mayera ki ki mene cholbe?" (What should mothers follow?)
+❌ WRONG: "⚠️ HIGH PRIORITY... আপনার প্রেসক্রিপশনে Augmentin আছে..."
+❌ WRONG: "আপনি ৯ সপ্তাহের গর্ভবতী..."
+❌ WRONG: "আপনার ডেন্টাল ঔষধগুলি..."
+✅ RIGHT: "গর্ভবতী মায়েদের কিছু গুরুত্বপূর্ণ বিষয় মেনে চলা উচিত:
+১. পুষ্টিকর খাবার খান
+২. নিয়মিত চেকআপ করান
+৩. পর্যাপ্ত বিশ্রাম নিন
+৪. ডাক্তারের পরামর্শ মেনে চলুন"
+
+Question: "gorbhobosthay ki vitamin khawa uchit?" (What vitamins in pregnancy?)
+❌ WRONG: "আপনার প্রেসক্রিপশনে..."
+✅ RIGHT: "গর্ভাবস্থায় ফলিক এসিড, আয়রন, ক্যালসিয়াম, ভিটামিন ডি খাওয়া উচিত।"`;
       } else if (isPersonalizedMode) {
-        systemPrompt += `\n\n🟢 CURRENT MODE: PERSONAL QUESTION
-- User is logged in and asking about HERSELF
-- Keywords detected: "amar", "ami", "my", etc.
-- Use profile data to personalize answer
-- **NEVER list prescription details unless user asks "amar prescription ki?"**
-- Use prescription info internally but DON'T display it
-- Check if follow-up needed before answering`;
+        systemPrompt += `\n\n═══════════════════════════════════════════
+🟢 CURRENT MODE: PERSONAL QUESTION
+═══════════════════════════════════════════
+
+User asked about HERSELF specifically.
+
+Question contains: "amar", "ami", "my" (PERSONAL keywords)
+
+**RULES:**
+✅ Use profile data to personalize answer
+✅ Consider her week, symptoms, conditions
+❌ NEVER list prescription details unless user asks "amar prescription ki?"
+❌ Use prescription info internally but DON'T display it
+✅ Check if follow-up needed before answering
+
+**Prescription Privacy:**
+User asks: "amar pet betha" → You check she has diabetes → Say "ডায়াবেটিস আছে, ডাক্তারকে জানান" ✅
+DON'T say: "Metformin 500mg খান" ❌`;
       }
     } else {
       systemPrompt += `\n\n⚪ CURRENT MODE: LOGGED-OUT USER
@@ -216,9 +262,15 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    const profileNote = profileContext
+    // Only include profile context for PERSONAL questions, not GENERAL questions
+    const profileNote = (profileContext && isPersonalizedMode && !isGeneralQuestion)
       ? `\n\n${profileContext}`
       : "";
+    
+    // Log for debugging
+    if (profileContext && isGeneralQuestion) {
+      console.log("[MomsCare] GENERAL question detected - profile context EXCLUDED");
+    }
 
     // Filter and format messages - only include user and assistant messages
     const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
