@@ -1,68 +1,38 @@
 import { groq, isGroqConfigured } from "./groqClient";
-import { getBanglishScore, isBanglishText } from "./banglishWords";
 
 /**
  * Detect if text contains Bangla/Bengali characters or is in Banglish
- * Uses comprehensive 1200+ word Banglish dictionary for accurate detection
  */
 export function detectLanguage(text: string): "en" | "bn" {
   // Check for Bengali Unicode range: U+0980 to U+09FF
   const bengaliRegex = /[\u0980-\u09FF]/;
   
-  // If text contains Bengali characters, it's definitely Bangla
+  // If text contains Bengali characters, it's Bangla/Banglish
   if (bengaliRegex.test(text)) {
     return "bn";
   }
   
-  // Use comprehensive Banglish detection (1200+ words)
-  // If >20% of words are Banglish, classify as Bangla
-  if (isBanglishText(text)) {
-    return "bn";
+  // Check for common Banglish patterns (Bengali words written in English)
+  const banglishPatterns = [
+    // Common verbs and pronouns
+    /\b(ami|tumi|apni|kemon|koto|kototi|ki|kake|karo|kore|hobe|hoy|ache|nei|jabe|asbe|khabe|kheye|koreche|korche|korbe|hoyechhe|hoyche|hoybe)\b/gi,
+    // Time and place
+    /\b(mas|mash|saptah|soptaho|din|ghonta|minit|bochor|bochhor|shomoy|somoy|kotha|bari|ghor|khana|pani|bhalo|valo|kharap|sundor|bhalobasha)\b/gi,
+    // Pregnancy specific
+    /\b(gorbho|gorbhobostha|gorbhabostha|prosob|proshob|prosuti|baby|baccha|shishu|hospital|dakter|daktar|doctor|appointment|dikkat|problem|byatha|betha)\b/gi,
+    // Questions words
+    /\b(kivabe|kibhabe|kkhon|kokhon|keno|kothay|kar|kisher|kothai|kotota|kotogulo)\b/gi,
+    // Medical terms in Banglish
+    /\b(amar|amake|amader|tomar|apnar|purbo|purba|lokho|lokkho|rakha|uchit|ucit)\b/gi,
+  ];
+  
+  for (const pattern of banglishPatterns) {
+    if (pattern.test(text)) {
+      return "bn";
+    }
   }
   
   return "en";
-}
-
-/**
- * Get detailed language analysis
- * Returns language and confidence score
- */
-export function analyzeLanguage(text: string): {
-  language: "en" | "bn";
-  confidence: number;
-  banglishScore: number;
-  hasBengaliScript: boolean;
-} {
-  const bengaliRegex = /[\u0980-\u09FF]/;
-  const hasBengaliScript = bengaliRegex.test(text);
-  const banglishScore = getBanglishScore(text);
-  
-  let language: "en" | "bn" = "en";
-  let confidence = 100;
-  
-  if (hasBengaliScript) {
-    language = "bn";
-    confidence = 100;
-  } else if (banglishScore > 50) {
-    language = "bn";
-    confidence = 95;
-  } else if (banglishScore > 30) {
-    language = "bn";
-    confidence = 80;
-  } else if (banglishScore > 20) {
-    language = "bn";
-    confidence = 70;
-  } else {
-    language = "en";
-    confidence = 100 - banglishScore;
-  }
-  
-  return {
-    language,
-    confidence,
-    banglishScore,
-    hasBengaliScript,
-  };
 }
 
 /**
