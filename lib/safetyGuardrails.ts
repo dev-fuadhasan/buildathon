@@ -44,7 +44,7 @@ const CRITICAL_RED_FLAGS = [
   "chest pain", "chest tightness",
   
   // Trauma
-  "fell", "accident", "hit", "trauma", "injury",
+  "fell", "accident", "hit my", "hit her", "was hit", "got hit", "trauma", "injury",
   
   // Other emergencies
   "emergency", "urgent", "immediately", "right now", "asap",
