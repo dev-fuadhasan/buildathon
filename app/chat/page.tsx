@@ -154,10 +154,8 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, { role: "assistant" as const, content: data.reply }];
       setMessages(finalMessages);
       
-      // Save chat history for logged-in mothers
-      if (isMother) {
-        saveChatHistory(finalMessages);
-      }
+      // Chat history is now saved automatically by the backend API
+      // No need to save from frontend to avoid duplicates
     } catch (err: any) {
       console.error("Chat error:", err);
       const errorMessage = err.message || "Sorry, something went wrong. Please try again.";
@@ -167,10 +165,7 @@ export default function ChatPage() {
       ];
       setMessages(errorMessages);
       
-      // Save error message to history too
-      if (isMother) {
-        saveChatHistory(errorMessages);
-      }
+      // Chat history is saved by backend, but errors are not saved to avoid polluting history
     } finally {
       setLoading(false);
     }

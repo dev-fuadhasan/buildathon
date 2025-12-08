@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { askMomsCare } from "@/lib/momsCareChat";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother } from "@/lib/data";
+import { getMother, getChatHistory, updateChatHistory, listDailyEntries, listMotherQuestions, ChatMessage } from "@/lib/data";
 import { listObjects, signedUrl } from "@/lib/r2Client";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
+import { isPersonalQuestion } from "@/lib/chatHelper";
+import { getCurrentDateInTimezone } from "@/lib/pregnancyTracker";
 
 // Increase timeout for chat API (60 seconds)
 export const maxDuration = 60;
@@ -75,58 +77,241 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Clean and deduplicate messages
-    messages = cleanMessages(messages);
-    
-    // Limit conversation history to prevent token overflow and maintain focus
-    messages = limitConversationHistory(messages, 18);
-
+    // Check if user is logged in
     const user = await getUserFromRequest(req);
-
-    let profileContext: string | undefined = body.profileContext;
+    const isLoggedIn = user?.role === "mother";
+    
+    // ============================================================
+    // LOGGED-OUT USER (GUEST MODE) - Start fresh session
+    // ============================================================
+    if (!isLoggedIn) {
+      // For logged-out users: Use only current session messages
+      // No history, no profile, no personalization
+      messages = cleanMessages(messages);
+      messages = limitConversationHistory(messages, 18);
+      
+      // Get the last user message
+      const lastUserMessage = messages
+        .filter((m: any) => m.role === "user")
+        .pop()?.content || "";
+      
+      if (!lastUserMessage.trim()) {
+        return NextResponse.json(
+          { error: "User message is required" },
+          { status: 400 }
+        );
+      }
+      
+      // Detect language
+      const userLanguage = detectLanguage(lastUserMessage);
+      
+      // Translate messages for AI
+      const translatedMessages = await Promise.all(
+        messages.map(async (m: any) => {
+          if (m.role === "user") {
+            const msgLanguage = detectLanguage(m.content);
+            if (msgLanguage === "bn") {
+              try {
+                const translated = await translateToEnglish(m.content);
+                return { ...m, content: translated };
+              } catch (error) {
+                return m;
+              }
+            }
+          }
+          return m;
+        })
+      );
+      
+      // Translate last message for safety check
+      let translatedUserMessage = lastUserMessage;
+      if (userLanguage === "bn") {
+        try {
+          translatedUserMessage = await translateToEnglish(lastUserMessage);
+        } catch (error) {
+          translatedUserMessage = lastUserMessage;
+        }
+      }
+      
+      // Safety check
+      const safetyCheck = checkSafety(translatedUserMessage, undefined);
+      
+      if (safetyCheck.requiresEmergency) {
+        const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
+        const finalReply = userLanguage === "bn" 
+          ? await translateToBangla(emergencyMessage).catch(() => emergencyMessage)
+          : emergencyMessage;
+        
+        return NextResponse.json({
+          reply: finalReply,
+          safetyWarning: true,
+          riskLevel: safetyCheck.riskLevel,
+        });
+      }
+      
+      // Get AI response (no profile context for guests)
+      let reply: string;
+      try {
+        const timeoutPromise = new Promise<string>((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), 55000);
+        });
+        
+        reply = await Promise.race([
+          askMomsCare(translatedMessages, undefined, [], undefined, false, false),
+          timeoutPromise
+        ]) as string;
+        
+        reply = reply.trim();
+        
+        if (!reply || reply.length < 3) {
+          throw new Error("Empty response from AI");
+        }
+      } catch (error: any) {
+        console.error("AI chat error:", error);
+        const errorMessage = userLanguage === "bn"
+          ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+          : "Sorry, something went wrong. Please try again in a moment.";
+        
+        return NextResponse.json({
+          reply: errorMessage,
+          safetyWarning: false,
+          riskLevel: "low",
+        });
+      }
+      
+      // Add safety warnings if needed
+      if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
+        reply = `${safetyCheck.recommendation}\n\n${reply}`;
+      } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
+        reply = `${safetyCheck.recommendation}\n\n${reply}`;
+      }
+      
+      // Translate response back
+      let finalReply = reply;
+      if (userLanguage === "bn") {
+        try {
+          finalReply = await translateToBangla(reply);
+        } catch (error) {
+          finalReply = reply;
+        }
+      }
+      
+      // DO NOT store chat history for logged-out users
+      return NextResponse.json({
+        reply: finalReply.trim(),
+        safetyWarning: safetyCheck.riskLevel !== "low",
+        riskLevel: safetyCheck.riskLevel,
+      });
+    }
+    
+    // ============================================================
+    // LOGGED-IN MOTHER (PERSONALIZED MODE)
+    // ============================================================
+    
+    // Load previous chat history for logged-in mothers
+    let previousChatHistory: ChatMessage[] = [];
+    try {
+      const history = await getChatHistory(user!.id);
+      if (history && history.messages && history.messages.length > 0) {
+        previousChatHistory = history.messages;
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+    }
+    
+    // Merge previous history with current session messages
+    // Current session messages take priority (they're the latest)
+    const allMessages = [...previousChatHistory, ...messages];
+    messages = cleanMessages(allMessages);
+    messages = limitConversationHistory(messages, 20); // Allow more history for logged-in users
+    
+    // Load comprehensive mother data
+    let profileContext: string | undefined = undefined;
     let prescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
+    let isPersonal = false;
     
-    if (user?.role === "mother") {
-      try {
-        const mother = await getMother(user.id);
-        if (mother) {
-          const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
-          const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
-          const months = weeks ? Math.round(weeks / 4.33) : undefined;
+    try {
+      const mother = await getMother(user!.id);
+      if (mother) {
+        const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+        const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+        const months = weeks ? Math.round(weeks / 4.33) : undefined;
+        
+        // Get the last user message to detect question type
+        const lastUserMessage = messages
+          .filter((m: any) => m.role === "user")
+          .pop()?.content || "";
+        
+        isPersonal = isPersonalQuestion(lastUserMessage);
+        
+        // Build comprehensive profile context
+        const profileParts: string[] = [];
+        
+        // Basic profile
+        if (mother.name) profileParts.push(`নাম: ${mother.name}`);
+        if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
+        if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
+        if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
+        if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
+        if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
+        
+        // Medical history
+        if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
+        if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
+        if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
+        if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
+        
+        // Load daily entries for recent activity
+        try {
+          const dailyEntries = await listDailyEntries(user!.id);
+          const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
+          const recentEntries = dailyEntries
+            .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .slice(0, 5)
+            .map(entry => entry.entry);
           
-          // Build comprehensive profile context for personalized AI
-          const profileParts: string[] = [];
-          
-          if (mother.name) profileParts.push(`নাম: ${mother.name}`);
-          if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
-          if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
-          if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
-          if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
-          if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
-          if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
-          if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
-          if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
-          if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
-          
-          profileContext = profileParts.length > 0 
-            ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
-            : undefined;
-          weeksPregnant = weeks;
-          
-          try {
-            const prefix = `prescriptions/${user.id}/`;
-            const objects = await listObjects(prefix);
-            prescriptionUrls = await Promise.all(
-              (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
-            );
-          } catch (err) {
-            console.error("Failed to fetch prescriptions:", err);
+          if (recentEntries.length > 0) {
+            profileParts.push(`\nসাম্প্রতিক দৈনিক এন্ট্রি:\n${recentEntries.join("\n")}`);
           }
+        } catch (err) {
+          console.error("Failed to load daily entries:", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch mother profile:", err);
+        
+        // Load recent doctor Q&A
+        try {
+          const questions = await listMotherQuestions(user!.id);
+          const recentQAs = questions
+            .filter(q => q.answer)
+            .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
+            .slice(0, 3)
+            .map(q => `Q: ${q.question}\nA: ${q.answer}`);
+          
+          if (recentQAs.length > 0) {
+            profileParts.push(`\nসাম্প্রতিক ডাক্তারের পরামর্শ:\n${recentQAs.join("\n\n")}`);
+          }
+        } catch (err) {
+          console.error("Failed to load questions:", err);
+        }
+        
+        profileContext = profileParts.length > 0 
+          ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
+          : undefined;
+        weeksPregnant = weeks;
+        
+        // Load prescriptions
+        try {
+          const prefix = `prescriptions/${user!.id}/`;
+          const objects = await listObjects(prefix);
+          prescriptionUrls = await Promise.all(
+            (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
+          );
+        } catch (err) {
+          console.error("Failed to fetch prescriptions:", err);
+        }
       }
+    } catch (err) {
+      console.error("Failed to fetch mother profile:", err);
     }
 
     // Get the last user message
@@ -144,16 +329,13 @@ export async function POST(req: NextRequest) {
     // Detect language of user message
     const userLanguage = detectLanguage(lastUserMessage);
     
-    // Estimate token count more accurately
+    // Estimate token count
     const allMessagesText = JSON.stringify(messages) + (profileContext || "");
-    const estimatedTokens = Math.ceil(allMessagesText.length / 3.5); // More accurate estimate
+    const estimatedTokens = Math.ceil(allMessagesText.length / 3.5);
     
-    // Check if token limit is exceeded (8000 tokens max, leave buffer for response)
+    // Check if token limit is exceeded
     if (estimatedTokens > 6000) {
-      // Trim more aggressively
       messages = limitConversationHistory(messages, 12);
-      
-      // Re-check
       const newEstimatedTokens = Math.ceil((JSON.stringify(messages) + (profileContext || "")).length / 3.5);
       if (newEstimatedTokens > 6000) {
         const errorMessage = userLanguage === "bn"
@@ -168,7 +350,7 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Translate ALL user messages in the conversation to maintain context consistency
+    // Translate ALL user messages
     const translatedMessages = await Promise.all(
       messages.map(async (m: any) => {
         if (m.role === "user") {
@@ -178,7 +360,6 @@ export async function POST(req: NextRequest) {
               const translated = await translateToEnglish(m.content);
               return { ...m, content: translated };
             } catch (error) {
-              console.error("Translation error for message:", error);
               return m;
             }
           }
@@ -187,15 +368,12 @@ export async function POST(req: NextRequest) {
       })
     );
     
-    // Translate the last user message separately for safety check
+    // Translate last message for safety check
     let translatedUserMessage = lastUserMessage;
     if (userLanguage === "bn") {
       try {
         translatedUserMessage = await translateToEnglish(lastUserMessage);
-        // Log for debugging translation accuracy
-        console.log("Translation:", { original: lastUserMessage, translated: translatedUserMessage });
       } catch (error) {
-        console.error("Translation error:", error);
         translatedUserMessage = lastUserMessage;
       }
     }
@@ -203,7 +381,6 @@ export async function POST(req: NextRequest) {
     // Safety check
     const safetyCheck = checkSafety(translatedUserMessage, profileContext);
     
-    // If critical emergency, return immediate response
     if (safetyCheck.requiresEmergency) {
       const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
       const finalReply = userLanguage === "bn" 
@@ -217,30 +394,22 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Get AI response in English with timeout handling
+    // Get AI response with personalization metadata
     let reply: string;
     try {
-      // Add timeout wrapper to prevent 502 errors
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 55000); // 55 seconds timeout
+        setTimeout(() => reject(new Error("Request timeout")), 55000);
       });
       
       reply = await Promise.race([
-        askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant),
+        askMomsCare(translatedMessages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
         timeoutPromise
       ]) as string;
       
-      // Validate and clean the response
       reply = reply.trim();
       
-      // Check for empty or very short responses
       if (!reply || reply.length < 3) {
-        throw new Error("Received empty or invalid response from AI");
-      }
-      
-      // Check if response is just error messages or placeholders
-      if (reply.toLowerCase().includes("error") && reply.length < 50) {
-        throw new Error("AI returned an error response");
+        throw new Error("Empty response from AI");
       }
       
     } catch (error: any) {
@@ -327,9 +496,29 @@ export async function POST(req: NextRequest) {
       try {
         finalReply = await translateToBangla(reply);
       } catch (error) {
-        console.error("Translation error:", error);
         finalReply = reply;
       }
+    }
+    
+    // Store chat history for logged-in mothers only
+    try {
+      const updatedMessages: ChatMessage[] = messages.map((m: any) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date().toISOString(),
+      }));
+      
+      // Add the new assistant response
+      updatedMessages.push({
+        role: "assistant",
+        content: finalReply.trim(),
+        timestamp: new Date().toISOString(),
+      });
+      
+      await updateChatHistory(user!.id, updatedMessages);
+    } catch (err) {
+      console.error("Failed to save chat history:", err);
+      // Don't fail the request if history save fails
     }
     
     return NextResponse.json({

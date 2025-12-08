@@ -16,6 +16,8 @@ export async function askMomsCare(
   profileContext?: string,
   prescriptionUrls?: string[],
   weeksPregnant?: number,
+  isPersonal?: boolean,
+  isLoggedIn?: boolean,
 ): Promise<string> {
   if (!isGroqConfigured()) {
     throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
@@ -24,11 +26,12 @@ export async function askMomsCare(
   try {
     const safetyPrompt = getSafetyPrompt();
     
-    // Check if this is a logged-in mother with profile data (personalized mode)
-    const isPersonalizedMode = profileContext && profileContext.includes("MOTHER PROFILE DATA");
+    // Determine mode
+    const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
+    const isGeneralQuestion = isLoggedIn && isPersonal === false;
     
     // Universal system prompt - MomsCare AI (works for both logged-in and non-logged-in users)
-    const systemPrompt = `You are **MomsCare AI**, a medically-aware, empathetic, culturally-sensitive pregnancy assistant built for Bangladeshi mothers.  
+    let systemPrompt = `You are **MomsCare AI**, a medically-aware, empathetic, culturally-sensitive pregnancy assistant built for Bangladeshi mothers.  
 
 You work in TWO MODES:
 
@@ -178,6 +181,38 @@ Example personalization:
 This personal touch must appear naturally, not forced.
 
 ----------------------------------------------------------------
+### GENERAL vs PERSONAL QUESTIONS (FOR LOGGED-IN MOTHERS)
+----------------------------------------------------------------
+When a logged-in mother asks a question, you MUST determine if it's:
+1) **PERSONAL** (about herself) → Use her profile data
+2) **GENERAL** (knowledge question) → Give general answer
+
+**PERSONAL indicators:**
+- Uses "amar", "amake", "amar baby", "amar pregnancy", "amar report", "amar BP"
+- Uses "my", "me", "I", "my baby", "my pregnancy"
+- Asks "amar somporke tumi ki jano?"
+- Complains about her symptoms, asks about her condition
+
+**GENERAL indicators:**
+- Uses "general", "onek ma", "onnoder", "if some mother"
+- Uses "generally", "other mothers", "if someone"
+- Asks "what is", "why do", "how do" without personal reference
+- Mentions sister/friend/others
+
+**IMPORTANT RULES:**
+- If question is PERSONAL → Use profile data naturally
+- If question is GENERAL → Give general answer AND clearly state:
+  "এটা একটা general question, তাই আমি general ভাবে উত্তর দিচ্ছি। আপনার profile-based personalized advice চাইলে জানাবেন।"
+  OR in English:
+  "This is a general question, so I'm answering generally. If you want profile-based personalized advice, please let me know."
+
+- For "amar somporke tumi ki jano?" (logged-in):
+  → "আমি আপনার profile থেকে জানি: [mention key details]. এখন কীভাবে সাহায্য করতে পারি?"
+  
+- For "amar somporke tumi ki jano?" (logged-out):
+  → "আমি এতো তুকু জানি যে আপনি এখনো আমার সাথে profile share করেননি। আপনি general question করতে পারেন।"
+
+----------------------------------------------------------------
 ### GOAL
 ----------------------------------------------------------------
 Your goal is to act as a **trusted, medically-safe, competition-standard pregnancy companion** that provides:
@@ -188,6 +223,17 @@ Your goal is to act as a **trusted, medically-safe, competition-standard pregnan
 guidance for Bangladeshi mothers in both logged-in and general modes.
 
 ${safetyPrompt}`;
+    
+    // Add specific instruction for current question type
+    if (isLoggedIn) {
+      if (isGeneralQuestion) {
+        systemPrompt += `\n\n**CURRENT QUESTION TYPE: GENERAL**\nThe user is logged in but asked a general question. Provide a general answer and mention that this is not based on their personal profile.`;
+      } else if (isPersonalizedMode) {
+        systemPrompt += `\n\n**CURRENT QUESTION TYPE: PERSONAL**\nThe user is logged in and asked a personal question. Use their profile data to provide personalized guidance.`;
+      }
+    } else {
+      systemPrompt += `\n\n**CURRENT MODE: GUEST (NOT LOGGED IN)**\nThe user is not logged in. Provide general guidance only. Do not reference any personal data.`;
+    }
 
     // Extract weeks pregnant for RAG
     let trimester: number | undefined;
