@@ -42,16 +42,41 @@ export async function askMomsCare(
       .pop()?.content || "";
     
     // ==========================================
-    // STEP 2: Detect language from user message (or use forced language from config)
+    // STEP 2: Quick intent detection FIRST (before expensive operations)
+    // This prevents logged-out users from triggering profile operations
+    // ==========================================
+    const quickIntent = detectIntent(lastUserMessage, userIsLoggedIn);
+    
+    // ==========================================
+    // STEP 3: Detect language from user message (or use forced language from config)
     // ==========================================
     const forcedLanguage = getForcedLanguage();
     const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
-    const languageInstruction = userLanguage === "bn"
-      ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
-      : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
     
     // ==========================================
-    // STEP 3: Search dual dataset based on language
+    // STEP 4: Handle special intents EARLY (before expensive operations)
+    // ==========================================
+    if (quickIntent.intent === 'greeting') {
+      return userLanguage === 'bn' 
+        ? "আসসালামু আলাইকুম! আমি MomsCare AI। আমি আপনাকে গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত পরামর্শ দিতে পারি। আপনার কি কোনো প্রশ্ন আছে?"
+        : "Hello! I'm MomsCare AI. I can help you with pregnancy and health advice. How can I assist you?";
+    }
+    
+    if (quickIntent.intent === 'ask_for_question') {
+      return userLanguage === 'bn'
+        ? "আপনার গর্ভাবস্থার কোন বিষয়ে আমি আপনাকে সাহায্য করতে পারি?"
+        : "What aspect of your pregnancy can I help you with?";
+    }
+    
+    if (quickIntent.needsFollowUp) {
+      const followUp = generateFollowUpQuestion(lastUserMessage, quickIntent);
+      if (followUp) {
+        return followUp;
+      }
+    }
+    
+    // ==========================================
+    // STEP 5: Search dual dataset based on language (only if needed)
     // ==========================================
     // Check if query is Banglish (romanized Bangla without Bengali script)
     const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
@@ -68,8 +93,9 @@ export async function askMomsCare(
         searchQuery = translatedQuery || lastUserMessage;
         console.log(`[Banglish] Original: ${lastUserMessage}`);
         console.log(`[Banglish] Translated: ${searchQuery}`);
-        // Search English dataset with translated query
-        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 3);
+        // Search English dataset with translated query (fewer results for speed)
+        const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
+        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", numResults);
       } catch (error) {
         console.error("Banglish translation failed, fallback to direct search:", error);
         // Fallback: search both datasets
@@ -79,15 +105,17 @@ export async function askMomsCare(
       }
     } else {
       // Normal search for English or Bangla with script
-      relevantDatasetItems = searchDatasetByLanguage(searchQuery, userLanguage, 3);
+      // Use fewer results for simple queries to improve speed
+      const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
+      relevantDatasetItems = searchDatasetByLanguage(searchQuery, userLanguage, numResults);
     }
     
     const datasetContext = relevantDatasetItems.length > 0 
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
-    // Step 1: Detect user intent (what do they ACTUALLY want?)
-    const intent = detectIntent(lastUserMessage, userIsLoggedIn);
+    // Use the quick intent we already detected
+    const intent = quickIntent;
     
     console.log(`[Intent Detection]`, {
       intent: intent.intent,
@@ -97,29 +125,7 @@ export async function askMomsCare(
       shouldShowPrescription: intent.shouldShowPrescription
     });
     
-    // Step 2: Handle special intents immediately
-    if (intent.intent === 'ask_for_question') {
-      // User wants AI to ask them a question
-      const followUp = generateFollowUpQuestion(lastUserMessage, intent) || 
-        "আপনার গর্ভাবস্থার কোন বিষয়ে আমি আপনাকে সাহায্য করতে পারি?";
-      return followUp;
-    }
-    
-    if (intent.intent === 'greeting') {
-      return userLanguage === 'bn' 
-        ? "আসসালামু আলাইকুম! আমি MomsCare AI। আমি আপনাকে গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত পরামর্শ দিতে পারি। আপনার কি কোনো প্রশ্ন আছে?"
-        : "Hello! I'm MomsCare AI. I can help you with pregnancy and health advice. How can I assist you?";
-    }
-    
-    // Step 3: Check if follow-up needed
-    if (intent.needsFollowUp) {
-      const followUp = generateFollowUpQuestion(lastUserMessage, intent);
-      if (followUp) {
-        return followUp;
-      }
-    }
-    
-    // Step 4: Use modular question classifier for remaining logic
+    // Use modular question classifier for remaining logic
     const classification = classifyQuestion(lastUserMessage, userIsLoggedIn);
     const isGeneralQuestion = classification.type === 'general' || intent.intent === 'ask_general_info';
     const isPersonalQuestion = classification.type === 'personal' && intent.intent !== 'ask_general_info';
@@ -324,14 +330,32 @@ Provide this calculation FIRST, then add context.`;
       throw new Error("Groq client is not initialized");
     }
 
-    // Use a vision-capable model if we have images, otherwise use the 70B versatile model
-    const model = prescriptionUrls && prescriptionUrls.length > 0
-      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for prescription images
-      : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
+    // Smart model selection based on query complexity
+    let model: string;
+    
+    if (prescriptionUrls && prescriptionUrls.length > 0) {
+      // Use vision model for image analysis
+      model = "meta-llama/llama-4-scout-17b-16e-instruct";
+    } else if (quickIntent.intent === 'ask_profile_info') {
+      // Use faster model for simple profile queries
+      model = "llama-3.1-8b-instant"; // 10x faster for simple queries
+    } else if (isGeneralQuestion) {
+      // Use medium model for general questions
+      model = "llama-3.1-70b-versatile";
+    } else {
+      // Use best model for complex medical advice
+      model = "llama-3.3-70b-versatile";
+    }
+    
+    console.log(`[Model Selection] Using ${model} for intent: ${quickIntent.intent}`);
 
-    // Create timeout wrapper to prevent 502 errors
+    // Create timeout wrapper to prevent 502 errors (shorter for simple queries)
+    const timeoutDuration = quickIntent.intent === 'ask_profile_info'
+      ? 15000  // 15 seconds for simple queries
+      : 45000; // 45 seconds for complex queries
+    
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 50000); // 50 seconds
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), timeoutDuration);
     });
     
     const completion = await Promise.race([
@@ -344,12 +368,15 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        temperature: 0.3, // Lower temperature for more accurate, focused responses
-        max_tokens: 4000, // Reduced from 8000 to prevent timeout and long responses
-        top_p: 0.85, // Slightly lower for more focused responses
-        frequency_penalty: 0.4, // Higher penalty to prevent repetition and irrelevant content
-        presence_penalty: 0.3, // Higher penalty to stay on topic
-        stop: ["\n\n\n\n", "====", "----"], // Stop sequences to prevent excessive rambling
+        // Dynamic parameters based on query type
+        temperature: quickIntent.intent === 'ask_profile_info' ? 0.1 : 0.3, // Very low for factual queries
+        max_tokens: quickIntent.intent === 'ask_profile_info' ? 500 :  // Short for profile info
+                   quickIntent.intent === 'ask_general_info' ? 1500 :  // Medium for general
+                   3000, // Longer for medical advice
+        top_p: 0.85,
+        frequency_penalty: 0.4,
+        presence_penalty: 0.3,
+        stop: ["\n\n\n\n", "====", "----", "আপনার প্রেসক্রিপশন"], // Stop if starting to list prescriptions
       }),
       timeoutPromise
     ]);

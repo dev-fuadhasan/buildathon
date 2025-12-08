@@ -11,39 +11,55 @@ export interface ValidationResult {
 
 /**
  * Validate response doesn't contain prescription details when it shouldn't
+ * AGGRESSIVE removal of ALL prescription mentions
  */
 function validateNoPrescriptions(response: string): {valid: boolean; cleaned: string} {
   let cleaned = response;
-  const issues: string[] = [];
   
-  // Check for prescription mentions
-  const prescriptionPatterns = [
-    /আপনার প্রেসক্রিপশনে/gi,
-    /Augmentin|Enzoflam|Pan\s*D|Hexigel/gi,
-    /\d+\s*সপ্তাহের গর্ভিণী/gi,
-    /আপনি গর্ভবতী \(/gi,
+  // AGGRESSIVE prescription removal patterns
+  const removalPatterns = [
+    // Bengali prescription intro
+    /আপনার প্রেসক্রিপশন[\s\S]*?(?=\n\n|আপনার যদি|যদি আপনার|$)/gi,
+    /প্রেসক্রিপশন বিশ্লেষণ[\s\S]*?(?=\n\n|আপনার যদি|যদি আপনার|$)/gi,
+    /নিম্নলিখিত ঔষধ[\s\S]*?(?=\n\n|আপনার যদি|যদি আপনার|$)/gi,
+    
+    // Medicine lists (Bengali numbers and English)
+    /[১২৩৪৫৬৭৮৯০1-9]\.\s*\*\*[\s\S]*?\*\*:[\s\S]*?(?=\n[১২৩৪৫৬৭৮৯০1-9]\.|$)/gi,
+    
+    // Specific medicine names
+    /(অ্যাজমেন্টিন|এনজাফ্লাম|প্যানডি|হেক্সিজেল|Augmentin|Enzoflam|Pan\s*D|Hexigel)[^\n]*/gi,
+    
+    // Dosage patterns
+    /\d+\s*(মিলিগ্রাম|mg|ট্যাবলেট|tablet)[\s\S]*?(?=\n\n|$)/gi,
+    
+    // "For 5 days" type patterns
+    /\d+\s*(দিনের জন্য|দিন|days|সপ্তাহে|week)/gi,
+    
+    // Medicine taking instructions
+    /(খাবার পর|খাবার আগে|after food|before food).*?(?=\n|$)/gi,
+    
+    // Pregnancy week mentions (when not asked)
+    /আপনি বর্তমানে\s*\d+\s*সপ্তাহে[\s\S]*?(?=\n\n|$)/gi,
+    /আপনি\s*\d+\s*সপ্তাহের গর্ভবতী[।.\s]*/gi,
   ];
   
   let hasPrescriptions = false;
-  for (const pattern of prescriptionPatterns) {
+  
+  for (const pattern of removalPatterns) {
     if (pattern.test(cleaned)) {
       hasPrescriptions = true;
-      break;
+      cleaned = cleaned.replace(pattern, '');
     }
   }
   
-  if (hasPrescriptions) {
-    issues.push('Contains prescription details');
-    
-    // Remove prescription content
-    cleaned = cleaned.replace(/আপনার প্রেসক্রিপশনে[\s\S]*?(?=\n\n|$)/gi, '');
-    cleaned = cleaned.replace(/[১২৩৪৫৬৭৮৯০1-9]\.\s*\*\*[A-Za-z\s]+\*\*:[\s\S]*?(?=\n[১২৩৪৫৬৭৮৯০1-9]\.|$)/gi, '');
-    cleaned = cleaned.replace(/আপনি গর্ভবতী \([^)]+\)[।.\s]*/gi, '');
-    cleaned = cleaned.replace(/\d+\s*সপ্তাহের গর্ভিণী/gi, '');
-    cleaned = cleaned.replace(/(Augmentin|Enzoflam|Pan\s*D|Hexigel)[^\n]*/gi, '');
-  }
+  // Remove "doctor safety" sentences that often accompany prescriptions
+  cleaned = cleaned.replace(/গর্ভাবস্থায় এই ঔষধগুলি নিরাপদ কিনা[\s\S]*?(?=\n\n|$)/gi, '');
+  cleaned = cleaned.replace(/ডাক্তার বা স্বাস্থ্যসেবা প্রদানকারীকে অবহিত[\s\S]*?(?=\n\n|$)/gi, '');
   
-  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  // Clean up formatting
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/^\s*\n/gm, '');
+  cleaned = cleaned.trim();
   
   return {
     valid: !hasPrescriptions,
