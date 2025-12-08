@@ -494,8 +494,8 @@ export default function NurseDashboard() {
   );
 
   const tabs = [
-    { id: "priority", label: "Priority List", icon: "overview", action: "navigate" as const, href: "/nurse/dashboard" },
-    { id: "patients", label: "Patient Management", icon: "profile", action: "navigate" as const, href: "/nurse/dashboard#patients" },
+    { id: "priority", label: "Priority List", icon: "overview" },
+    { id: "patients", label: "Patient Management", icon: "profile" },
     { id: "profile", label: "Profile", icon: "profile", action: "navigate" as const, href: "/nurse/profile" },
     { id: "logout", label: "Logout", action: "logout" as const },
   ];
@@ -525,13 +525,7 @@ export default function NurseDashboard() {
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={(id) => {
-            if (id === "priority") {
-              setActiveTab("priority");
-            } else if (id === "patients") {
-              setActiveTab("patients");
-            } else if (id === "profile") {
-              router.push("/nurse/profile");
-            }
+            setActiveTab(id as "priority" | "patients");
           }}
         />
 

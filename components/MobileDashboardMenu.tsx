@@ -99,6 +99,7 @@ export default function MobileDashboardMenu({ tabs, activeTab, onTabChange }: Pr
       setIsOpen(false);
       router.push(tab.href);
     } else {
+      setIsOpen(false); // Close menu when switching tabs
       onTabChange(tab.id);
     }
   };
