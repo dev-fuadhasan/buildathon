@@ -7,6 +7,7 @@ import { classifyQuestion, needsFollowUpQuestion } from "./chat/QuestionClassifi
 import { buildSystemPrompt, type PromptContext } from "./chat/SystemPromptBuilder";
 import { validateAndCleanResponse } from "./chat/ResponseValidator";
 import { detectIntent, generateFollowUpQuestion } from "./chat/IntentDetector";
+import { handleSimpleQuery, ensureQuestionMarks } from "./chat/SimpleResponseHandler";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -54,60 +55,58 @@ export async function askMomsCare(
     const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
     
     // ==========================================
-    // STEP 4: Handle special intents EARLY (before expensive operations)
+    // STEP 4: Handle SIMPLE queries instantly (NO API calls for speed)
     // ==========================================
-    if (quickIntent.intent === 'greeting') {
-      return userLanguage === 'bn' 
-        ? "আসসালামু আলাইকুম! আমি MomsCare AI। আমি আপনাকে গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত পরামর্শ দিতে পারি। আপনার কি কোনো প্রশ্ন আছে?"
-        : "Hello! I'm MomsCare AI. I can help you with pregnancy and health advice. How can I assist you?";
+    const simpleResponse = handleSimpleQuery(lastUserMessage, userIsLoggedIn, userLanguage);
+    if (simpleResponse.handled) {
+      console.log('[SimpleHandler] Instant response - no AI API calls needed');
+      return ensureQuestionMarks(simpleResponse.response!);
     }
     
-    if (quickIntent.intent === 'ask_for_question') {
-      return userLanguage === 'bn'
-        ? "আপনার গর্ভাবস্থার কোন বিষয়ে আমি আপনাকে সাহায্য করতে পারি?"
-        : "What aspect of your pregnancy can I help you with?";
-    }
-    
+    // ==========================================
+    // STEP 5: Handle follow-up questions that need clarification
+    // ==========================================
     if (quickIntent.needsFollowUp) {
       const followUp = generateFollowUpQuestion(lastUserMessage, quickIntent);
       if (followUp) {
-        return followUp;
+        console.log('[FollowUp] Asking for clarification');
+        return ensureQuestionMarks(followUp);
       }
     }
     
     // ==========================================
-    // STEP 5: Search dual dataset based on language (only if needed)
+    // STEP 6: Search dual dataset based on language
+    // OPTIMIZATION: Skip expensive translation for logged-out users or profile queries
     // ==========================================
-    // Check if query is Banglish (romanized Bangla without Bengali script)
     const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
     const isBanglish = userLanguage === "bn" && !hasBengaliScript;
     
-    // For Banglish queries, translate to English first for better search
     let searchQuery = lastUserMessage;
     let relevantDatasetItems;
     
-    if (isBanglish) {
+    // SMART TRANSLATION: Only translate when it adds value
+    const shouldTranslate = isBanglish && userIsLoggedIn && quickIntent.intent !== 'ask_profile_info';
+    
+    if (shouldTranslate) {
       try {
-        // Translate Banglish to English for accurate dataset search
+        console.log(`[Banglish] Translating for better search...`);
         const translatedQuery = await translateToEnglish(lastUserMessage);
         searchQuery = translatedQuery || lastUserMessage;
-        console.log(`[Banglish] Original: ${lastUserMessage}`);
         console.log(`[Banglish] Translated: ${searchQuery}`);
-        // Search English dataset with translated query (fewer results for speed)
-        const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
-        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", numResults);
+        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 2);
       } catch (error) {
-        console.error("Banglish translation failed, fallback to direct search:", error);
-        // Fallback: search both datasets
-        const enResults = searchDatasetByLanguage(lastUserMessage, "en", 3);
-        const bnResults = searchDatasetByLanguage(lastUserMessage, "bn", 3);
+        console.warn("Banglish translation failed, using fallback:", error);
+        // Fallback: search both datasets without translation
+        const enResults = searchDatasetByLanguage(lastUserMessage, "en", 2);
+        const bnResults = searchDatasetByLanguage(lastUserMessage, "bn", 2);
         relevantDatasetItems = enResults.length > 0 ? enResults : bnResults;
       }
     } else {
-      // Normal search for English or Bangla with script
-      // Use fewer results for simple queries to improve speed
+      // Direct search (faster, no API call)
       const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
-      relevantDatasetItems = searchDatasetByLanguage(searchQuery, userLanguage, numResults);
+      const searchLang = isBanglish ? "en" : userLanguage; // Search English for Banglish
+      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, searchLang, numResults);
+      console.log(`[Dataset] Direct search in ${searchLang}: ${relevantDatasetItems.length} results`);
     }
     
     const datasetContext = relevantDatasetItems.length > 0 
@@ -443,7 +442,10 @@ Provide this calculation FIRST, then add context.`;
       console.log("[Response Validation] Issues fixed:", validation.issues);
     }
     
-    return validation.cleaned;
+    // FINAL STEP: Ensure all questions have question marks
+    const finalResponse = ensureQuestionMarks(validation.cleaned);
+    
+    return finalResponse;
   } catch (error: any) {
     console.error("MomsCare AI error:", error);
     console.error("Error context:", {
