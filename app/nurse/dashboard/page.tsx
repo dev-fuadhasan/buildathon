@@ -32,9 +32,9 @@ export default function NurseDashboard() {
   const [sortBy, setSortBy] = useState<"recent" | "priority" | "name">("recent");
   const [currentPage, setCurrentPage] = useState(1);
   const [patientsPerPage] = useState(10);
+  const [activeTab, setActiveTab] = useState<"priority" | "patients">("priority");
   const prioritySectionRef = useRef<HTMLDivElement | null>(null);
   const patientsSectionRef = useRef<HTMLDivElement | null>(null);
-  const [activeMobileSection, setActiveMobileSection] = useState<"priority" | "patients">("priority");
 
   // Determine status for priority badges
   const getStatus = (patient: PatientData) => {
@@ -522,14 +522,12 @@ export default function NurseDashboard() {
         {/* Mobile Menu */}
         <MobileDashboardMenu
           tabs={tabs}
-          activeTab="priority"
+          activeTab={activeTab}
           onTabChange={(id) => {
             if (id === "priority") {
-              setActiveMobileSection("priority");
-              prioritySectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              setActiveTab("priority");
             } else if (id === "patients") {
-              setActiveMobileSection("patients");
-              patientsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              setActiveTab("patients");
             } else if (id === "profile") {
               router.push("/nurse/profile");
             }
@@ -586,12 +584,12 @@ export default function NurseDashboard() {
           message={popup.message}
         />
 
-        {/* Main Content - Two Column Layout (priority first on mobile) */}
+        {/* Main Content - Two Column Layout or Single View on Mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Priority List */}
-          <div
-            ref={prioritySectionRef}
-            className={`space-y-4 order-1 lg:order-2 ${activeMobileSection === "priority" ? "" : "hidden lg:block"}`}
+          {/* AI Priority List (shown first/only on mobile by default) */}
+          <div 
+            ref={prioritySectionRef} 
+            className={`space-y-4 order-1 lg:order-2 ${activeTab !== "priority" ? "hidden lg:block" : "block"}`}
           >
             <DashboardCard title="AI Priority List">
               <p className="text-sm text-slate-600 mb-3">
@@ -602,22 +600,22 @@ export default function NurseDashboard() {
                   No priority patients at the moment.
                 </div>
               ) : (
-                <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
                   {priorityList.map((item, index) => (
                     <div
                       key={item.patient.id}
-                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-3"
+                      className="bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-2.5"
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2.5">
                         <div className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border-2 border-blue-200">
                           {index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-800 text-sm mb-0.5">{item.patient.name}</h3>
-                          <p className="text-xs text-slate-600 mb-1">
+                          <h3 className="font-semibold text-slate-800 text-[13px] mb-0.5">{item.patient.name}</h3>
+                          <p className="text-[11px] text-slate-600 mb-1">
                             📞 {item.patient.phone}
                           </p>
-                          <p className="text-xs text-blue-700 font-medium mb-1 leading-relaxed">
+                          <p className="text-[11px] text-blue-700 font-medium mb-1 leading-snug">
                             {item.priorityReason}
                           </p>
                           <div className="flex items-center justify-between gap-2 mt-1.5 flex-wrap">
@@ -655,9 +653,9 @@ export default function NurseDashboard() {
                                   setShowEditModal(true);
                                 }
                               }}
-                              className="btn-primary text-[10px] px-2 py-1 font-semibold"
+                              className="text-[10px] px-2.5 py-0.5 rounded bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 font-semibold"
                             >
-                              View Details
+                              View
                             </button>
                           </div>
                         </div>
@@ -669,10 +667,10 @@ export default function NurseDashboard() {
             </DashboardCard>
           </div>
 
-          {/* Patient Management */}
-          <div
-            ref={patientsSectionRef}
-            className={`space-y-6 order-2 lg:order-1 ${activeMobileSection === "patients" ? "" : "hidden lg:block"}`}
+          {/* Patient Management (hidden on mobile unless active) */}
+          <div 
+            ref={patientsSectionRef} 
+            className={`space-y-6 order-2 lg:order-1 ${activeTab !== "patients" ? "hidden lg:block" : "block"}`} 
             id="patients"
           >
             <DashboardCard
@@ -817,84 +815,6 @@ export default function NurseDashboard() {
                     </div>
                   )}
                 </>
-              )}
-            </DashboardCard>
-          </div>
-
-          {/* Right Side - AI Priority List */}
-          <div className="space-y-6">
-            <DashboardCard title="AI Priority List">
-              <p className="text-sm text-slate-600 mb-4">
-                Patients are automatically prioritized based on their medical data, urgency, and needs.
-              </p>
-              {priorityList.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  No priority patients at the moment.
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
-                  {priorityList.map((item, index) => (
-                    <div
-                      key={item.patient.id}
-                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg border-2 border-blue-200">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-800 text-base mb-1">{item.patient.name}</h3>
-                          <p className="text-sm text-slate-600 mb-2">
-                            📞 {item.patient.phone}
-                          </p>
-                          <p className="text-sm text-blue-700 font-medium mb-2 leading-relaxed">
-                            {item.priorityReason}
-                          </p>
-                          <div className="flex items-center justify-between gap-3 mt-2 flex-wrap">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="priority" size="sm">
-                                Score: {item.priorityScore.toFixed(1)}
-                              </Badge>
-                              {(() => {
-                                const status = getStatus(item.patient);
-                                return <Badge variant={status.variant} size="sm">{status.label}</Badge>;
-                              })()}
-                            </div>
-                            <button
-                              onClick={async () => {
-                                const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
-                                  headers: headers(),
-                                });
-                                if (res.ok) {
-                                  const data = await res.json();
-                                  setSelectedPatient(data.patient);
-                                  setPatientForm({
-                                    name: data.patient.name || "",
-                                    age: data.patient.age?.toString() || "",
-                                    phone: data.patient.phone || "",
-                                    email: data.patient.email || "",
-                                    address: data.patient.address || "",
-                                    bloodGroup: data.patient.bloodGroup || "",
-                                    medicalHistory: data.patient.medicalHistory || "",
-                                    allergies: data.patient.allergies || "",
-                                    currentMedications: data.patient.currentMedications || "",
-                                    emergencyContact: data.patient.emergencyContact || "",
-                                    emergencyPhone: data.patient.emergencyPhone || "",
-                                    notes: data.patient.notes || "",
-                                  });
-                                  setShowEditModal(true);
-                                }
-                              }}
-                              className="btn-primary text-[11px] px-2.5 py-1.5 font-semibold"
-                            >
-                              View Details
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               )}
             </DashboardCard>
           </div>

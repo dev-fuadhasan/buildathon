@@ -88,24 +88,24 @@ export default function PatientCard({ patient, onEdit, onDelete, onView }: Patie
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-1.5 mt-2">
             {onView && (
               <button
                 onClick={onView}
-                className="btn-secondary text-[11px] px-2.5 py-1"
+                className="text-[10px] px-2 py-0.5 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium"
               >
                 View
               </button>
             )}
             <button
               onClick={onEdit}
-              className="btn-secondary text-[11px] px-2.5 py-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="text-[10px] px-2 py-0.5 rounded border border-blue-300 bg-white text-blue-700 hover:bg-blue-50 font-medium"
             >
               Edit
             </button>
             <button
               onClick={onDelete}
-              className="btn-ghost text-[11px] px-2.5 py-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-[10px] px-2 py-0.5 rounded bg-white text-red-600 hover:bg-red-50 font-medium"
             >
               Delete
             </button>
