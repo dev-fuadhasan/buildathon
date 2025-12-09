@@ -245,18 +245,22 @@ export async function POST(req: NextRequest) {
           // Build comprehensive profile context
           const profileParts: string[] = [];
           
-          // Basic profile
+          // Basic profile (ALL fields from dashboard)
           profileParts.push("=== HEALTH PROFILE ===");
-          if (mother.name) profileParts.push(`Name: ${mother.name}`);
+          if (mother.name) profileParts.push(`Full Name: ${mother.name}`);
+          if (mother.email) profileParts.push(`Email: ${mother.email}`);
           if (mother.age) profileParts.push(`Age: ${mother.age}`);
-          if (weeks) profileParts.push(`Weeks pregnant: ${weeks} weeks (${months} months)`);
-          if (mother.dueDate) profileParts.push(`Due date: ${mother.dueDate}`);
-          if (mother.bloodGroup) profileParts.push(`Blood group: ${mother.bloodGroup}`);
-          if (mother.previousPregnancies !== undefined) profileParts.push(`Previous pregnancies: ${mother.previousPregnancies}`);
-          if (mother.conditions) profileParts.push(`Medical conditions: ${mother.conditions}`);
+          if (daysPregnant) profileParts.push(`Days Pregnant: ${daysPregnant} days (${weeks} weeks, ${months} months)`);
+          if (mother.phone) profileParts.push(`Phone: ${mother.phone}`);
+          if (mother.bloodGroup) profileParts.push(`Blood Group: ${mother.bloodGroup}`);
+          if (mother.previousPregnancies !== undefined) profileParts.push(`Previous Pregnancies: ${mother.previousPregnancies}`);
+          if (mother.address) profileParts.push(`Address: ${mother.address}`);
+          if (mother.dueDate) profileParts.push(`Due Date: ${mother.dueDate}`);
+          if (mother.conditions) profileParts.push(`Medical Conditions: ${mother.conditions}`);
           if (mother.allergies) profileParts.push(`Allergies: ${mother.allergies}`);
-          if (mother.medications) profileParts.push(`Current medications: ${mother.medications}`);
-          if (mother.emergencyContact) profileParts.push(`Emergency contact: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
+          if (mother.medications) profileParts.push(`Current Medications: ${mother.medications}`);
+          if (mother.emergencyContact) profileParts.push(`Emergency Contact Name: ${mother.emergencyContact}`);
+          if (mother.emergencyPhone) profileParts.push(`Emergency Contact Phone: ${mother.emergencyPhone}`);
           
           // Load daily entries
           try {
@@ -266,6 +270,8 @@ export async function POST(req: NextRequest) {
               .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .slice(0, 10);
+            
+            console.log(`[Data Load] Daily Entries: ${recentEntries.length} entries found`);
             
             if (recentEntries.length > 0) {
               profileParts.push("\n=== RECENT DAILY ENTRIES ===");
@@ -285,6 +291,8 @@ export async function POST(req: NextRequest) {
               .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
               .slice(0, 5);
             
+            console.log(`[Data Load] Doctor Q&A: ${recentQAs.length} questions found`);
+            
             if (recentQAs.length > 0) {
               profileParts.push("\n=== RECENT DOCTOR Q&A ===");
               recentQAs.forEach((qa, idx) => {
@@ -300,6 +308,9 @@ export async function POST(req: NextRequest) {
           try {
             const { getChatHistory } = await import("@/lib/data");
             const history = await getChatHistory(user!.id);
+            
+            console.log(`[Data Load] Chat History: ${history?.messages?.length || 0} messages found`);
+            
             if (history?.messages && history.messages.length > 0) {
               const recentHistory = history.messages
                 .slice(-10) // Last 10 messages
@@ -324,6 +335,7 @@ export async function POST(req: NextRequest) {
             prescriptionUrls = await Promise.all(
               (objects || []).slice(0, 3).map(async (obj) => await signedUrl(obj.Key!))
             );
+            console.log(`[Data Load] Prescriptions: ${prescriptionUrls.length} files found`);
           } catch (err) {
             console.error("Failed to fetch prescriptions:", err);
           }
@@ -333,7 +345,7 @@ export async function POST(req: NextRequest) {
             prescriptionUrls.push(imageUrl);
           }
           
-          console.log(`[Profile Loaded] Profile sections: ${profileParts.length}, Prescriptions: ${prescriptionUrls.length}`);
+          console.log(`[✅ FULL PROFILE LOADED] Sections: ${profileParts.length}, Prescriptions: ${prescriptionUrls.length}, Total context chars: ${profileContext?.length || 0}`);
         }
       } catch (err) {
         console.error("Failed to fetch mother profile:", err);
