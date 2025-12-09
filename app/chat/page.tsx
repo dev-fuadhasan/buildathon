@@ -316,7 +316,7 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] max-w-7xl mx-auto gap-0 sm:gap-2 md:gap-3 px-0 sm:px-2 md:px-4">
+      <div className="flex h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] max-w-7xl mx-auto gap-0 sm:gap-2 px-0 sm:px-2 md:px-4">
         {/* Conversation History Sidebar - Only for logged-in mothers */}
         {isMother && (
           <>
@@ -423,56 +423,52 @@ export default function ChatPage() {
         )}
         
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 gap-1 sm:gap-2 md:gap-3 px-1 sm:px-0">
-          {/* Header */}
-          <div className="flex items-center justify-between flex-shrink-0 py-1 sm:py-2">
-            <div className="flex items-center gap-2">
+        <div className="flex-1 flex flex-col min-w-0 gap-1 sm:gap-1.5 px-1 sm:px-0">
+          {/* Header - Compact Design */}
+          <div className="flex items-center justify-between flex-shrink-0 py-1">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Mobile Menu Button - Only for logged-in mothers */}
               {isMother && (
                 <button
                   onClick={() => setShowSidebar(true)}
-                  className="lg:hidden p-2 hover:bg-slate-100 rounded-lg"
+                  className="lg:hidden p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
               )}
-              <div>
-                <h1 className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent">
-                  MomsCare AI Chat
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent leading-none">
+                  MomsCare AI
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-600 mt-0.5 hidden sm:block">
-                  <span className="flex items-center gap-2">
-                    <Icon name={isMother ? "ai" : "chat"} size={16} className="sm:w-5 sm:h-5" />
-                    {isMother ? "Personalized" : "Public"}
-                  </span>
-                </p>
+                <span className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-200">
+                  <Icon name={isMother ? "ai" : "chat"} size={10} className="sm:w-3 sm:h-3" />
+                  {isMother ? "Personalized" : "Public"}
+                </span>
               </div>
             </div>
             {!isMother && (
-              <Link href="/mother/login" className="btn-secondary text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2 hidden sm:inline-flex">
-                Login for Personalized
+              <Link href="/mother/login" className="btn-secondary text-[10px] sm:text-xs px-2 sm:px-3 py-1 whitespace-nowrap">
+                Login
               </Link>
             )}
           </div>
 
-          {/* Safety Disclaimer */}
-          <div className="rounded-lg bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 p-1.5 sm:p-2 md:p-2.5 shadow-sm flex-shrink-0 hidden sm:block">
-            <p className="text-xs text-yellow-900 font-medium">
-              <span className="flex items-start gap-1.5 sm:gap-2">
-                <Icon name="warning" size={16} className="sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">
-                  <strong>Important:</strong> This AI chatbot provides general information and is not a substitute for professional medical advice. For emergencies, contact your healthcare provider immediately.
-                </span>
+          {/* Safety Disclaimer - Ultra Compact */}
+          <div className="rounded-md bg-yellow-50 border border-yellow-200 px-2 py-1 flex-shrink-0">
+            <p className="flex items-start gap-1 text-[10px] sm:text-xs text-yellow-900 leading-tight">
+              <Icon name="warning" size={12} className="mt-0.5 flex-shrink-0 opacity-70" />
+              <span>
+                <strong className="font-semibold">Note:</strong> AI provides general info only. For emergencies, contact your provider.
               </span>
             </p>
           </div>
 
           {/* Main Chat Container */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-lg sm:rounded-xl shadow-lg border border-slate-200 overflow-hidden">
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-slate-50 to-white min-h-0">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 bg-gradient-to-b from-slate-50 to-white min-h-0">
               {messages.map((msg, idx) => (
                 <ChatBubble 
                   key={idx} 
