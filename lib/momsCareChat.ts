@@ -103,8 +103,14 @@ export async function askMomsCare(
       ? "Provide a COMPREHENSIVE answer with clear points or bullet list when needed. For 'what things' or 'ki ki' questions, list ALL relevant items."
       : "Keep answers concise but complete. For simple questions, give short answers. For complex topics, provide adequate details.";
     
+    // Check if image is provided
+    const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
+    const imageInstruction = hasImage 
+      ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
+      : "";
+    
     // System prompt - MomsCare AI
-    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}
+    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}${imageInstruction}
 
 1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
 
@@ -127,6 +133,8 @@ export async function askMomsCare(
 8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
 
 9. For list-based questions (ki ki, what things, what should, etc.), provide a well-organized list with brief explanations.
+
+10. WHEN TO SUGGEST IMAGE UPLOAD: If user asks about symptoms, pain, reports, prescriptions, or anything that could benefit from visual inspection, politely suggest they can upload an image for more accurate guidance. Say: "আপনি যদি কোনো প্রেসক্রিপশন, রিপোর্ট বা সংশ্লিষ্ট ছবি আপলোড করেন তাহলে আমি আরো সঠিক পরামর্শ দিতে পারব।" (Bangla) or "You can upload any prescription, report, or related image for more accurate guidance." (English)
 
 Goal: Provide helpful, accurate health guidance.
 

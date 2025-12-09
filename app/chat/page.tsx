@@ -4,14 +4,13 @@ import { useEffect, useState, useRef } from "react";
 import ChatBubble from "@/components/ChatBubble";
 import ChatInput from "@/components/ChatInput";
 import ChatPrescriptionUpload from "@/components/ChatPrescriptionUpload";
-import ChatImageAttachment from "@/components/ChatImageAttachment";
 import Layout from "@/components/Layout";
 import Icon from "@/components/Icon";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; imageUrl?: string };
 
 type ConversationListItem = {
   id: string;
@@ -231,7 +230,12 @@ export default function ChatPage() {
       }
     }
     
-    const newMessages = [...messages, { role: "user" as const, content: text }];
+    // Add user message with optional image
+    const newMessages = [...messages, { 
+      role: "user" as const, 
+      content: text,
+      imageUrl: uploadedImageUrl || undefined
+    }];
     setMessages(newMessages);
     setLoading(true);
     
@@ -465,7 +469,12 @@ export default function ChatPage() {
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-slate-50 to-white min-h-0">
               {messages.map((msg, idx) => (
-                <ChatBubble key={idx} role={msg.role} content={msg.content} />
+                <ChatBubble 
+                  key={idx} 
+                  role={msg.role} 
+                  content={msg.content}
+                  imageUrl={msg.imageUrl}
+                />
               ))}
               {loading && (
                 <div className="flex items-center gap-3 text-slate-500">
@@ -491,17 +500,14 @@ export default function ChatPage() {
 
             {/* Input Section */}
             <div className="border-t border-slate-200 bg-white p-2 sm:p-3 flex-shrink-0">
-              {/* Image Attachment - For ALL users */}
-              <div className="mb-2">
-                <ChatImageAttachment
-                  onImageSelect={handleImageSelect}
-                  onImageRemove={handleImageRemove}
-                  currentImage={attachedImage}
-                  disabled={loading}
-                />
-              </div>
-              
-              <ChatInput onSend={sendMessage} disabled={loading} />
+              {/* Combined Chat Input with Image Attachment */}
+              <ChatInput 
+                onSend={sendMessage} 
+                disabled={loading}
+                onImageSelect={handleImageSelect}
+                onImageRemove={handleImageRemove}
+                currentImage={attachedImage}
+              />
               
               {isMother && (
                 <div className="mt-2 pt-2 border-t border-slate-100">
