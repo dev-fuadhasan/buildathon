@@ -86,8 +86,12 @@ function initializeGroqClients(): void {
   });
   
   console.log(`[Groq] ✅ Successfully initialized ${groqInstances.length} API key(s)`);
-  currentKeyIndex = 0; // Reset to first key
+  // Start from LAST key (reverse order: key 14, 13, 12, ...)
+  currentKeyIndex = groqInstances.length > 0 ? groqInstances.length - 1 : 0;
   failedKeys.clear(); // Clear any previous failures
+  if (groqInstances.length > 1) {
+    console.log(`[Groq] 🔄 Will start from last key ${currentKeyIndex + 1}/${groqInstances.length} (reverse order)`);
+  }
 }
 
 /**
@@ -102,7 +106,7 @@ export function resetGroqClients(): void {
 }
 
 /**
- * Get the next available Groq client (round-robin with failover)
+ * Get the next available Groq client (reverse order: last key first, with failover)
  */
 function getNextGroqClient(): Groq {
   initializeGroqClients();
@@ -115,6 +119,12 @@ function getNextGroqClient(): Groq {
   if (failedKeys.size >= groqInstances.length) {
     console.log(`[Groq] ⚠️  All ${groqInstances.length} key(s) failed, resetting failed keys list (they may have recovered)`);
     failedKeys.clear();
+  }
+  
+  // Start from LAST key (reverse order) if currentKeyIndex is 0 (first call)
+  if (currentKeyIndex === 0 && groqInstances.length > 1) {
+    currentKeyIndex = groqInstances.length - 1; // Start from last key
+    console.log(`[Groq] 🔄 Starting from last key ${currentKeyIndex + 1}/${groqInstances.length} (reverse order)`);
   }
   
   // Try to find an available key (not in failed list)
@@ -132,8 +142,8 @@ function getNextGroqClient(): Groq {
       return client;
     }
     
-    // Move to next key
-    currentKeyIndex = (currentKeyIndex + 1) % groqInstances.length;
+    // Move to PREVIOUS key (reverse order: going backwards)
+    currentKeyIndex = currentKeyIndex === 0 ? groqInstances.length - 1 : currentKeyIndex - 1;
     attempts++;
     
     // Prevent infinite loop
@@ -155,15 +165,15 @@ export function markKeyAsFailed(keyIndex: number): void {
   const availableCount = groqInstances.length - failedKeys.size;
   console.log(`[Groq] ❌ Marked key ${keyIndex + 1}/${groqInstances.length} as failed. Available keys: ${availableCount}/${groqInstances.length}`);
   
-  // Move to next key
+  // Move to PREVIOUS key (reverse order: going backwards)
   const previousIndex = currentKeyIndex;
-  currentKeyIndex = (currentKeyIndex + 1) % groqInstances.length;
+  currentKeyIndex = currentKeyIndex === 0 ? groqInstances.length - 1 : currentKeyIndex - 1;
   
   // If we've cycled through all keys, log it
-  if (currentKeyIndex === 0 && previousIndex === groqInstances.length - 1) {
-    console.log(`[Groq] 🔄 Cycled through all keys, resetting to key 1`);
+  if (currentKeyIndex === groqInstances.length - 1 && previousIndex === 0) {
+    console.log(`[Groq] 🔄 Cycled through all keys, resetting to last key`);
   } else {
-    console.log(`[Groq] ➡️  Switching to key ${currentKeyIndex + 1}/${groqInstances.length}`);
+    console.log(`[Groq] ⬅️  Switching to key ${currentKeyIndex + 1}/${groqInstances.length} (reverse order)`);
   }
 }
 
@@ -217,28 +227,45 @@ async function createWithFailover(params: any) {
     } catch (error: any) {
       lastError = error;
       
-      // Check if it's a rate limit or API error
-      const isRateLimit = error?.status === 429 || 
-                        error?.message?.includes('rate limit') ||
-                        error?.message?.includes('429');
-      const isApiError = error?.status === 401 || 
-                       error?.status === 403 ||
-                       error?.message?.includes('API');
+      // Check error details
+      const errorStatus = error?.status;
+      const errorCode = error?.error?.code || error?.code;
+      const errorMessage = error?.message || JSON.stringify(error?.error || {});
       
-      if (isRateLimit || isApiError) {
-        console.log(`[Groq] ⚠️  Key ${keyIndex + 1} failed with status ${error?.status || 'unknown'}: ${isRateLimit ? 'Rate limit' : 'API error'}`);
+      // Check if it's a rate limit
+      const isRateLimit = errorStatus === 429 || 
+                        errorMessage?.includes('rate limit') ||
+                        errorMessage?.includes('429');
+      
+      // Check if it's an API/auth error (401, 403)
+      const isApiError = errorStatus === 401 || 
+                       errorStatus === 403 ||
+                       errorMessage?.includes('API');
+      
+      // Check if it's an organization restriction (400 with organization_restricted code)
+      const isOrganizationRestricted = errorStatus === 400 && 
+                                     (errorCode === 'organization_restricted' ||
+                                      errorMessage?.includes('organization_restricted') ||
+                                      errorMessage?.includes('Organization has been restricted'));
+      
+      // Skip this key if it's rate limit, API error, or organization restricted
+      if (isRateLimit || isApiError || isOrganizationRestricted) {
+        const errorType = isRateLimit ? 'Rate limit' : 
+                         isOrganizationRestricted ? 'Organization restricted' : 
+                         'API error';
+        console.log(`[Groq] ⚠️  Key ${keyIndex + 1} failed with status ${errorStatus || 'unknown'}: ${errorType}`);
         markKeyAsFailed(keyIndex);
         
         // If we have more keys, try next one
         if (attempt < maxAttempts - 1) {
-          console.log(`[Groq] 🔄 Retrying with next key...`);
+          console.log(`[Groq] 🔄 Retrying with next key (reverse order)...`);
           continue; // Try next key
         } else {
           console.error(`[Groq] ❌ All ${maxAttempts} key(s) failed. No more keys to try.`);
         }
       } else {
-        // If not rate limit/API error, throw immediately (don't try other keys)
-        console.error(`[Groq] ❌ Key ${keyIndex + 1} failed with non-rate-limit error: ${error?.message || 'Unknown error'}`);
+        // If not a skippable error, throw immediately (don't try other keys)
+        console.error(`[Groq] ❌ Key ${keyIndex + 1} failed with non-skippable error: ${errorMessage || 'Unknown error'}`);
         throw error;
       }
     }
