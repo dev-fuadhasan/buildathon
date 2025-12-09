@@ -86,14 +86,28 @@ export async function askMomsCare(
     const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
     
     // ==========================================
-    // AI-BASED DECISIONS
+    // AI-BASED DECISIONS (PARALLELIZED FOR PERFORMANCE)
     // ==========================================
     
-    // Decision 1: Should we use profile data? (Only for logged-in users)
+    // Run AI decisions in parallel to reduce latency
+    const aiDecisions = await Promise.allSettled([
+      // Decision 1: Should we use profile data? (Only for logged-in users)
+      isLoggedIn && profileContext
+        ? shouldUseProfileData(lastUserMessage, profileContext)
+        : Promise.resolve(false),
+      
+      // Decision 2: Are follow-up questions needed? (For all users)
+      needsFollowUpQuestions(lastUserMessage, isPersonal || false, messages),
+    ]);
+    
+    // Extract results
+    const useProfileResult = aiDecisions[0];
+    const followUpResult = aiDecisions[1];
+    
+    // Process profile decision
     let actualProfileContext: string | undefined = undefined;
     if (isLoggedIn && profileContext) {
-      const useProfile = await shouldUseProfileData(lastUserMessage, profileContext);
-      if (useProfile) {
+      if (useProfileResult.status === 'fulfilled' && useProfileResult.value) {
         actualProfileContext = profileContext;
         console.log(`[AI Decision] Using profile data for personalized answer`);
       } else {
@@ -101,8 +115,11 @@ export async function askMomsCare(
       }
     }
     
-    // Decision 2: Are follow-up questions needed?
-    const followUpDecision = await needsFollowUpQuestions(lastUserMessage, isPersonal || false, messages);
+    // Process follow-up decision
+    const followUpDecision = followUpResult.status === 'fulfilled' 
+      ? followUpResult.value 
+      : { needsFollowUp: false, questions: [] };
+    
     const followUpInstruction = followUpDecision.needsFollowUp && followUpDecision.questions.length > 0
       ? `\n\nFOLLOW-UP QUESTIONS NEEDED: After your main answer, ask these follow-up questions naturally in the conversation:\n${followUpDecision.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nAsk these questions in a conversational way, not as a list.`
       : "";
@@ -318,19 +335,20 @@ Provide this calculation FIRST, then add context.`;
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
+    // Reduced max_tokens for faster responses
     const aiParams = needsComprehensive ? {
       temperature: 0.6,
-      max_tokens: 6000,
+      max_tokens: 3000, // Reduced from 6000 for faster responses
       top_p: 0.9,
     } : {
       temperature: 0.5,
-      max_tokens: 4000,
+      max_tokens: 2000, // Reduced from 4000 for faster responses
       top_p: 0.85,
     };
 
-    // Create timeout wrapper to prevent 502 errors
+    // Create timeout wrapper to prevent 502 errors (reduced timeout for faster failure)
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 55000); // 55 seconds
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 40000); // 40 seconds (reduced from 55)
     });
     
     const completion = await Promise.race([

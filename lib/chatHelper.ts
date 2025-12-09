@@ -224,33 +224,21 @@ export async function needsFollowUpQuestions(
       messages: [
         {
           role: "system",
-          content: `You are a medical assistant. Analyze if the user's question needs follow-up questions to provide better guidance.
+          content: `Decide if this question needs follow-up questions for better guidance.
 
-DECIDE:
-1. Does the question need more information to give accurate advice?
-2. If YES, what 1-2 specific follow-up questions would help?
+YES + questions if: "I have pain" → ask "Where?" "How severe?"
+NO if: "What is anemia?" or "I'm 6 months pregnant with mild back pain"
 
-EXAMPLES:
-- "I have pain" → YES, ask: "Where is the pain?" "How severe?"
-- "Can I take medicine?" → YES, ask: "Which medicine?" "How many weeks pregnant?"
-- "What is anemia?" → NO, enough info for educational answer
-- "I'm 6 months pregnant and have mild back pain" → NO, enough info already
-
-Respond in JSON format ONLY:
-{
-  "needsFollowUp": true/false,
-  "questions": ["Question 1 in user's language", "Question 2 in user's language"]
-}
-
-If needsFollowUp is false, questions array should be empty.`,
+Respond ONLY in JSON:
+{"needsFollowUp": true/false, "questions": ["Q1", "Q2"] or []}`,
         },
         {
           role: "user",
-          content: `User question: ${message}${historyContext}\n\nIs this personal question about the user: ${isPersonal ? 'YES' : 'NO'}`,
+          content: message + (historyContext ? `\n\nContext: ${historyContext.substring(0, 100)}` : ''),
         },
       ],
       temperature: 0.2,
-      max_tokens: 200,
+      max_tokens: 150, // Reduced from 200 for faster response
     });
 
     const response = completion.choices?.[0]?.message?.content?.trim() || "";
@@ -302,27 +290,20 @@ export async function shouldUseProfileData(
       messages: [
         {
           role: "system",
-          content: `You are a medical assistant. Decide if the user's question requires analyzing their personal profile data (pregnancy week, medical history, prescriptions, etc.) to give a good answer.
+          content: `Decide: Does this question need personal profile data (pregnancy week, medical history, prescriptions)?
 
-USE PROFILE DATA when:
-- Question is about user's specific situation: "my pain", "my medication", "should I"
-- Question needs personalization: "what should I eat", "can I travel"
-- Question about user's pregnancy stage, conditions, medications
+YES if: "my pain", "should I", "what should I eat", "can I travel"
+NO if: "What is anemia?", "Why is iron important?", "How does ultrasound work?"
 
-DON'T USE PROFILE DATA when:
-- General knowledge question: "What is anemia?", "Why is iron important?"
-- Educational question: "How does ultrasound work?"
-- General advice: "What should pregnant women eat?" (not "what should I eat")
-
-Respond with ONLY one word: "YES" or "NO"`,
+Respond with ONLY: "YES" or "NO"`,
         },
         {
           role: "user",
-          content: `User question: ${message}\n\nShould I analyze their profile data (pregnancy week, medical history, prescriptions) to answer this?`,
+          content: message,
         },
       ],
       temperature: 0.1,
-      max_tokens: 10,
+      max_tokens: 5, // Reduced from 10 for faster response
     });
 
     const response = completion.choices?.[0]?.message?.content?.trim().toUpperCase() || "";
