@@ -27,8 +27,6 @@ export async function askMomsCare(
   }
 
   try {
-    console.log(`[askMomsCare] Called with: isLoggedIn=${isLoggedIn}, isPersonal=${isPersonal}, images=${prescriptionUrls?.length || 0}, messages=${messages.length}`);
-    
     const safetyPrompt = getSafetyPrompt();
     
     // ==========================================
@@ -108,41 +106,49 @@ export async function askMomsCare(
     // Debug logging
     console.log(`[AI Mode] Comprehensive: ${needsComprehensive}, HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}`);
     const imageInstruction = hasImage 
-      ? "\n\nIMAGE: Analyze the attached medical image carefully. Provide specific guidance based on visual findings."
+      ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
     
-    // System prompt - DIFFERENT for logged-in vs logged-out (token optimization)
-    let systemPrompt = "";
+    // System prompt - MomsCare AI
+    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}${imageInstruction}
+
+1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
+
+   If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
+
+2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
+
+3. Logged-in user: backend provides profile. Use it only when the question is about the user's own health. If the question is general, answer generally and say the answer is general.
+
+4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
+
+5. Do NOT give emergency warnings unless the user clearly mentions one of these:
+
+   heavy bleeding, severe abdominal pain, vomiting >24h without fluids, fainting, no fetal movement (20+ weeks), very high BP, seizures etc.
+
+6. ${answerLengthInstruction}
+
+7. Do not assume anything not said by the user. Do not invent symptoms.
+
+8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
+
+9. For list-based questions (ki ki, what things, what should, etc.), provide a well-organized list with brief explanations.
+
+10. WHEN TO SUGGEST IMAGE UPLOAD: If user asks about symptoms, pain, reports, prescriptions, or anything that could benefit from visual inspection, politely suggest they can upload an image for more accurate guidance. Say: "আপনি যদি কোনো প্রেসক্রিপশন, রিপোর্ট বা সংশ্লিষ্ট ছবি আপলোড করেন তাহলে আমি আরো সঠিক পরামর্শ দিতে পারব।" (Bangla) or "You can upload any prescription, report, or related image for more accurate guidance." (English)
+
+Goal: Provide helpful, accurate health guidance.
+
+${safetyPrompt}`;
     
-    if (!isLoggedIn) {
-      // COMPACT prompt for logged-out users (avoid token limits)
-      systemPrompt = `You are MomsCare AI.${languageInstruction}${imageInstruction}
-
-Rules:
-1. Answer ONLY pregnancy/health questions. Off-topic: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
-2. ${answerLengthInstruction}
-3. Emergency warnings ONLY for: heavy bleeding, severe pain, vomiting >24h, fainting, no fetal movement.
-4. Do NOT assume symptoms.
-
-${safetyPrompt}`;
-    } else {
-      // FULL prompt for logged-in users
-      systemPrompt = `You are MomsCare AI.${languageInstruction}${imageInstruction}
-
-1. Answer ONLY health/pregnancy questions. Off-topic: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
-2. ${answerLengthInstruction}
-3. Emergency warnings ONLY for: heavy bleeding, severe pain, vomiting >24h, fainting, no fetal movement (20+ weeks).
-4. Do NOT assume symptoms.
-5. For lists (ki ki, what things), provide organized points.
-
-${safetyPrompt}`;
-      
-      // Add context about user type
+    // Add specific instruction for current question type
+    if (isLoggedIn) {
       if (isGeneralQuestion) {
-        systemPrompt += `\n\nCONTEXT: General question. Answer generally.`;
+        systemPrompt += `\n\nCURRENT: Logged-in user, general question. Answer generally and state it is general.`;
       } else if (isPersonalizedMode) {
-        systemPrompt += `\n\nCONTEXT: Personal question. Use profile for personalized guidance.`;
+        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Use profile data for personalized guidance.`;
       }
+    } else {
+      systemPrompt += `\n\nCURRENT: Logged-out user. No personal information. Do not mention this unless directly asked. Answer questions directly.`;
     }
 
     // Extract weeks pregnant for RAG
@@ -282,24 +288,24 @@ Provide this calculation FIRST, then add context.`;
     // Use a vision-capable model if we have images, otherwise use the 70B versatile model
     const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
     const model = hasImages
-      ? "meta-llama/llama-4-maverick-17b-128e-instruct" // Vision model for images (CORRECT Groq model)
-      : "llama-3.3-70b-versatile"; // Text model for Groq API
+      ? "meta-llama/llama-4-maverick-17b-128e-instruct" // CORRECT Groq vision model
+      : "llama-3.3-70b-versatile"; // Text model for better accuracy
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
-    // Dynamic AI parameters based on question type (matching Groq API spec)
+    // Dynamic AI parameters based on question type (GROQ API SPEC)
     const aiParams = needsComprehensive ? {
       temperature: 0.5,
-      max_completion_tokens: 6000, // Groq uses max_completion_tokens not max_tokens
+      max_completion_tokens: 6000, // GROQ uses max_completion_tokens, NOT max_tokens
       top_p: 0.9,
-      stream: false,
-      stop: null,
+      stream: false, // Required by Groq API
+      stop: null, // Use null instead of empty array
     } : {
       temperature: 0.4,
-      max_completion_tokens: 4000, // Groq uses max_completion_tokens not max_tokens
+      max_completion_tokens: 4000, // GROQ uses max_completion_tokens, NOT max_tokens
       top_p: 0.85,
-      stream: false,
-      stop: null,
+      stream: false, // Required by Groq API
+      stop: null, // Use null instead of array
     };
 
     // Create timeout wrapper to prevent 502 errors
@@ -317,8 +323,8 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        ...aiParams, // Includes all correct Groq parameters
-      }) as Promise<any>, // Cast to avoid stream type conflict
+        ...aiParams, // Includes all correct Groq API parameters (temperature, max_completion_tokens, top_p, stream, stop)
+      }) as Promise<any>, // Cast to avoid stream type conflict (we set stream: false)
       timeoutPromise
     ]);
 

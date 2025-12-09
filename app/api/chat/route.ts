@@ -67,8 +67,6 @@ function limitConversationHistory(
 
 export async function POST(req: NextRequest) {
   try {
-    const requestId = Math.random().toString(36).substring(7); // Unique request ID for logging
-    
     const body = await req.json();
     let messages = body.messages || [];
     const imageUrl = body.imageUrl || null; // Optional image URL
@@ -83,8 +81,6 @@ export async function POST(req: NextRequest) {
     // Check if user is logged in
     const user = await getUserFromRequest(req);
     const isLoggedIn = user?.role === "mother";
-    
-    console.log(`[REQ-${requestId}] User: ${user?.id || 'guest'}, LoggedIn: ${isLoggedIn}, Messages: ${messages.length}, HasImage: ${!!imageUrl}`);
     
     // ============================================================
     // LOGGED-OUT USER (GUEST MODE) - Start fresh session
@@ -158,14 +154,7 @@ export async function POST(req: NextRequest) {
           throw new Error("Empty response from AI");
         }
       } catch (error: any) {
-        console.error("AI chat error (LOGGED-OUT):", error);
-        console.error("Error details:", {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-          status: error.status,
-          code: error.code,
-        });
+        console.error("AI chat error:", error);
         const errorMessage = userLanguage === "bn"
           ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
           : "Sorry, something went wrong. Please try again in a moment.";
@@ -358,7 +347,25 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Translate last message for safety check only (don't translate all messages - causes rate limits)
+    // Translate ALL user messages
+    const translatedMessages = await Promise.all(
+      messages.map(async (m: any) => {
+        if (m.role === "user") {
+          const msgLanguage = detectLanguage(m.content);
+          if (msgLanguage === "bn") {
+            try {
+              const translated = await translateToEnglish(m.content);
+              return { ...m, content: translated };
+            } catch (error) {
+              return m;
+            }
+          }
+        }
+        return m;
+      })
+    );
+    
+    // Translate last message for safety check
     let translatedUserMessage = currentUserMessage;
     if (userLanguage === "bn") {
       try {
