@@ -245,8 +245,15 @@ async function listJson<T>(prefix: string): Promise<T[]> {
   try {
     const objects = await listObjects(prefix);
     console.log(`[Data] listJson: Found ${objects.length} objects with prefix "${prefix}"`);
+
+    // Only keep JSON objects to avoid parsing images/binary files
+    const jsonObjects = (objects || []).filter((obj) => obj.Key && obj.Key.endsWith(".json"));
+    if (jsonObjects.length !== (objects || []).length) {
+      console.warn(`[Data] listJson: Skipping ${objects.length - jsonObjects.length} non-JSON object(s) under prefix "${prefix}"`);
+    }
+
     const items = await Promise.all(
-      (objects || []).map(async (obj) => {
+      jsonObjects.map(async (obj) => {
         try {
           const key = obj.Key!;
           const item = await getJson<T>(key);

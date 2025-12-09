@@ -443,18 +443,18 @@ Provide this calculation FIRST, then add context.`;
 
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
     const aiParams = needsComprehensive ? {
-      temperature: 0.55,
-      max_tokens: 3000, // lower to reduce latency further
+      temperature: 0.5,
+      max_tokens: 2600, // further reduce latency
       top_p: 0.9,
     } : {
-      temperature: 0.45,
-      max_tokens: 2000, // lower to reduce latency further
+      temperature: 0.4,
+      max_tokens: 1800, // further reduce latency
       top_p: 0.85,
     };
 
     // Create timeout wrapper to prevent 502/504 errors
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 35000); // 35 seconds
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 30000); // 30 seconds
     });
     
     const completion = await Promise.race([
