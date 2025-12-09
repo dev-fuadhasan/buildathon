@@ -252,49 +252,29 @@ export async function askMomsCare(
       ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
     
-    // System prompt - MomsCare AI
-    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}${imageInstruction}${followUpInstruction}
+    // System prompt - MomsCare AI (SIMPLIFIED for better accuracy)
+    let systemPrompt = `You are MomsCare AI, a pregnancy and maternal health assistant.${languageInstruction}${imageInstruction}
 
-1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
+RULES:
+1. Only answer health/pregnancy questions. For non-health topics, say: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
 
-   If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
+2. ${actualProfileContext ? 'USER DATA: The mother\'s personal data is provided below in labeled sections. Find the answer in the appropriate section and respond directly.' : 'No personal data available. Answer generally.'}
 
-2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
+3. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, difficulty breathing, high fever with symptoms.
 
-3. Logged-in user: ${actualProfileContext ? '⚠️ CRITICAL INSTRUCTION - DATA USAGE:\nYou have access to multiple data sections below (HEALTH PROFILE, DAILY ENTRIES, DOCTOR Q&A, CHAT HISTORY, and PRESCRIPTION IMAGES).\n\nHOW TO USE DATA:\n- Analyze the question to determine which data section is MOST RELEVANT\n- Use ONLY the relevant section(s) to answer\n- Give a DIRECT answer from the relevant data - do NOT mention other sections or say you checked multiple sources\n- Do NOT explain which data source you used unless asked\n\nEXAMPLES:\n- "my blood group?" → Use HEALTH PROFILE section → Answer directly: "আপনার রক্তের গ্রুপ O+"  (NOT "I checked prescriptions but found it in profile")\n- "what did I write today?" → Use DAILY ENTRIES section → Answer directly from entries\n- "what did doctor say about X?" → Use DOCTOR Q&A section → Answer from doctor\'s advice\n- "what medicine did doctor prescribe?" → Use PRESCRIPTION IMAGES → Analyze images and answer\n\nRULE: Answer DIRECTLY from the relevant data. Do NOT mention checking multiple sources.' : 'No profile data needed for this question. Answer generally.'}
+4. ${answerLengthInstruction}
 
-4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
-
-5. Do NOT give emergency warnings unless the user clearly mentions one of these:
-
-   heavy bleeding, severe abdominal pain, vomiting >24h without fluids, fainting, no fetal movement (20+ weeks), very high BP, seizures etc.
-
-6. ${answerLengthInstruction}
-
-7. Do not assume anything not said by the user. Do not invent symptoms.
-
-8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
-
-9. For list-based questions (ki ki, what things, what should, etc.), provide a well-organized list with brief explanations.
-
-10. WHEN TO SUGGEST IMAGE UPLOAD: If user asks about symptoms, pain, reports, prescriptions, or anything that could benefit from visual inspection, politely suggest they can upload an image for more accurate guidance. Say: "আপনি যদি কোনো প্রেসক্রিপশন, রিপোর্ট বা সংশ্লিষ্ট ছবি আপলোড করেন তাহলে আমি আরো সঠিক পরামর্শ দিতে পারব।" (Bangla) or "You can upload any prescription, report, or related image for more accurate guidance." (English)
-
-Goal: Provide helpful, accurate health guidance using the MOST RELEVANT data source for each question.
+5. Do not invent symptoms or information not provided by the user.
 
 ${safetyPrompt}`;
     
-    // Add specific instruction for current question type
-    if (isLoggedIn) {
-      if (actualProfileContext) {
-        systemPrompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ DATA USAGE REMINDER:
-Multiple data sections are provided below. Analyze the question, identify the MOST RELEVANT section, use ONLY that section to answer, and give a DIRECT answer without mentioning which section you used.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      } else {
-        systemPrompt += `\n\nCURRENT: Logged-in user, general/educational question. Answer generally without using profile data.`;
-      }
+    // Add specific instruction for logged-in users with profile data
+    if (isLoggedIn && actualProfileContext) {
+      systemPrompt += `\n\nDATA AVAILABLE: User's personal data is organized below. Answer questions directly from the relevant data.${followUpInstruction}`;
+    } else if (isLoggedIn) {
+      systemPrompt += `\n\nGeneral question - no personal data needed.`;
     } else {
-      systemPrompt += `\n\nCURRENT: Logged-out user. No personal information. Do not mention this unless directly asked. Answer questions directly.`;
+      systemPrompt += `\n\nLogged-out user - no personal data available.`;
     }
 
     // Extract weeks pregnant for RAG
@@ -363,9 +343,8 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Keep full context - don't trim! The profile data is already loaded only for personal questions
-    // and is structured with clear sections, so the AI needs to see ALL of it
-    const profileNote = actualProfileContext ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📋 MOTHER'S COMPLETE PROFILE DATA (READ CAREFULLY):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${actualProfileContext}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━` : "";
+    // Present data simply and clearly - let AI parse it naturally
+    const profileNote = actualProfileContext ? `\n\n${actualProfileContext}` : "";
     const dailyNote = (contextDecision.useDaily && dailyContextRaw) ? `\n\n${dailyContextRaw}` : "";
     const doctorQANote = (contextDecision.useDoctorQA && doctorQAContextRaw) ? `\n\n${doctorQAContextRaw}` : "";
 
