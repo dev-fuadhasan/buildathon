@@ -11,6 +11,41 @@ export type ChatMessage = {
   content: string;
 };
 
+// In-memory cache for compact mother profiles (per motherId)
+// Not persisted; safe for short-lived performance boost
+const profileCache = new Map<string, {
+  summary: string;
+  bloodGroup?: string;
+  weeks?: number;
+  dueDate?: string;
+  conditions?: string;
+  medications?: string;
+  lastUpdated: number;
+}>();
+
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function setProfileCache(motherId: string, data: {
+  summary: string;
+  bloodGroup?: string;
+  weeks?: number;
+  dueDate?: string;
+  conditions?: string;
+  medications?: string;
+}) {
+  profileCache.set(motherId, { ...data, lastUpdated: Date.now() });
+}
+
+function getProfileCache(motherId: string) {
+  const entry = profileCache.get(motherId);
+  if (!entry) return null;
+  if (Date.now() - entry.lastUpdated > PROFILE_CACHE_TTL_MS) {
+    profileCache.delete(motherId);
+    return null;
+  }
+  return entry;
+}
+
 type ContextDecision = {
   useProfile: boolean;
   usePrescriptions: boolean;
@@ -89,6 +124,7 @@ export async function askMomsCare(
   extraContexts?: {
     dailyContext?: string;
     doctorQAContext?: string;
+    motherId?: string;
   }
 ): Promise<string> {
   if (!isGroqConfigured()) {
@@ -160,6 +196,7 @@ export async function askMomsCare(
     // Available extra contexts
     const dailyContextRaw = extraContexts?.dailyContext;
     const doctorQAContextRaw = extraContexts?.doctorQAContext;
+    const motherId = extraContexts?.motherId;
 
     // Decision 1: AI decides which contexts to include (profile, prescriptions, daily, doctorQA)
     const contextDecision = await decideContextNeeds(
@@ -324,9 +361,9 @@ Provide this calculation FIRST, then add context.`;
     }
     
     // Trim contexts to avoid huge prompts causing 504/slow responses
-    const trimmedProfile = actualProfileContext ? actualProfileContext.slice(0, 1500) : "";
-    const trimmedDaily = (contextDecision.useDaily && dailyContextRaw) ? dailyContextRaw.slice(0, 800) : "";
-    const trimmedDoctorQA = (contextDecision.useDoctorQA && doctorQAContextRaw) ? doctorQAContextRaw.slice(0, 800) : "";
+    const trimmedProfile = actualProfileContext ? actualProfileContext.slice(0, 1000) : "";
+    const trimmedDaily = (contextDecision.useDaily && dailyContextRaw) ? dailyContextRaw.slice(0, 500) : "";
+    const trimmedDoctorQA = (contextDecision.useDoctorQA && doctorQAContextRaw) ? doctorQAContextRaw.slice(0, 500) : "";
 
     const profileNote = trimmedProfile ? `\n\n${trimmedProfile}` : "";
     const dailyNote = trimmedDaily ? `\n\nRECENT DAILY NOTES:\n${trimmedDaily}` : "";
@@ -407,11 +444,11 @@ Provide this calculation FIRST, then add context.`;
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
     const aiParams = needsComprehensive ? {
       temperature: 0.55,
-      max_tokens: 3500, // lower to reduce latency
+      max_tokens: 3000, // lower to reduce latency further
       top_p: 0.9,
     } : {
       temperature: 0.45,
-      max_tokens: 2500, // lower to reduce latency
+      max_tokens: 2000, // lower to reduce latency further
       top_p: 0.85,
     };
 
