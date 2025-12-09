@@ -183,6 +183,92 @@ export function searchDatasetByLanguage(
 }
 
 /**
+ * Search both EN and BN datasets simultaneously (for Banglish queries)
+ * Combines results from both languages and ranks by relevance score
+ * @param query - User query (Banglish)
+ * @param limit - Number of results to return
+ * @returns Array of matching dataset items sorted by score
+ */
+export function searchDatasetDual(
+  query: string,
+  limit: number = 3
+): DatasetItem[] {
+  if (!isDatasetLoaded) {
+    loadDualDataset();
+  }
+
+  if (unifiedDataset.length === 0) {
+    return [];
+  }
+
+  const queryLower = query.toLowerCase();
+  const scoredResults: Array<{ item: DatasetItem; score: number; source: 'en' | 'bn' }> = [];
+
+  // Search BOTH datasets simultaneously
+  for (const item of unifiedDataset) {
+    // Score against English content
+    let enScore = 0;
+    const questionEn = item.question_en.toLowerCase();
+    const answerEn = item.answer_en.toLowerCase();
+
+    // Score against Bangla content
+    let bnScore = 0;
+    const questionBn = item.question_bn.toLowerCase();
+    const answerBn = item.answer_bn.toLowerCase();
+
+    // Extract query keywords
+    const queryWords = queryLower
+      .split(/\s+/)
+      .filter((word) => word.length > 2);
+
+    // Score both EN and BN versions
+    for (const word of queryWords) {
+      // EN scoring
+      if (questionEn.includes(word)) enScore += 10;
+      if (answerEn.includes(word)) enScore += 5;
+      
+      // BN scoring
+      if (questionBn.includes(word)) bnScore += 10;
+      if (answerBn.includes(word)) bnScore += 5;
+      
+      // Tag and context (language-agnostic)
+      if (item.tag.toLowerCase().includes(word)) {
+        enScore += 8;
+        bnScore += 8;
+      }
+      if (item.context.toLowerCase().includes(word)) {
+        enScore += 6;
+        bnScore += 6;
+      }
+    }
+
+    // Boost for exact phrase matches
+    if (questionEn.includes(queryLower)) enScore += 50;
+    if (answerEn.includes(queryLower)) enScore += 30;
+    if (questionBn.includes(queryLower)) bnScore += 50;
+    if (answerBn.includes(queryLower)) bnScore += 30;
+
+    // Use the BEST score from either language
+    const bestScore = Math.max(enScore, bnScore);
+    const bestSource = enScore > bnScore ? 'en' : 'bn';
+
+    if (bestScore > 0) {
+      scoredResults.push({ item, score: bestScore, source: bestSource });
+    }
+  }
+
+  // Sort by score (descending) and return top results
+  scoredResults.sort((a, b) => b.score - a.score);
+  
+  console.log(`[Dual Search] Found ${scoredResults.length} results, top ${Math.min(limit, scoredResults.length)}:`);
+  scoredResults.slice(0, limit).forEach((r, i) => {
+    console.log(`  ${i+1}. Score: ${r.score} (${r.source}) - ${r.item.question_en.substring(0, 60)}...`);
+  });
+  
+  return scoredResults.slice(0, limit).map((result) => result.item);
+}
+
+/**
  * Format dataset results as context for AI
  * @param items - Array of dataset items
  * @param language - Language to format

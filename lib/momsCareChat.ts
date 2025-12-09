@@ -1,8 +1,8 @@
 import { groq, isGroqConfigured } from "./groqClient";
 import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
-import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
-import { detectLanguage, translateToEnglish } from "./translation";
+import { searchDatasetByLanguage, searchDatasetDual, formatDatasetContext, type Language } from "./dualDatasetLoader";
+import { detectLanguage } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
 import { shouldUseProfileData, needsFollowUpQuestions } from "./chatHelper";
 
@@ -153,33 +153,24 @@ export async function askMomsCare(
     // ==========================================
     // STEP 3: Search dual dataset based on language
     // ==========================================
+    // ML-ENGINEERED DATASET SEARCH (No translation needed!)
+    // ==========================================
+    
     // Check if query is Banglish (romanized Bangla without Bengali script)
     const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
     const isBanglish = userLanguage === "bn" && !hasBengaliScript;
     
-    // For Banglish queries, translate to English first for better search
-    let searchQuery = lastUserMessage;
     let relevantDatasetItems;
     
     if (isBanglish) {
-      try {
-        // Translate Banglish to English for accurate dataset search
-        const translatedQuery = await translateToEnglish(lastUserMessage);
-        searchQuery = translatedQuery || lastUserMessage;
-        console.log(`[Banglish] Original: ${lastUserMessage}`);
-        console.log(`[Banglish] Translated: ${searchQuery}`);
-        // Search English dataset with translated query
-        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 3);
-      } catch (error) {
-        console.error("Banglish translation failed, fallback to direct search:", error);
-        // Fallback: search both datasets
-        const enResults = searchDatasetByLanguage(lastUserMessage, "en", 3);
-        const bnResults = searchDatasetByLanguage(lastUserMessage, "bn", 3);
-        relevantDatasetItems = enResults.length > 0 ? enResults : bnResults;
-      }
+      // 🎯 DUAL SEARCH: Search BOTH EN + BN datasets simultaneously
+      // No translation = No translation errors!
+      console.log(`[Dual Search] Banglish detected: "${lastUserMessage}"`);
+      console.log(`[Dual Search] Searching both EN + BN datasets...`);
+      relevantDatasetItems = searchDatasetDual(lastUserMessage, 3);
     } else {
       // Normal search for English or Bangla with script
-      relevantDatasetItems = searchDatasetByLanguage(searchQuery, userLanguage, 3);
+      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, userLanguage, 3);
     }
     
     const datasetContext = relevantDatasetItems.length > 0 
