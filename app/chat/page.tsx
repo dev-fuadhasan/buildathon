@@ -292,9 +292,15 @@ export default function ChatPage() {
       const finalMessages = [...newMessages, { role: "assistant" as const, content: data.reply }];
       setMessages(finalMessages);
       
-      // Save to conversation if logged in and conversation exists
+      // Stop loading immediately after showing response
+      setLoading(false);
+      
+      // Save to conversation in background (don't block UI)
       if (isMother && conversationId) {
-        await saveMessagesToConversation(finalMessages, conversationId);
+        saveMessagesToConversation(finalMessages, conversationId).catch((err) => {
+          console.error("Background conversation save failed:", err);
+          // Silent failure - user already has their response
+        });
       }
     } catch (err: any) {
       console.error("Chat error:", err);
@@ -304,8 +310,7 @@ export default function ChatPage() {
         { role: "assistant" as const, content: `❌ Error: ${errorMessage}` },
       ];
       setMessages(errorMessages);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Also stop loading on error
     }
   };
 

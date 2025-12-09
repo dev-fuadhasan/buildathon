@@ -122,14 +122,21 @@ function isRoutineQuestion(message: string): boolean {
 
 /**
  * Analyzes user input for red flags and dangerous situations
+ * @param userMessage - User's text message
+ * @param profileContext - Optional profile context
+ * @param hasImage - Whether user attached an image (images often provide health context)
  */
-export function checkSafety(userMessage: string, profileContext?: string): SafetyCheck {
+export function checkSafety(userMessage: string, profileContext?: string, hasImage?: boolean): SafetyCheck {
   const message = userMessage.toLowerCase();
   const context = (profileContext || "").toLowerCase();
   const combined = `${message} ${context}`;
   
+  // If user attached an image, assume it's health/pregnancy related context
+  // (users don't upload random images to a pregnancy chatbot)
+  const hasImageContext = hasImage === true;
+  
   // Check if this is a routine question first
-  const isRoutine = isRoutineQuestion(message);
+  const isRoutine = isRoutineQuestion(message) || hasImageContext;
   
   const criticalFlags: string[] = [];
   const highFlags: string[] = [];

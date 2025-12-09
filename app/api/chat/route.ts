@@ -201,8 +201,9 @@ export async function POST(req: NextRequest) {
     // Detect language
     const userLanguage = detectLanguage(currentUserMessage);
     
-    // Safety check (on original message)
-    const safetyCheck = checkSafety(currentUserMessage);
+    // Safety check (on original message + image context)
+    const hasImage = imageUrl !== null && imageUrl !== undefined;
+    const safetyCheck = checkSafety(currentUserMessage, undefined, hasImage);
     
     if (safetyCheck.requiresEmergency) {
       const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
