@@ -223,13 +223,13 @@ export async function POST(req: NextRequest) {
     
     console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
     
-    // Load profile data ONLY if AI determines question is personal
+    // Load ALL profile data if AI determines question is personal
     let profileContext: string | undefined = undefined;
     let prescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
     
     if (isPersonal) {
-      console.log("[AI Decision] Personal question - loading profile data...");
+      console.log("[AI Decision] Personal question - loading FULL profile data...");
       
       try {
         const { getMother, listDailyEntries, listMotherQuestions } = await import("@/lib/data");
@@ -240,18 +240,81 @@ export async function POST(req: NextRequest) {
         if (mother) {
           const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+          const months = weeks ? Math.round(weeks / 4.33) : undefined;
           
-          // Build compact profile context
+          // Build comprehensive profile context
           const profileParts: string[] = [];
+          
+          // Basic profile
+          profileParts.push("=== HEALTH PROFILE ===");
           if (mother.name) profileParts.push(`Name: ${mother.name}`);
           if (mother.age) profileParts.push(`Age: ${mother.age}`);
-          if (weeks) profileParts.push(`Weeks pregnant: ${weeks}`);
+          if (weeks) profileParts.push(`Weeks pregnant: ${weeks} weeks (${months} months)`);
+          if (mother.dueDate) profileParts.push(`Due date: ${mother.dueDate}`);
           if (mother.bloodGroup) profileParts.push(`Blood group: ${mother.bloodGroup}`);
-          if (mother.conditions) profileParts.push(`Conditions: ${mother.conditions}`);
+          if (mother.previousPregnancies !== undefined) profileParts.push(`Previous pregnancies: ${mother.previousPregnancies}`);
+          if (mother.conditions) profileParts.push(`Medical conditions: ${mother.conditions}`);
           if (mother.allergies) profileParts.push(`Allergies: ${mother.allergies}`);
-          if (mother.medications) profileParts.push(`Medications: ${mother.medications}`);
+          if (mother.medications) profileParts.push(`Current medications: ${mother.medications}`);
+          if (mother.emergencyContact) profileParts.push(`Emergency contact: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
           
-          profileContext = profileParts.length > 0 ? `PROFILE:\n${profileParts.join("\n")}` : undefined;
+          // Load daily entries
+          try {
+            const dailyEntries = await listDailyEntries(user!.id);
+            const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
+            const recentEntries = dailyEntries
+              .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 10);
+            
+            if (recentEntries.length > 0) {
+              profileParts.push("\n=== RECENT DAILY ENTRIES ===");
+              recentEntries.forEach((entry, idx) => {
+                profileParts.push(`${idx + 1}. [${entry.date}] ${entry.entry}`);
+              });
+            }
+          } catch (err) {
+            console.error("Failed to load daily entries:", err);
+          }
+          
+          // Load recent doctor Q&A
+          try {
+            const questions = await listMotherQuestions(user!.id);
+            const recentQAs = questions
+              .filter(q => q.answer)
+              .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
+              .slice(0, 5);
+            
+            if (recentQAs.length > 0) {
+              profileParts.push("\n=== RECENT DOCTOR Q&A ===");
+              recentQAs.forEach((qa, idx) => {
+                profileParts.push(`${idx + 1}. Q: ${qa.question}`);
+                profileParts.push(`   A: ${qa.answer}`);
+              });
+            }
+          } catch (err) {
+            console.error("Failed to load doctor Q&A:", err);
+          }
+          
+          // Load chat history (previous conversations)
+          try {
+            const { getChatHistory } = await import("@/lib/data");
+            const history = await getChatHistory(user!.id);
+            if (history?.messages && history.messages.length > 0) {
+              const recentHistory = history.messages
+                .slice(-10) // Last 10 messages
+                .map((msg, idx) => `${idx + 1}. ${msg.role === "user" ? "Mother" : "AI"}: ${msg.content.substring(0, 150)}...`);
+              
+              if (recentHistory.length > 0) {
+                profileParts.push("\n=== RECENT CHAT HISTORY ===");
+                profileParts.push(...recentHistory);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to load chat history:", err);
+          }
+          
+          profileContext = profileParts.length > 0 ? profileParts.join("\n") : undefined;
           weeksPregnant = weeks;
           
           // Load prescriptions (limit to 3 for speed)
@@ -270,7 +333,7 @@ export async function POST(req: NextRequest) {
             prescriptionUrls.push(imageUrl);
           }
           
-          console.log(`[Profile Loaded] Prescriptions: ${prescriptionUrls.length}`);
+          console.log(`[Profile Loaded] Profile sections: ${profileParts.length}, Prescriptions: ${prescriptionUrls.length}`);
         }
       } catch (err) {
         console.error("Failed to fetch mother profile:", err);
