@@ -4,6 +4,7 @@ import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medica
 import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
+import { shouldUseProfileData, needsFollowUpQuestions } from "./chatHelper";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -81,12 +82,34 @@ export async function askMomsCare(
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
-    // Determine mode
-    const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
-    const isGeneralQuestion = isLoggedIn && isPersonal === false;
-    
     // Check if image is provided
     const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
+    
+    // ==========================================
+    // AI-BASED DECISIONS
+    // ==========================================
+    
+    // Decision 1: Should we use profile data? (Only for logged-in users)
+    let actualProfileContext: string | undefined = undefined;
+    if (isLoggedIn && profileContext) {
+      const useProfile = await shouldUseProfileData(lastUserMessage, profileContext);
+      if (useProfile) {
+        actualProfileContext = profileContext;
+        console.log(`[AI Decision] Using profile data for personalized answer`);
+      } else {
+        console.log(`[AI Decision] NOT using profile data - question is general/educational`);
+      }
+    }
+    
+    // Decision 2: Are follow-up questions needed?
+    const followUpDecision = await needsFollowUpQuestions(lastUserMessage, isPersonal || false, messages);
+    const followUpInstruction = followUpDecision.needsFollowUp && followUpDecision.questions.length > 0
+      ? `\n\nFOLLOW-UP QUESTIONS NEEDED: After your main answer, ask these follow-up questions naturally in the conversation:\n${followUpDecision.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nAsk these questions in a conversational way, not as a list.`
+      : "";
+    
+    if (followUpDecision.needsFollowUp) {
+      console.log(`[AI Decision] Follow-up questions needed: ${followUpDecision.questions.length}`);
+    }
     
     // Check if question needs comprehensive answer (more selective criteria)
     const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki ") || 
@@ -104,13 +127,14 @@ export async function askMomsCare(
       : "Keep answers concise but complete. For simple questions, give short answers. For complex topics, provide adequate details.";
     
     // Debug logging
-    console.log(`[AI Mode] Comprehensive: ${needsComprehensive}, HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}`);
+    console.log(`[AI Mode] Comprehensive: ${needsComprehensive}, HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}, UseProfile: ${!!actualProfileContext}`);
+    
     const imageInstruction = hasImage 
       ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
     
     // System prompt - MomsCare AI
-    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}${imageInstruction}
+    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}${imageInstruction}${followUpInstruction}
 
 1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
 
@@ -118,7 +142,7 @@ export async function askMomsCare(
 
 2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
 
-3. Logged-in user: backend provides profile. Use it only when the question is about the user's own health. If the question is general, answer generally and say the answer is general.
+3. Logged-in user: ${actualProfileContext ? 'Profile data is provided below. Use it to personalize your answer.' : 'No profile data needed for this question. Answer generally.'}
 
 4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
 
@@ -142,10 +166,10 @@ ${safetyPrompt}`;
     
     // Add specific instruction for current question type
     if (isLoggedIn) {
-      if (isGeneralQuestion) {
-        systemPrompt += `\n\nCURRENT: Logged-in user, general question. Answer generally and state it is general.`;
-      } else if (isPersonalizedMode) {
-        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Use profile data for personalized guidance.`;
+      if (actualProfileContext) {
+        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Profile data provided below - use it for personalized guidance.`;
+      } else {
+        systemPrompt += `\n\nCURRENT: Logged-in user, general/educational question. Answer generally without using profile data.`;
       }
     } else {
       systemPrompt += `\n\nCURRENT: Logged-out user. No personal information. Do not mention this unless directly asked. Answer questions directly.`;
@@ -156,9 +180,9 @@ ${safetyPrompt}`;
     
     if (weeksPregnant) {
       trimester = weeksPregnant;
-    } else if (profileContext) {
+    } else if (actualProfileContext) {
       // Try to extract weeks from profile context (new format: "সপ্তাহ: X সপ্তাহ" or old format)
-      const weeksMatch = profileContext.match(/সপ্তাহ:\s*(\d+)|(\d+)\s*সপ্তাহ|Weeks pregnant:\s*(\d+)|(\d+)\s*weeks/i);
+      const weeksMatch = actualProfileContext.match(/সপ্তাহ:\s*(\d+)|(\d+)\s*সপ্তাহ|Weeks pregnant:\s*(\d+)|(\d+)\s*weeks/i);
       if (weeksMatch) {
         trimester = parseInt(weeksMatch[1] || weeksMatch[2] || weeksMatch[3] || weeksMatch[4], 10);
       }
@@ -217,8 +241,8 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    const profileNote = profileContext
-      ? `\n\n${profileContext}`
+    const profileNote = actualProfileContext
+      ? `\n\n${actualProfileContext}`
       : "";
 
     // Filter and format messages - only include user and assistant messages

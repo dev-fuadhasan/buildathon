@@ -98,36 +98,37 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
         </div>
       )}
 
-      {/* Input Row */}
-      <div className="flex gap-2 items-end">
+      {/* Input Row - Properly Aligned */}
+      <div className="flex gap-2 items-center">
         {/* Image Attachment Button - LEFT SIDE */}
         {onImageSelect && (
-          <label 
-            htmlFor="chat-image-input" 
-            className={`p-3 h-[48px] flex items-center justify-center rounded-lg border-2 transition-all ${
-              disabled 
-                ? "border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50" 
-                : "border-slate-300 text-slate-600 hover:text-pink-600 hover:border-pink-400 hover:bg-pink-50 cursor-pointer"
-            }`}
-            title={lang === "bn" ? "ছবি যুক্ত করুন" : "Attach image"}
-          >
-            <Icon name="add" size={22} />
-          </label>
+          <>
+            <label 
+              htmlFor="chat-image-input" 
+              className={`flex-shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-lg border-2 transition-all ${
+                disabled 
+                  ? "border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50" 
+                  : "border-slate-300 text-slate-600 hover:text-pink-600 hover:border-pink-400 hover:bg-pink-50 cursor-pointer"
+              }`}
+              title={lang === "bn" ? "ছবি যুক্ত করুন" : "Attach image"}
+            >
+              <Icon name="add" size={22} />
+            </label>
+            <input
+              id="chat-image-input"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={handleFileChange}
+              disabled={disabled}
+              className="hidden"
+            />
+          </>
         )}
-        
-        <input
-          id="chat-image-input"
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
-          onChange={handleFileChange}
-          disabled={disabled}
-          className="hidden"
-        />
 
-        {/* Text Input */}
-        <div className="flex-1 relative">
+        {/* Text Input - CENTER */}
+        <div className="flex-1 relative min-w-0">
           <textarea
-            className="input resize-none text-sm py-2.5 px-3"
+            className="input resize-none text-sm py-3 px-4 w-full h-[48px] min-h-[48px] max-h-[120px]"
             placeholder={lang === "bn" 
               ? "বার্তা টাইপ করুন... (Enter: পাঠান, Shift+Enter: নতুন লাইন)"
               : "Type message... (Enter: send, Shift+Enter: new line)"}
@@ -141,15 +142,15 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             }}
             disabled={sending || disabled}
             rows={1}
-            style={{ height: "48px", minHeight: "48px", maxHeight: "120px", overflowY: "auto" }}
+            style={{ overflowY: "auto" }}
           />
         </div>
 
-        {/* Send Button */}
+        {/* Send Button - RIGHT SIDE */}
         <button
           onClick={handleSend}
           disabled={sending || disabled || (!value.trim() && !currentImage)}
-          className="btn-primary px-4 py-2.5 h-[48px] flex items-center justify-center min-w-[80px] text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-shrink-0 h-[48px] px-4 btn-primary flex items-center justify-center min-w-[80px] text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           title={lang === "bn" ? "পাঠান" : "Send"}
         >
           {sending ? (

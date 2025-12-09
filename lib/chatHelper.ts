@@ -201,10 +201,145 @@ export function needsComprehensiveAnswer(message: string): boolean {
 }
 
 /**
- * Detects if asking follow-up questions would improve the answer quality
+ * AI-based: Decides if follow-up questions are needed and what they should be
  * Returns { needsFollowUp: boolean, questions: string[] }
  */
-export function needsFollowUpQuestions(
+export async function needsFollowUpQuestions(
+  message: string,
+  isPersonal: boolean,
+  conversationHistory?: Array<{ role: string; content: string }>
+): Promise<{ needsFollowUp: boolean; questions: string[] }> {
+  // If Groq is not configured, fallback to keyword-based
+  if (!isGroqConfigured()) {
+    return needsFollowUpQuestionsFallback(message, isPersonal);
+  }
+
+  try {
+    const historyContext = conversationHistory && conversationHistory.length > 0
+      ? `\n\nConversation history:\n${conversationHistory.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n')}`
+      : '';
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content: `You are a medical assistant. Analyze if the user's question needs follow-up questions to provide better guidance.
+
+DECIDE:
+1. Does the question need more information to give accurate advice?
+2. If YES, what 1-2 specific follow-up questions would help?
+
+EXAMPLES:
+- "I have pain" → YES, ask: "Where is the pain?" "How severe?"
+- "Can I take medicine?" → YES, ask: "Which medicine?" "How many weeks pregnant?"
+- "What is anemia?" → NO, enough info for educational answer
+- "I'm 6 months pregnant and have mild back pain" → NO, enough info already
+
+Respond in JSON format ONLY:
+{
+  "needsFollowUp": true/false,
+  "questions": ["Question 1 in user's language", "Question 2 in user's language"]
+}
+
+If needsFollowUp is false, questions array should be empty.`,
+        },
+        {
+          role: "user",
+          content: `User question: ${message}${historyContext}\n\nIs this personal question about the user: ${isPersonal ? 'YES' : 'NO'}`,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 200,
+    });
+
+    const response = completion.choices?.[0]?.message?.content?.trim() || "";
+    
+    // Try to parse JSON response
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const needsFollowUp = parsed.needsFollowUp === true;
+        const questions = Array.isArray(parsed.questions) ? parsed.questions.filter((q: any) => q && typeof q === 'string') : [];
+        
+        console.log(`[Follow-up Detection] Needs follow-up: ${needsFollowUp}, Questions: ${questions.length}`);
+        return { needsFollowUp, questions };
+      }
+    } catch (parseError) {
+      console.error("[Follow-up Detection] Failed to parse AI response:", parseError);
+    }
+    
+    // Fallback if parsing fails
+    return needsFollowUpQuestionsFallback(message, isPersonal);
+  } catch (error: any) {
+    console.error("[Follow-up Detection] AI classification failed, using fallback:", error.message);
+    return needsFollowUpQuestionsFallback(message, isPersonal);
+  }
+}
+
+/**
+ * AI-based: Decides if profile data should be used for logged-in users
+ * Returns true if profile data should be analyzed and used in answer
+ */
+export async function shouldUseProfileData(
+  message: string,
+  profileContext?: string
+): Promise<boolean> {
+  // If no profile context, don't use it
+  if (!profileContext) {
+    return false;
+  }
+
+  // If Groq is not configured, default to true (use profile)
+  if (!isGroqConfigured()) {
+    return true;
+  }
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content: `You are a medical assistant. Decide if the user's question requires analyzing their personal profile data (pregnancy week, medical history, prescriptions, etc.) to give a good answer.
+
+USE PROFILE DATA when:
+- Question is about user's specific situation: "my pain", "my medication", "should I"
+- Question needs personalization: "what should I eat", "can I travel"
+- Question about user's pregnancy stage, conditions, medications
+
+DON'T USE PROFILE DATA when:
+- General knowledge question: "What is anemia?", "Why is iron important?"
+- Educational question: "How does ultrasound work?"
+- General advice: "What should pregnant women eat?" (not "what should I eat")
+
+Respond with ONLY one word: "YES" or "NO"`,
+        },
+        {
+          role: "user",
+          content: `User question: ${message}\n\nShould I analyze their profile data (pregnancy week, medical history, prescriptions) to answer this?`,
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 10,
+    });
+
+    const response = completion.choices?.[0]?.message?.content?.trim().toUpperCase() || "";
+    const shouldUse = response.includes("YES");
+    
+    console.log(`[Profile Usage] Should use profile data: ${shouldUse} for question: "${message.substring(0, 50)}..."`);
+    return shouldUse;
+  } catch (error: any) {
+    console.error("[Profile Usage] AI decision failed, defaulting to use profile:", error.message);
+    return true; // Default to using profile if AI fails
+  }
+}
+
+/**
+ * Fallback keyword-based follow-up detection (used if AI fails)
+ */
+function needsFollowUpQuestionsFallback(
   message: string,
   isPersonal: boolean
 ): { needsFollowUp: boolean; questions: string[] } {
