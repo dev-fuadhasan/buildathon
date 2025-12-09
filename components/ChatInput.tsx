@@ -98,9 +98,9 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
         </div>
       )}
 
-      {/* Input Row - Properly Aligned */}
+      {/* Input Row - Properly Aligned (All elements exactly 48px height) */}
       <div className="flex gap-2 items-center">
-        {/* Image Attachment Button - LEFT SIDE */}
+        {/* Image Attachment Button - LEFT SIDE (48px) */}
         {onImageSelect && (
           <>
             <label 
@@ -125,15 +125,23 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
           </>
         )}
 
-        {/* Text Input - CENTER */}
-        <div className="flex-1 relative min-w-0">
+        {/* Text Input - CENTER (48px minimum, expands up to 120px) */}
+        <div className="flex-1 relative min-w-0 h-[48px] flex items-center">
           <textarea
-            className="input resize-none text-sm py-3 px-4 w-full h-[48px] min-h-[48px] max-h-[120px]"
+            className="resize-none text-sm px-4 w-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder={lang === "bn" 
               ? "বার্তা টাইপ করুন... (Enter: পাঠান, Shift+Enter: নতুন লাইন)"
               : "Type message... (Enter: send, Shift+Enter: new line)"}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              // Auto-resize but maintain minimum 48px
+              const textarea = e.target;
+              textarea.style.height = '48px';
+              if (textarea.scrollHeight > 48) {
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -142,11 +150,20 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             }}
             disabled={sending || disabled}
             rows={1}
-            style={{ overflowY: "auto" }}
+            style={{ 
+              height: '48px',
+              minHeight: '48px',
+              maxHeight: '120px',
+              overflowY: 'auto',
+              paddingTop: '12px',
+              paddingBottom: '12px',
+              boxSizing: 'border-box',
+              lineHeight: '1.5'
+            }}
           />
         </div>
 
-        {/* Send Button - RIGHT SIDE */}
+        {/* Send Button - RIGHT SIDE (48px) */}
         <button
           onClick={handleSend}
           disabled={sending || disabled || (!value.trim() && !currentImage)}

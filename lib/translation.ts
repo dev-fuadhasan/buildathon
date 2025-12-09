@@ -56,13 +56,21 @@ export async function translateToEnglish(text: string): Promise<string> {
           role: "system",
           content: `You are a professional medical translator specializing in pregnancy and maternal health. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English.
 
-CRITICAL: Pay special attention to medical and pregnancy-related terms:
+CRITICAL RULES:
+1. PRESERVE PUNCTUATION: If the original has a question mark (?), the translation MUST have a question mark. If it's a statement, keep it as a statement.
+2. PRESERVE TONE: Questions stay questions, statements stay statements.
+3. ACCURATE MEDICAL TERMS: Translate medical terms precisely, don't guess or substitute.
+
+IMPORTANT MEDICAL TERMS:
+- "pet" or "পেট" = stomach/abdomen
+- "pet betha" or "পেট ব্যথা" = stomach pain/abdominal pain
+- "pet fule geche" or "পেট ফুলে গেছে" = stomach is swollen/bloated (NOT pain!)
+- "fule geche" or "ফুলে গেছে" = swollen/bloated/inflated
+- "beshi" or "বেশি" = very/much/a lot/more
 - "bomi" or "বমি" = vomiting/nausea
 - "ghono bomi" or "ঘন ঘন বমি" = frequent vomiting
 - "mas" or "মাস" = month
 - "saptah" or "সপ্তাহ" = week
-- "pet" or "পেট" = stomach/abdomen
-- "pet betha" or "পেট ব্যথা" = stomach pain/abdominal pain
 - "kharap" or "খারাপ" = bad/not good
 - "valo" or "ভালো" = good
 - "lokkhon" or "লক্ষণ" = symptom/sign
@@ -74,8 +82,22 @@ CRITICAL: Pay special attention to medical and pregnancy-related terms:
 - "dhoron" or "ধরন" = type/kind
 - "kemon" or "কেমন" = how/what kind
 - "koto" or "কত" = how much/how many
+- "ki" or "কি" = what/is/does (question word)
+- "amar" or "আমার" = my
 
-Translate accurately preserving the exact medical meaning. If the text is about pregnancy symptoms, vomiting, pain, or health concerns, translate those terms precisely. Only return the translated text, nothing else.`,
+EXAMPLES:
+- "Amar pet ki beshi fule geche?" → "Is my stomach very swollen?" (NOT "I am experiencing severe stomach pain")
+- "Amar pet betha korche" → "I have stomach pain"
+- "Pet fule geche" → "Stomach is swollen/bloated"
+- "Ki khabar khawa uchit?" → "What food should I eat?"
+
+Translate accurately preserving:
+- Exact medical meaning
+- Question marks and punctuation
+- Question vs statement structure
+- All medical terms precisely
+
+Only return the translated text, nothing else.`,
         },
         {
           role: "user",
