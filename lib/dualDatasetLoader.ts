@@ -172,13 +172,16 @@ export function searchDatasetByLanguage(
       score += 30;
     }
 
-    if (score > 0) {
+    // QUALITY FILTER: Only include results with meaningful matches (25+ points)
+    // This prevents returning irrelevant Q&A that only match 1-2 common words
+    if (score >= 25) {
       scoredResults.push({ item, score });
     }
   }
 
   // Sort by score (descending) and return top results
   scoredResults.sort((a, b) => b.score - a.score);
+  console.log(`[Dataset Search] Found ${scoredResults.length} quality results (score >= 25) for language: ${language}`);
   return scoredResults.slice(0, limit).map((result) => result.item);
 }
 
@@ -252,7 +255,9 @@ export function searchDatasetDual(
     const bestScore = Math.max(enScore, bnScore);
     const bestSource = enScore > bnScore ? 'en' : 'bn';
 
-    if (bestScore > 0) {
+    // QUALITY FILTER: Only include results with meaningful matches (25+ points)
+    // This prevents returning irrelevant Q&A that only match 1-2 common words
+    if (bestScore >= 25) {
       scoredResults.push({ item, score: bestScore, source: bestSource });
     }
   }
@@ -260,11 +265,12 @@ export function searchDatasetDual(
   // Sort by score (descending) and return top results
   scoredResults.sort((a, b) => b.score - a.score);
   
-  console.log(`[Dual Search] Found ${scoredResults.length} results, top ${Math.min(limit, scoredResults.length)}:`);
+  console.log(`[Dual Search] Found ${scoredResults.length} quality results (score >= 25), top ${Math.min(limit, scoredResults.length)}:`);
   scoredResults.slice(0, limit).forEach((r, i) => {
     console.log(`  ${i+1}. Score: ${r.score} (${r.source}) - ${r.item.question_en.substring(0, 60)}...`);
   });
   
+  // Return top results, or empty array if no quality matches
   return scoredResults.slice(0, limit).map((result) => result.item);
 }
 
@@ -297,8 +303,10 @@ Context: ${item.context}
   });
 
   return `
-RELEVANT INFORMATION FROM MOMSCARE KNOWLEDGE BASE:
+REFERENCE Q&A FROM KNOWLEDGE BASE (Use ONLY if directly relevant to user's question):
 ${contextParts.join("\n\n---\n\n")}
+
+IMPORTANT: If these Q&A examples are about DIFFERENT topics than the user's question, IGNORE THEM and answer from your own knowledge.
 `.trim();
 }
 

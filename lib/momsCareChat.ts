@@ -177,6 +177,17 @@ export async function askMomsCare(
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
     
+    // Log dataset context usage for debugging
+    if (relevantDatasetItems.length > 0) {
+      console.log(`[Dataset] Using ${relevantDatasetItems.length} reference Q&A for context`);
+      relevantDatasetItems.forEach((item, i) => {
+        const question = userLanguage === "en" ? item.question_en : item.question_bn;
+        console.log(`  ${i+1}. ${question.substring(0, 80)}...`);
+      });
+    } else {
+      console.log(`[Dataset] No relevant Q&A found - AI will use its own knowledge`);
+    }
+    
     // Check if image is provided
     const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
     
@@ -233,9 +244,16 @@ RULES:
 
 2. ${actualProfileContext || dailyContextRaw || doctorQAContextRaw ? 'User data provided below with labels. Use it to answer.' : hasImage ? 'No profile data available. If user sent images, ALWAYS analyze them. For questions with "my/amar", use the images to provide personalized guidance.' : 'No personal data. Answer generally.'}
 
-3. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
+3. CRITICAL - DATASET USAGE:
+   - Reference data (Q&A examples) may be provided below
+   - ONLY use reference data if it's DIRECTLY RELEVANT to the user's EXACT question
+   - If reference Q&A is about DIFFERENT topics (e.g. user asks about running but reference is about food), IGNORE IT COMPLETELY
+   - Answer from your OWN KNOWLEDGE if reference data doesn't match
+   - NEVER mix topics: If user asks about exercise, don't answer about food/nutrition
 
-4. ${answerLengthInstruction}
+4. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
+
+5. ${answerLengthInstruction}
 
 ${safetyPrompt}`;
     
