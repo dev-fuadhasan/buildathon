@@ -216,9 +216,9 @@ export async function POST(req: NextRequest) {
     }
     
     // ==========================================
-    // STEP 1: Classify question type (Personal vs General)
+    // STEP 1: Classify question type (Personal vs General) - AI-based
     // ==========================================
-    const isPersonal = isPersonalQuestion(currentUserMessage);
+    const isPersonal = await isPersonalQuestion(currentUserMessage);
     
     console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
     

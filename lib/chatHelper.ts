@@ -2,17 +2,67 @@
  * Helper functions for chat functionality
  */
 
+import { groq, isGroqConfigured } from "./groqClient";
+
 /**
- * Detects if a question is personal (about the user) or general
+ * AI-based detection: Determines if a question is personal (about the user) or general
+ * Uses Groq AI instead of keyword matching for better accuracy
  * Returns true if personal, false if general
- * 
- * IMPROVED LOGIC:
- * - Strong personal indicators → personal
- * - Strong general indicators → general
- * - Educational/knowledge questions → general
- * - Symptom questions without "my/I" → general (unless very specific)
  */
-export function isPersonalQuestion(message: string): boolean {
+export async function isPersonalQuestion(message: string): Promise<boolean> {
+  // If Groq is not configured, fallback to simple detection
+  if (!isGroqConfigured()) {
+    return isPersonalQuestionFallback(message);
+  }
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant", // Fast, cheap model for classification
+      messages: [
+        {
+          role: "system",
+          content: `You are a question classifier. Analyze if a question is PERSONAL (about the user asking) or GENERAL (educational/knowledge).
+
+PERSONAL questions:
+- User asking about themselves: "my", "amar", "I", "ami"
+- User's symptoms, conditions, medications
+- User's pregnancy, baby, reports
+- "What should I do?", "Can I...?", "Should I...?"
+- "Amar ki korte hobe?", "Amake ki...?"
+
+GENERAL questions:
+- Educational: "What is...?", "Why is...?", "How does...?"
+- Knowledge: "Ki hote pare?", "Keno hoy?", "Kemon hoy?"
+- General advice: "What should mothers...?", "Generally...", "In general..."
+- Comparison: "Which is better?", "Difference between..."
+
+Respond with ONLY one word: "PERSONAL" or "GENERAL"`,
+        },
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      temperature: 0.1, // Very low for consistent classification
+      max_tokens: 10, // Just need one word
+    });
+
+    const response = completion.choices?.[0]?.message?.content?.trim().toUpperCase() || "";
+    const isPersonal = response.includes("PERSONAL");
+    
+    console.log(`[Question Classifier] "${message.substring(0, 50)}..." → ${isPersonal ? "PERSONAL" : "GENERAL"}`);
+    return isPersonal;
+  } catch (error: any) {
+    console.error("[Question Classifier] AI classification failed, using fallback:", error.message);
+    // Fallback to simple detection if AI fails
+    return isPersonalQuestionFallback(message);
+  }
+}
+
+/**
+ * Fallback keyword-based detection (used if AI fails or Groq not configured)
+ */
+function isPersonalQuestionFallback(message: string): boolean {
   const text = message.toLowerCase().trim();
   
   // STRONG personal indicators (Bengali and English)
