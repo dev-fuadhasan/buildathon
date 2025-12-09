@@ -121,6 +121,36 @@ export function isPersonalQuestion(message: string): boolean {
 }
 
 /**
+ * Detects if the question needs a comprehensive/list-based answer
+ * Returns true for "what things", "what should", "how to", "tips", "guidelines" type questions
+ */
+export function needsComprehensiveAnswer(message: string): boolean {
+  const text = message.toLowerCase().trim();
+  
+  const comprehensiveIndicators = [
+    // List-based questions (English)
+    "what things", "what should", "what can", "what are",
+    "how to", "how can", "ways to", "tips", "guidelines",
+    "what all", "list of", "suggestions", "advice",
+    "steps", "precautions", "care", "follow", "do and don't",
+    
+    // List-based questions (Bangla/Banglish)
+    "ki ki", "kiki", "kon kon", "kokhon kokhon",
+    "kivabe", "kibhabe", "kothay kothay",
+    "poramorsho", "upay", "tips", "guidelines",
+    "mene colte hobe", "mene colbe", "kora uchit",
+    "kora dorkar", "rakhte hobe", "dekha uchit",
+    
+    // Comprehensive topics
+    "diet", "food", "khabar", "exercise", "byayam",
+    "prepare", "prostuti", "ready", "taiyar",
+  ];
+  
+  // Check if question contains comprehensive indicators
+  return comprehensiveIndicators.some(indicator => text.includes(indicator));
+}
+
+/**
  * Detects if asking follow-up questions would improve the answer quality
  * Returns { needsFollowUp: boolean, questions: string[] }
  */

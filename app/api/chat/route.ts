@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     let messages = body.messages || [];
+    const imageUrl = body.imageUrl || null; // Optional image URL
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -138,9 +139,12 @@ export async function POST(req: NextRequest) {
           setTimeout(() => reject(new Error("Request timeout")), 55000);
         });
         
+        // Prepare image URLs array
+        const imageUrls = imageUrl ? [imageUrl] : [];
+        
         // Send messages directly to AI in original language (no translation)
         reply = await Promise.race([
-          askMomsCare(messages, undefined, [], undefined, false, false),
+          askMomsCare(messages, undefined, imageUrls, undefined, false, false),
           timeoutPromise
         ]) as string;
         
@@ -301,13 +305,21 @@ export async function POST(req: NextRequest) {
             console.error("Failed to fetch prescriptions:", err);
           }
           
+          // Add chat image if provided
+          if (imageUrl) {
+            prescriptionUrls.push(imageUrl);
+          }
+          
           console.log(`[Profile Loaded] Profile: ${profileParts.length} sections, Prescriptions: ${prescriptionUrls.length}`);
         }
       } catch (err) {
         console.error("Failed to fetch mother profile:", err);
       }
     } else {
-      // For GENERAL questions, don't load profile
+      // For GENERAL questions, don't load profile but still add chat image if provided
+      if (imageUrl) {
+        prescriptionUrls = [imageUrl];
+      }
       console.log("[Profile Loading] General question detected - skipping profile load");
     }
 

@@ -85,6 +85,24 @@ export async function askMomsCare(
     const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
     const isGeneralQuestion = isLoggedIn && isPersonal === false;
     
+    // Check if question needs comprehensive answer
+    const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki") || 
+                               lastUserMessage.toLowerCase().includes("what things") ||
+                               lastUserMessage.toLowerCase().includes("what should") ||
+                               lastUserMessage.toLowerCase().includes("how to") ||
+                               lastUserMessage.toLowerCase().includes("tips") ||
+                               lastUserMessage.toLowerCase().includes("guidelines") ||
+                               lastUserMessage.toLowerCase().includes("mene colbe") ||
+                               lastUserMessage.toLowerCase().includes("kora uchit") ||
+                               lastUserMessage.toLowerCase().includes("list") ||
+                               lastUserMessage.toLowerCase().includes("care") ||
+                               lastUserMessage.toLowerCase().includes("follow");
+    
+    // Dynamic answer length instruction
+    const answerLengthInstruction = needsComprehensive
+      ? "Provide a COMPREHENSIVE answer with clear points or bullet list when needed. For 'what things' or 'ki ki' questions, list ALL relevant items."
+      : "Keep answers concise but complete. For simple questions, give short answers. For complex topics, provide adequate details.";
+    
     // System prompt - MomsCare AI
     let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}
 
@@ -102,13 +120,15 @@ export async function askMomsCare(
 
    heavy bleeding, severe abdominal pain, vomiting >24h without fluids, fainting, no fetal movement (20+ weeks), very high BP, seizures etc.
 
-6. Keep all answers short. No long explanations, no hormone details, no repetition, no medical lectures. One follow-up question only if needed.
+6. ${answerLengthInstruction}
 
-7. Do not assume anything not said by the user. Do not invent symptoms or repeat long lists.
+7. Do not assume anything not said by the user. Do not invent symptoms.
 
 8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
 
-Goal: Provide short, calm, safe health guidance only.
+9. For list-based questions (ki ki, what things, what should, etc.), provide a well-organized list with brief explanations.
+
+Goal: Provide helpful, accurate health guidance.
 
 ${safetyPrompt}`;
     
@@ -249,6 +269,21 @@ Provide this calculation FIRST, then add context.`;
       ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for prescription images
       : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
 
+    // Dynamic AI parameters based on question type
+    const aiParams = needsComprehensive ? {
+      temperature: 0.5, // Higher for more creative list generation
+      max_tokens: 6000, // More tokens for comprehensive answers
+      top_p: 0.9, // Higher for more diverse responses
+      frequency_penalty: 0.2, // Lower to allow listing multiple items
+      presence_penalty: 0.1, // Lower to allow thorough coverage
+    } : {
+      temperature: 0.4, // Balanced for specific questions
+      max_tokens: 4000, // Standard token limit
+      top_p: 0.85, // Focused responses
+      frequency_penalty: 0.3, // Moderate repetition prevention
+      presence_penalty: 0.2, // Moderate topic adherence
+    };
+
     // Create timeout wrapper to prevent 502 errors
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 50000); // 50 seconds
@@ -264,12 +299,8 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        temperature: 0.3, // Lower temperature for more accurate, focused responses
-        max_tokens: 4000, // Reduced from 8000 to prevent timeout and long responses
-        top_p: 0.85, // Slightly lower for more focused responses
-        frequency_penalty: 0.4, // Higher penalty to prevent repetition and irrelevant content
-        presence_penalty: 0.3, // Higher penalty to stay on topic
-        stop: ["\n\n\n\n", "====", "----"], // Stop sequences to prevent excessive rambling
+        ...aiParams,
+        stop: needsComprehensive ? [] : ["\n\n\n\n", "====", "----"], // No stop sequences for comprehensive answers
       }),
       timeoutPromise
     ]);
@@ -279,48 +310,36 @@ Provide this calculation FIRST, then add context.`;
       throw new Error("No valid response from AI");
     }
 
-    // Clean up the response
+    // Clean up the response (minimal cleaning to preserve content)
     let cleanedReply = reply.trim();
     
     // Remove common AI artifacts
     cleanedReply = cleanedReply.replace(/^(I'm|I am|As an AI|As a language model|I'm an AI).*?\.\s*/i, "");
-    cleanedReply = cleanedReply.replace(/\n{3,}/g, "\n\n"); // Remove excessive newlines
     
-    // Remove repetitive or meaningless sentences
-    // Split into sentences and filter out duplicates or very similar sentences
-    const sentences = cleanedReply.split(/[.!?]\s+/).filter(s => s.trim().length > 10);
-    const uniqueSentences: string[] = [];
-    const seen = new Set<string>();
+    // Remove excessive newlines (keep up to 2 for formatting)
+    cleanedReply = cleanedReply.replace(/\n{4,}/g, "\n\n");
     
-    for (const sentence of sentences) {
-      const normalized = sentence.toLowerCase().trim();
-      // Skip if very similar to a previous sentence (simple check)
-      let isDuplicate = false;
-      for (const seenSentence of seen) {
-        // Check if sentences are very similar (more than 80% word overlap)
-        const words1 = normalized.split(/\s+/);
-        const words2 = seenSentence.split(/\s+/);
-        const commonWords = words1.filter(w => words2.includes(w));
-        const similarity = commonWords.length / Math.max(words1.length, words2.length);
-        if (similarity > 0.8) {
-          isDuplicate = true;
-          break;
+    // Only remove EXACT duplicate consecutive sentences (not similar ones)
+    if (!needsComprehensive) {
+      // For non-comprehensive answers, do light deduplication
+      const lines = cleanedReply.split('\n');
+      const dedupedLines: string[] = [];
+      let lastLine = '';
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        // Only skip if EXACTLY the same as previous line
+        if (trimmedLine !== lastLine) {
+          dedupedLines.push(line);
+          lastLine = trimmedLine;
         }
       }
-      
-      if (!isDuplicate && normalized.length > 10) {
-        uniqueSentences.push(sentence.trim());
-        seen.add(normalized);
-      }
+      cleanedReply = dedupedLines.join('\n');
     }
     
-    // Rejoin sentences, preserving the structure
-    if (uniqueSentences.length > 0) {
-      cleanedReply = uniqueSentences.join(". ") + (cleanedReply.endsWith(".") ? "" : ".");
-    }
-    
-    // Final cleanup
-    cleanedReply = cleanedReply.replace(/\s+/g, " "); // Remove extra spaces
+    // Final minimal cleanup
+    cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces before newlines
+    cleanedReply = cleanedReply.replace(/\n\s+/g, "\n"); // Remove leading spaces after newlines
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
     

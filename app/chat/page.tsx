@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import ChatBubble from "@/components/ChatBubble";
 import ChatInput from "@/components/ChatInput";
 import ChatPrescriptionUpload from "@/components/ChatPrescriptionUpload";
+import ChatImageAttachment from "@/components/ChatImageAttachment";
 import Layout from "@/components/Layout";
 import Icon from "@/components/Icon";
 import Link from "next/link";
@@ -33,6 +34,8 @@ export default function ChatPage() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -179,10 +182,61 @@ export default function ChatPage() {
     localStorage.getItem("doctorToken") ||
     "";
 
+  // Upload image to R2 storage (for both logged-in and logged-out users)
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const endpoint = isMother 
+        ? "/api/mother/chat-images" // User-specific folder
+        : "/api/chat-images"; // Temporary/guest folder
+      
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: isMother ? { Authorization: `Bearer ${motherToken}` } : {},
+        body: formData,
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      return null;
+    }
+  };
+
+  // Handle image selection
+  const handleImageSelect = (imageData: { file: File; preview: string }) => {
+    setAttachedImage(imageData);
+  };
+
+  // Handle image removal
+  const handleImageRemove = () => {
+    setAttachedImage(null);
+    setImageUrl(null);
+  };
+
   const sendMessage = async (text: string) => {
+    // Upload image first if attached
+    let uploadedImageUrl: string | null = null;
+    if (attachedImage) {
+      uploadedImageUrl = await uploadImageToStorage(attachedImage.file);
+      if (!uploadedImageUrl) {
+        alert(lang === "bn" ? "ছবি আপলোড ব্যর্থ হয়েছে" : "Image upload failed");
+        return;
+      }
+    }
+    
     const newMessages = [...messages, { role: "user" as const, content: text }];
     setMessages(newMessages);
     setLoading(true);
+    
+    // Clear attached image after sending
+    setAttachedImage(null);
     
     try {
       // If this is first message in new conversation for logged-in mother, create conversation
@@ -217,6 +271,7 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           messages: newMessages,
+          imageUrl: uploadedImageUrl, // Send image URL with message
         }),
       });
 
@@ -436,7 +491,18 @@ export default function ChatPage() {
 
             {/* Input Section */}
             <div className="border-t border-slate-200 bg-white p-2 sm:p-3 flex-shrink-0">
+              {/* Image Attachment - For ALL users */}
+              <div className="mb-2">
+                <ChatImageAttachment
+                  onImageSelect={handleImageSelect}
+                  onImageRemove={handleImageRemove}
+                  currentImage={attachedImage}
+                  disabled={loading}
+                />
+              </div>
+              
               <ChatInput onSend={sendMessage} disabled={loading} />
+              
               {isMother && (
                 <div className="mt-2 pt-2 border-t border-slate-100">
                   <ChatPrescriptionUpload
