@@ -5,6 +5,45 @@ let groqInstances: Groq[] = [];
 let currentKeyIndex = 0;
 let failedKeys = new Set<number>(); // Track keys that failed (rate limit, etc.)
 
+// Rate limiting: Track concurrent requests per key
+const keyRequestCounts = new Map<number, number>();
+const MAX_CONCURRENT_PER_KEY = 5; // Max 5 concurrent requests per key
+const requestQueues = new Map<number, Array<() => void>>(); // Queue for each key
+
+// Helper to wait for available slot in rate limit
+async function waitForRateLimitSlot(keyIndex: number): Promise<void> {
+  const currentCount = keyRequestCounts.get(keyIndex) || 0;
+  
+  if (currentCount < MAX_CONCURRENT_PER_KEY) {
+    keyRequestCounts.set(keyIndex, currentCount + 1);
+    return;
+  }
+  
+  // Wait in queue
+  return new Promise((resolve) => {
+    const queue = requestQueues.get(keyIndex) || [];
+    requestQueues.set(keyIndex, queue);
+    queue.push(() => {
+      const count = keyRequestCounts.get(keyIndex) || 0;
+      keyRequestCounts.set(keyIndex, count + 1);
+      resolve();
+    });
+  });
+}
+
+// Release rate limit slot
+function releaseRateLimitSlot(keyIndex: number): void {
+  const currentCount = keyRequestCounts.get(keyIndex) || 0;
+  keyRequestCounts.set(keyIndex, Math.max(0, currentCount - 1));
+  
+  // Process queued requests
+  const queue = requestQueues.get(keyIndex) || [];
+  if (queue.length > 0) {
+    const next = queue.shift();
+    if (next) next();
+  }
+}
+
 /**
  * Get all available API keys from environment
  * Supports: GROQ_API_KEY, GROQ_API_KEY_1, GROQ_API_KEY_2, ..., GROQ_API_KEY_20
@@ -215,7 +254,14 @@ async function createWithFailover(params: any) {
     console.log(`[Groq] Attempt ${attempt + 1}/${maxAttempts}: Using key ${keyIndex + 1}/${groqInstances.length}`);
     
     try {
+      // Wait for rate limit slot (prevents burst traffic)
+      await waitForRateLimitSlot(keyIndex);
+      
       const result = await client.chat.completions.create(params);
+      
+      // Release rate limit slot on success
+      releaseRateLimitSlot(keyIndex);
+      
       // Success - reset failed keys if this was a retry
       if (attempt > 0) {
         failedKeys.delete(keyIndex);
@@ -248,6 +294,9 @@ async function createWithFailover(params: any) {
                                       errorMessage?.includes('organization_restricted') ||
                                       errorMessage?.includes('Organization has been restricted'));
       
+      // Release rate limit slot on error
+      releaseRateLimitSlot(keyIndex);
+      
       // Skip this key if it's rate limit, API error, or organization restricted
       if (isRateLimit || isApiError || isOrganizationRestricted) {
         const errorType = isRateLimit ? 'Rate limit' : 
@@ -256,8 +305,12 @@ async function createWithFailover(params: any) {
         console.log(`[Groq] ⚠️  Key ${keyIndex + 1} failed with status ${errorStatus || 'unknown'}: ${errorType}`);
         markKeyAsFailed(keyIndex);
         
-        // If we have more keys, try next one
+        // If we have more keys, try next one WITH DELAY (exponential backoff)
         if (attempt < maxAttempts - 1) {
+          // Exponential backoff: 1s, 2s, 4s, max 5s
+          const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`[Groq] ⏳ Waiting ${delayMs}ms before retrying with next key (respectful retry)...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
           console.log(`[Groq] 🔄 Retrying with next key (reverse order)...`);
           continue; // Try next key
         } else {

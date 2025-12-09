@@ -1,5 +1,44 @@
 import { groq, isGroqConfigured } from "./groqClient";
 
+// Translation cache to reduce duplicate API calls
+const translationCache = new Map<string, string>();
+const CACHE_MAX_SIZE = 1000; // Max 1000 cached translations
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours TTL
+
+interface CachedTranslation {
+  value: string;
+  timestamp: number;
+}
+
+const translationCacheWithTTL = new Map<string, CachedTranslation>();
+
+// Clean old cache entries periodically
+function cleanCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of translationCacheWithTTL.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      translationCacheWithTTL.delete(key);
+    }
+  }
+  
+  // Limit cache size
+  if (translationCacheWithTTL.size > CACHE_MAX_SIZE) {
+    const entries = Array.from(translationCacheWithTTL.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp); // Oldest first
+    const toDelete = entries.slice(0, entries.length - CACHE_MAX_SIZE);
+    for (const [key] of toDelete) {
+      translationCacheWithTTL.delete(key);
+    }
+  }
+}
+
+// Run cleanup periodically (only in Node.js environments, not in serverless)
+if (typeof setInterval !== 'undefined' && typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  // In development, clean cache every hour
+  setInterval(cleanCache, 60 * 60 * 1000);
+}
+// In production/serverless, cleanup happens on-demand during cache operations
+
 /**
  * Detect if text contains Bangla/Bengali characters or is in Banglish
  */
@@ -46,6 +85,14 @@ export async function translateToEnglish(text: string): Promise<string> {
 
   if (!groq) {
     throw new Error("Groq client is not initialized");
+  }
+
+  // Check cache first (case-insensitive, trimmed)
+  const cacheKey = text.trim().toLowerCase();
+  const cached = translationCacheWithTTL.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    console.log(`[Translation] Cache hit for: "${text.substring(0, 50)}..."`);
+    return cached.value;
   }
 
   try {
@@ -128,6 +175,14 @@ Only return the translated text, nothing else.`,
       console.log(`[Translation] Removed extra question mark: "${cleaned}"`);
     }
     
+    // Cache the translation
+    const cacheKey = text.trim().toLowerCase();
+    translationCacheWithTTL.set(cacheKey, {
+      value: cleaned,
+      timestamp: Date.now()
+    });
+    cleanCache(); // Clean old entries
+    
     return cleaned;
   } catch (error: any) {
     console.error("Translation to English error:", error);
@@ -146,6 +201,14 @@ export async function translateToBangla(text: string): Promise<string> {
 
   if (!groq) {
     throw new Error("Groq client is not initialized");
+  }
+
+  // Check cache first (case-insensitive, trimmed)
+  const cacheKey = `bn:${text.trim().toLowerCase()}`;
+  const cached = translationCacheWithTTL.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    console.log(`[Translation] Cache hit for EN→BN: "${text.substring(0, 50)}..."`);
+    return cached.value;
   }
 
   try {
@@ -169,6 +232,14 @@ export async function translateToBangla(text: string): Promise<string> {
     if (!translated) {
       throw new Error("Translation failed");
     }
+
+    // Cache the translation
+    const cacheKey = `bn:${text.trim().toLowerCase()}`;
+    translationCacheWithTTL.set(cacheKey, {
+      value: translated,
+      timestamp: Date.now()
+    });
+    cleanCache(); // Clean old entries
 
     return translated;
   } catch (error: any) {
