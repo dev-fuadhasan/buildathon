@@ -289,7 +289,7 @@ Provide this calculation FIRST, then add context.`;
     const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
     const model = hasImages
       ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for images (Groq supported)
-      : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
+      : "llama-3.1-70b-versatile"; // Correct text model for Groq API
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
