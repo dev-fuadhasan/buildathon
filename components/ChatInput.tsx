@@ -125,24 +125,15 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
           </>
         )}
 
-        {/* Text Input - CENTER (48px minimum, expands up to 120px) */}
+        {/* Text Input - CENTER (Fixed 48px height with auto-wrap) */}
         <div className="flex-1 relative min-w-0 h-[48px] flex items-center">
           <textarea
-            className="resize-none text-sm px-3 sm:px-4 w-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="resize-none text-sm px-3 sm:px-4 w-full h-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder={lang === "bn" 
               ? "বার্তা টাইপ করুন..."
               : "Type message..."}
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              // Auto-resize but maintain minimum 48px
-              const textarea = e.target;
-              textarea.style.height = '48px';
-              const newHeight = Math.min(textarea.scrollHeight, 120);
-              if (newHeight > 48) {
-                textarea.style.height = newHeight + 'px';
-              }
-            }}
+            onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -150,16 +141,19 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
               }
             }}
             disabled={sending || disabled}
-            rows={1}
+            rows={2}
             style={{ 
               height: '48px',
               minHeight: '48px',
-              maxHeight: '120px',
-              overflowY: 'hidden',
-              paddingTop: '12px',
-              paddingBottom: '12px',
+              maxHeight: '48px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              paddingTop: '10px',
+              paddingBottom: '10px',
               boxSizing: 'border-box',
-              lineHeight: '1.5'
+              lineHeight: '1.4',
+              wordWrap: 'break-word',
+              whiteSpace: 'pre-wrap'
             }}
           />
         </div>

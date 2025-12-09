@@ -449,7 +449,7 @@ export default function ChatPage() {
               </div>
             </div>
             {!isMother && (
-              <Link href="/mother/login" className="btn-secondary text-[10px] sm:text-xs px-2 sm:px-3 py-1 whitespace-nowrap">
+              <Link href="/mother/login" className="btn-secondary text-[9px] sm:text-xs px-1.5 sm:px-3 py-0.5 sm:py-1 whitespace-nowrap text-center min-w-[40px] sm:min-w-[60px]">
                 Login
               </Link>
             )}
