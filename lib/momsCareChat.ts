@@ -1,31 +1,9 @@
 import { groq, isGroqConfigured } from "./groqClient";
+import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
 import { searchDatasetByLanguage, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
-import { classifyQuestion, needsFollowUpQuestion } from "./chat/QuestionClassifier";
-import { buildSystemPrompt, type PromptContext } from "./chat/SystemPromptBuilder";
-import { validateAndCleanResponse } from "./chat/ResponseValidator";
-import { detectIntent, generateFollowUpQuestion } from "./chat/IntentDetector";
-import { handleSimpleQuery, ensureQuestionMarks } from "./chat/SimpleResponseHandler";
-
-// Lightweight fallback for logged-out general questions to avoid crashes and delays
-function generalFallbackResponse(question: string, language: Language): string {
-  const lower = question.toLowerCase();
-  const isBangla = language === "bn" || /[\u0980-\u09FF]/.test(question);
-
-  // Travel safety
-  if (/(long journey|long travel|long trip|vromon|ভ্রমণ|জার্নি|দীর্ঘ)/i.test(lower)) {
-    return isBangla
-      ? "গর্ভাবস্থায় দীর্ঘ ভ্রমণ সাধারণত সম্ভব, তবে কয়েকটি সতর্কতা মানুন: পর্যাপ্ত পানি পান করুন, প্রতি ১-২ ঘণ্টা অন্তর নড়াচড়া করুন, সিটবেল্ট পেটে নয়, নিতম্বের নিচে বাঁধুন, আরামদায়ক পোশাক পরুন, কোনো ঝুঁকির ইতিহাস থাকলে ডাক্তারের পরামর্শ নিন।"
-      : "Long travel in pregnancy is usually possible with precautions: stay hydrated, move every 1-2 hours, place the seatbelt below the belly, wear comfortable clothes, and consult your doctor if you have any risk factors.";
-  }
-
-  // Generic pregnancy safety
-  return isBangla
-    ? "গর্ভাবস্থায় নিরাপদ থাকতে সুষম খাবার, পর্যাপ্ত পানি, নিয়মিত হালকা ব্যায়াম, পর্যাপ্ত বিশ্রাম এবং ডাক্তারের নিয়মিত পরামর্শ মেনে চলুন। কোনো অস্বাভাবিক লক্ষণ হলে দ্রুত চিকিৎসকের পরামর্শ নিন।"
-    : "For pregnancy safety: eat balanced meals, stay hydrated, do light exercise, rest well, and follow your doctor's advice. If you notice unusual symptoms, seek medical care promptly.";
-}
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -49,9 +27,7 @@ export async function askMomsCare(
   }
 
   try {
-    // Determine if user has profile data
-    const hasProfile = !!(profileContext && profileContext.trim().length > 0);
-    const userIsLoggedIn = isLoggedIn ?? hasProfile;
+    const safetyPrompt = getSafetyPrompt();
     
     // ==========================================
     // STEP 1: Get last user message for processing
@@ -61,142 +37,90 @@ export async function askMomsCare(
       .pop()?.content || "";
     
     // ==========================================
-    // STEP 2: Quick intent detection FIRST (before expensive operations)
-    // This prevents logged-out users from triggering profile operations
-    // ==========================================
-    const quickIntent = detectIntent(lastUserMessage, userIsLoggedIn);
-    
-    // ==========================================
-    // STEP 3: Detect language from user message (or use forced language from config)
+    // STEP 2: Detect language from user message (or use forced language from config)
     // ==========================================
     const forcedLanguage = getForcedLanguage();
     const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
+    const languageInstruction = userLanguage === "bn"
+      ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
+      : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
     
     // ==========================================
-    // STEP 4: Handle SIMPLE queries instantly (NO API calls for speed)
+    // STEP 3: Search dual dataset based on language
     // ==========================================
-    const simpleResponse = handleSimpleQuery(lastUserMessage, userIsLoggedIn, userLanguage);
-    if (simpleResponse.handled) {
-      console.log('[SimpleHandler] Instant response - no AI API calls needed');
-      return simpleResponse.response!; // Already properly formatted
-    }
-    
-    // ==========================================
-    // STEP 5: Handle follow-up questions that need clarification
-    // ==========================================
-    if (quickIntent.needsFollowUp) {
-      const followUp = generateFollowUpQuestion(lastUserMessage, quickIntent);
-      if (followUp) {
-        console.log('[FollowUp] Asking for clarification');
-        return followUp; // Already has proper ? marks
-      }
-    }
-    
-    // ==========================================
-    // STEP 6: Search dual dataset based on language
-    // OPTIMIZATION: Skip expensive translation for logged-out users or profile queries
-    // ==========================================
+    // Check if query is Banglish (romanized Bangla without Bengali script)
     const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
     const isBanglish = userLanguage === "bn" && !hasBengaliScript;
     
+    // For Banglish queries, translate to English first for better search
     let searchQuery = lastUserMessage;
-    let relevantDatasetItems: any[] = [];
+    let relevantDatasetItems;
     
-    // SMART TRANSLATION: Skip for logged-out users (prevent crashes)
-    const shouldTranslate = isBanglish && userIsLoggedIn && quickIntent.intent !== 'ask_profile_info' && quickIntent.intent !== 'ask_general_info';
-    
-    if (shouldTranslate) {
+    if (isBanglish) {
       try {
-        console.log(`[Banglish] Translating for personalized query...`);
+        // Translate Banglish to English for accurate dataset search
         const translatedQuery = await translateToEnglish(lastUserMessage);
         searchQuery = translatedQuery || lastUserMessage;
+        console.log(`[Banglish] Original: ${lastUserMessage}`);
         console.log(`[Banglish] Translated: ${searchQuery}`);
-        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 2);
+        // Search English dataset with translated query
+        relevantDatasetItems = searchDatasetByLanguage(searchQuery, "en", 3);
       } catch (error) {
-        console.warn("Banglish translation failed, using direct search:", error);
-        // Fallback: direct search without translation
-        relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "en", 2);
+        console.error("Banglish translation failed, fallback to direct search:", error);
+        // Fallback: search both datasets
+        const enResults = searchDatasetByLanguage(lastUserMessage, "en", 3);
+        const bnResults = searchDatasetByLanguage(lastUserMessage, "bn", 3);
+        relevantDatasetItems = enResults.length > 0 ? enResults : bnResults;
       }
     } else {
-      // Direct search (faster, no API call needed)
-      // For Banglish, try English first as many keywords match
-      const numResults = quickIntent.intent === 'ask_profile_info' ? 1 : 2;
-      const searchLang = isBanglish ? "en" : userLanguage;
-      
-      try {
-        relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, searchLang, numResults);
-        console.log(`[Dataset] Direct search in ${searchLang}: ${relevantDatasetItems.length} results`);
-        
-        // If no results and it's Banglish, try Bangla too
-        if (relevantDatasetItems.length === 0 && isBanglish) {
-          relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "bn", numResults);
-          console.log(`[Dataset] Fallback search in bn: ${relevantDatasetItems.length} results`);
-        }
-      } catch (error) {
-        console.error("Dataset search error:", error);
-        relevantDatasetItems = []; // Continue without dataset context
-      }
+      // Normal search for English or Bangla with script
+      relevantDatasetItems = searchDatasetByLanguage(searchQuery, userLanguage, 3);
     }
     
-    const datasetContext = relevantDatasetItems.length > 0
+    const datasetContext = relevantDatasetItems.length > 0 
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
+    
+    // Determine mode
+    const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
+    const isGeneralQuestion = isLoggedIn && isPersonal === false;
+    
+    // System prompt - MomsCare AI
+    let systemPrompt = `You are MomsCare AI. Follow these strict rules:${languageInstruction}
 
-    // FAST EXIT: logged-out general questions with no dataset → use safe fallback (no AI call)
-    if (!userIsLoggedIn && quickIntent.intent === "ask_general_info" && relevantDatasetItems.length === 0) {
-      console.log("[Fallback] Logged-out general question - returning safe fallback response");
-      return generalFallbackResponse(lastUserMessage, userLanguage);
-    }
+1. Only answer health, pregnancy, symptoms, medicine, reports, or well-being questions.
+
+   If the message is not health related, reply: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
+
+2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
+
+3. Logged-in user: backend provides profile. Use it only when the question is about the user's own health. If the question is general, answer generally and say the answer is general.
+
+4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
+
+5. Do NOT give emergency warnings unless the user clearly mentions one of these:
+
+   heavy bleeding, severe abdominal pain, vomiting >24h without fluids, fainting, no fetal movement (20+ weeks), very high BP, seizures etc.
+
+6. Keep all answers short. No long explanations, no hormone details, no repetition, no medical lectures. One follow-up question only if needed.
+
+7. Do not assume anything not said by the user. Do not invent symptoms or repeat long lists.
+
+8. If the message is emotional, casual, or unrelated to health, respond politely and neutral without adding pregnancy context.
+
+Goal: Provide short, calm, safe health guidance only.
+
+${safetyPrompt}`;
     
-    // Use the quick intent we already detected
-    const intent = quickIntent;
-    
-    console.log(`[Intent Detection]`, {
-      intent: intent.intent,
-      confidence: intent.confidence,
-      reason: intent.reason,
-      shouldShowProfile: intent.shouldShowProfile,
-      shouldShowPrescription: intent.shouldShowPrescription
-    });
-    
-    // Use modular question classifier for remaining logic
-    const classification = classifyQuestion(lastUserMessage, userIsLoggedIn);
-    const isGeneralQuestion = classification.type === 'general' || intent.intent === 'ask_general_info';
-    const isPersonalQuestion = classification.type === 'personal' && intent.intent !== 'ask_general_info';
-    
-    // Build system prompt using modular builder
-    const promptContext: PromptContext = {
-      isLoggedIn: userIsLoggedIn,
-      hasProfile,
-      isGeneralQuestion,
-      isPersonalQuestion,
-      language: userLanguage,
-      needsFollowUp: false  // Already handled above
-    };
-    
-    let systemPrompt = buildSystemPrompt(promptContext);
-    
-    // Add intent-specific instructions
-    if (intent.intent === 'ask_profile_info') {
-      systemPrompt += `\n\n**INTENT: User asking for SPECIFIC profile information only.**
-- Answer ONLY what they asked (age, blood group, pregnancy duration, etc.)
-- DO NOT add prescriptions, medical advice, or warnings
-- Keep answer SHORT and DIRECT
-- Example: Q: "amar boyos?" A: "আপনার বয়স ৩০ বছর।" (STOP HERE)`;
-    }
-    
-    if (intent.intent === 'ask_prescription') {
-      systemPrompt += `\n\n**INTENT: User explicitly asking for prescription details.**
-- NOW you CAN show prescription details
-- List all medicines with dosages
-- Provide clear instructions`;
-    }
-    
-    if (!intent.shouldShowPrescription && intent.shouldShowProfile) {
-      systemPrompt += `\n\n**CRITICAL: DO NOT show prescription details.**
-- User asked a medical question but did NOT ask for prescriptions
-- Use prescription data internally if needed
-- But DO NOT list medicines in your response`;
+    // Add specific instruction for current question type
+    if (isLoggedIn) {
+      if (isGeneralQuestion) {
+        systemPrompt += `\n\nCURRENT: Logged-in user, general question. Answer generally and state it is general.`;
+      } else if (isPersonalizedMode) {
+        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Use profile data for personalized guidance.`;
+      }
+    } else {
+      systemPrompt += `\n\nCURRENT: Logged-out user. No personal information. Do not mention this unless directly asked. Answer questions directly.`;
     }
 
     // Extract weeks pregnant for RAG
@@ -265,53 +189,9 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Use intent-based decision for profile context
-    let profileNote = "";
-    
-    if (profileContext && intent.shouldShowProfile) {
-      // For specific profile info requests, extract only what they asked
-      if (intent.intent === 'ask_profile_info') {
-        const lower = lastUserMessage.toLowerCase();
-        
-        if (/boyos|age/.test(lower)) {
-          // Extract only age
-          const ageMatch = profileContext.match(/বয়স:\s*(\d+)/);
-          if (ageMatch) {
-            profileNote = `\n\nUSER AGE: ${ageMatch[1]} years`;
-          }
-        }
-        
-        if (/rokter group|blood group/.test(lower)) {
-          // Extract only blood group
-          const bgMatch = profileContext.match(/রক্তের গ্রুপ:\s*([A-Z+\-]+)/);
-          if (bgMatch) {
-            profileNote += `\n\nUSER BLOOD GROUP: ${bgMatch[1]}`;
-          }
-        }
-        
-        if (/pregnancy.*kotodin|koto mas/.test(lower)) {
-          // Extract only pregnancy duration
-          const weekMatch = profileContext.match(/সপ্তাহ:\s*(\d+)/);
-          if (weekMatch) {
-            profileNote += `\n\nPREGNANCY DURATION: ${weekMatch[1]} weeks`;
-          }
-        }
-        
-        // If nothing matched, include minimal profile
-        if (!profileNote && profileContext) {
-          profileNote = `\n\n${profileContext}`;
-        }
-      } else {
-        // For medical advice, include full profile but mark prescription as DO NOT SHOW
-        profileNote = `\n\n${profileContext}\n\n**IMPORTANT: User did NOT ask for prescription details. DO NOT list medicines unless specifically asked.**`;
-      }
-      
-      console.log("[MomsCare] Profile context INCLUDED (intent-based)");
-    } else if (profileContext && isGeneralQuestion) {
-      console.log("[MomsCare] GENERAL question - profile context EXCLUDED");
-    } else {
-      console.log("[MomsCare] No profile context needed for this query");
-    }
+    const profileNote = profileContext
+      ? `\n\n${profileContext}`
+      : "";
 
     // Filter and format messages - only include user and assistant messages
     const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
@@ -364,32 +244,14 @@ Provide this calculation FIRST, then add context.`;
       throw new Error("Groq client is not initialized");
     }
 
-    // Smart model selection based on query complexity
-    let model: string;
-    
-    if (prescriptionUrls && prescriptionUrls.length > 0) {
-      // Use vision model for image analysis
-      model = "meta-llama/llama-4-scout-17b-16e-instruct";
-    } else if (quickIntent.intent === 'ask_profile_info') {
-      // Use faster model for simple profile queries
-      model = "llama-3.1-8b-instant"; // 10x faster for simple queries
-    } else if (isGeneralQuestion) {
-      // Use medium model for general questions
-      model = "llama-3.1-70b-versatile";
-    } else {
-      // Use best model for complex medical advice
-      model = "llama-3.3-70b-versatile";
-    }
-    
-    console.log(`[Model Selection] Using ${model} for intent: ${quickIntent.intent}`);
+    // Use a vision-capable model if we have images, otherwise use the 70B versatile model
+    const model = prescriptionUrls && prescriptionUrls.length > 0
+      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for prescription images
+      : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
 
-    // Create timeout wrapper to prevent 502 errors (shorter for simple queries)
-    const timeoutDuration = quickIntent.intent === 'ask_profile_info'
-      ? 15000  // 15 seconds for simple queries
-      : 45000; // 45 seconds for complex queries
-    
+    // Create timeout wrapper to prevent 502 errors
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), timeoutDuration);
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 50000); // 50 seconds
     });
     
     const completion = await Promise.race([
@@ -402,15 +264,12 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        // Dynamic parameters based on query type
-        temperature: quickIntent.intent === 'ask_profile_info' ? 0.1 : 0.3, // Very low for factual queries
-        max_tokens: quickIntent.intent === 'ask_profile_info' ? 500 :  // Short for profile info
-                   quickIntent.intent === 'ask_general_info' ? 1500 :  // Medium for general
-                   3000, // Longer for medical advice
-        top_p: 0.85,
-        frequency_penalty: 0.4,
-        presence_penalty: 0.3,
-        stop: ["\n\n\n\n", "====", "----", "আপনার প্রেসক্রিপশন"], // Stop if starting to list prescriptions
+        temperature: 0.3, // Lower temperature for more accurate, focused responses
+        max_tokens: 4000, // Reduced from 8000 to prevent timeout and long responses
+        top_p: 0.85, // Slightly lower for more focused responses
+        frequency_penalty: 0.4, // Higher penalty to prevent repetition and irrelevant content
+        presence_penalty: 0.3, // Higher penalty to stay on topic
+        stop: ["\n\n\n\n", "====", "----"], // Stop sequences to prevent excessive rambling
       }),
       timeoutPromise
     ]);
@@ -465,86 +324,37 @@ Provide this calculation FIRST, then add context.`;
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
     
-    // Apply modular validation and cleaning (intent-aware)
-    const validation = validateAndCleanResponse(
-      cleanedReply, 
-      lastUserMessage, 
-      isGeneralQuestion,
-      intent.shouldShowPrescription
-    );
-    
-    if (validation.issues.length > 0) {
-      console.log("[Response Validation] Issues fixed:", validation.issues);
-    }
-    
-    // FINAL STEP: Ensure all questions have question marks
-    const finalResponse = ensureQuestionMarks(validation.cleaned);
-    
-    return finalResponse;
+    return cleanedReply;
   } catch (error: any) {
-    console.error("MomsCare AI error:", error);
-    console.error("Error context:", {
+    console.error("Groq API error:", error);
+    console.error("Error details:", {
       message: error.message,
       status: error.status,
       code: error.code,
       type: error.type,
-      errorStack: error.stack?.substring(0, 200)
     });
-    
-    // Detect language for error messages from the last message if available
-    const lastMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
-    const isBangla = /[\u0980-\u09FF]/.test(lastMsg) || /amar|ami|ki|kemon/.test(lastMsg.toLowerCase());
     
     // Provide more specific error messages
     if (error.message?.includes("rate limit") || error.status === 429) {
-      const msg = isBangla 
-        ? "সার্ভিস ব্যস্ত আছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
-        : "Service is busy. Please try again in a moment.";
-      throw new Error(msg);
+      throw new Error("Service is busy. Please try again in a moment.");
     }
-    
     if (error.message?.includes("token") || error.message?.includes("length") || error.status === 400) {
-      const msg = isBangla
-        ? "প্রশ্নটি খুব বড়। অনুগ্রহ করে ছোট করুন।"
-        : "Message is too long. Please shorten your question.";
-      throw new Error(msg);
+      throw new Error("Message is too long. Please shorten your question.");
     }
-    
-    if (error.message?.includes("API") || error.message?.includes("key") || error.status === 401 || error.status === 403) {
-      const msg = isBangla
-        ? "সার্ভিস কনফিগারেশন সমস্যা। সাপোর্টে যোগাযোগ করুন।"
-        : "Service configuration error. Please contact support.";
-      throw new Error(msg);
+    if (error.message?.includes("API") || error.message?.includes("key") || error.status === 401) {
+      throw new Error("API configuration issue. Please contact support.");
     }
-    
     if (error.message?.includes("model") || error.status === 404) {
-      const msg = isBangla
-        ? "মডেল উপলব্ধ নেই। পরে আবার চেষ্টা করুন।"
-        : "Model not available. Please try again later.";
-      throw new Error(msg);
+      throw new Error("Model not available. Please try again later.");
     }
     
-    if (error.message?.includes("timeout") || error.message?.includes("Request timeout")) {
-      const msg = isBangla
-        ? "রেসপন্স পেতে দেরি হচ্ছে। ছোট প্রশ্ন করুন।"
-        : "Response took too long. Please try a shorter question.";
-      throw new Error(msg);
+    // Re-throw with original message if it's informative
+    if (error.message && error.message.length > 10) {
+      throw error;
     }
     
-    // Check for profile/context errors (logged-out users)
-    if (error.message?.includes("profile") || error.message?.includes("undefined") || error.message?.includes("null")) {
-      console.error("[Critical] Possible data access error - logged-out user or missing profile");
-      const msg = isBangla
-        ? "দুঃখিত, আমি এই প্রশ্নের উত্তর দিতে পারছি না। আরও সাধারণ প্রশ্ন করুন।"
-        : "Sorry, I cannot answer this question. Please ask a more general question.";
-      throw new Error(msg);
-    }
-    
-    // Generic fallback with language support
-    const fallbackMessage = isBangla
-      ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
-      : "Sorry, something went wrong. Please try again in a moment.";
-    
-    throw new Error(fallbackMessage);
+    throw new Error(
+      error.message || "Failed to get response from AI. Please try again."
+    );
   }
 }

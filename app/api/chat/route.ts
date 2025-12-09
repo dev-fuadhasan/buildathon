@@ -5,7 +5,7 @@ import { getMother, getChatHistory, updateChatHistory, listDailyEntries, listMot
 import { listObjects, signedUrl } from "@/lib/r2Client";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
-import { isPersonalQuestion } from "@/lib/chatHelper";
+import { isPersonalQuestion, needsFollowUpQuestions } from "@/lib/chatHelper";
 import { getCurrentDateInTimezone } from "@/lib/pregnancyTracker";
 
 // Increase timeout for chat API (60 seconds)
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
     
     // ============================================================
-    // LOGGED-IN MOTHER (PERSONALIZED MODE)
+    // LOGGED-IN MOTHER (SMART PERSONALIZED MODE)
     // ============================================================
     
     // Load previous chat history for logged-in mothers
@@ -199,109 +199,120 @@ export async function POST(req: NextRequest) {
     messages = cleanMessages(allMessages);
     messages = limitConversationHistory(messages, 20); // Allow more history for logged-in users
     
-    // Load comprehensive mother data
-    let profileContext: string | undefined = undefined;
-    let prescriptionUrls: string[] = [];
-    let weeksPregnant: number | undefined;
-    let isPersonal = false;
-    
-    try {
-      const mother = await getMother(user!.id);
-      if (mother) {
-        const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
-        const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
-        const months = weeks ? Math.round(weeks / 4.33) : undefined;
-        
-        // Get the last user message to detect question type
-        const lastUserMessage = messages
-          .filter((m: any) => m.role === "user")
-          .pop()?.content || "";
-        
-        isPersonal = isPersonalQuestion(lastUserMessage);
-        
-        // Build comprehensive profile context
-        const profileParts: string[] = [];
-        
-        // Basic profile
-        if (mother.name) profileParts.push(`নাম: ${mother.name}`);
-        if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
-        if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
-        if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
-        if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
-        if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
-        
-        // Medical history
-        if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
-        if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
-        if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
-        if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
-        
-        // Load daily entries for recent activity
-        try {
-          const dailyEntries = await listDailyEntries(user!.id);
-          const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
-          const recentEntries = dailyEntries
-            .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-            .slice(0, 5)
-            .map(entry => entry.entry);
-          
-          if (recentEntries.length > 0) {
-            profileParts.push(`\nসাম্প্রতিক দৈনিক এন্ট্রি:\n${recentEntries.join("\n")}`);
-          }
-        } catch (err) {
-          console.error("Failed to load daily entries:", err);
-        }
-        
-        // Load recent doctor Q&A
-        try {
-          const questions = await listMotherQuestions(user!.id);
-          const recentQAs = questions
-            .filter(q => q.answer)
-            .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
-            .slice(0, 3)
-            .map(q => `Q: ${q.question}\nA: ${q.answer}`);
-          
-          if (recentQAs.length > 0) {
-            profileParts.push(`\nসাম্প্রতিক ডাক্তারের পরামর্শ:\n${recentQAs.join("\n\n")}`);
-          }
-        } catch (err) {
-          console.error("Failed to load questions:", err);
-        }
-        
-        profileContext = profileParts.length > 0 
-          ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
-          : undefined;
-        weeksPregnant = weeks;
-        
-        // Load prescriptions
-        try {
-          const prefix = `prescriptions/${user!.id}/`;
-          const objects = await listObjects(prefix);
-          prescriptionUrls = await Promise.all(
-            (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
-          );
-        } catch (err) {
-          console.error("Failed to fetch prescriptions:", err);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch mother profile:", err);
-    }
-
-    // Get the last user message
-    const lastUserMessage = messages
+    // Get the last user message to detect question type FIRST
+    const currentUserMessage = messages
       .filter((m: any) => m.role === "user")
       .pop()?.content || "";
     
-    if (!lastUserMessage.trim()) {
+    if (!currentUserMessage.trim()) {
       return NextResponse.json(
         { error: "User message is required" },
         { status: 400 }
       );
     }
     
+    // ==========================================
+    // STEP 1: Classify question type (Personal vs General)
+    // ==========================================
+    const isPersonal = isPersonalQuestion(currentUserMessage);
+    
+    console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
+    
+    // ==========================================
+    // STEP 2: Load profile data ONLY if question is PERSONAL
+    // ==========================================
+    let profileContext: string | undefined = undefined;
+    let prescriptionUrls: string[] = [];
+    let weeksPregnant: number | undefined;
+    
+    if (isPersonal) {
+      // Load comprehensive mother data for PERSONAL questions
+      console.log("[Profile Loading] Personal question detected - loading full profile...");
+      
+      try {
+        const mother = await getMother(user!.id);
+        if (mother) {
+          const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+          const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+          const months = weeks ? Math.round(weeks / 4.33) : undefined;
+          
+          // Build comprehensive profile context
+          const profileParts: string[] = [];
+          
+          // Basic profile
+          if (mother.name) profileParts.push(`নাম: ${mother.name}`);
+          if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
+          if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
+          if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
+          if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
+          if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
+          
+          // Medical history
+          if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
+          if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
+          if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
+          if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
+          
+          // Load daily entries for recent activity
+          try {
+            const dailyEntries = await listDailyEntries(user!.id);
+            const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
+            const recentEntries = dailyEntries
+              .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+              .slice(0, 5)
+              .map(entry => entry.entry);
+            
+            if (recentEntries.length > 0) {
+              profileParts.push(`\nসাম্প্রতিক দৈনিক এন্ট্রি:\n${recentEntries.join("\n")}`);
+            }
+          } catch (err) {
+            console.error("Failed to load daily entries:", err);
+          }
+          
+          // Load recent doctor Q&A
+          try {
+            const questions = await listMotherQuestions(user!.id);
+            const recentQAs = questions
+              .filter(q => q.answer)
+              .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
+              .slice(0, 3)
+              .map(q => `Q: ${q.question}\nA: ${q.answer}`);
+            
+            if (recentQAs.length > 0) {
+              profileParts.push(`\nসাম্প্রতিক ডাক্তারের পরামর্শ:\n${recentQAs.join("\n\n")}`);
+            }
+          } catch (err) {
+            console.error("Failed to load questions:", err);
+          }
+          
+          profileContext = profileParts.length > 0 
+            ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
+            : undefined;
+          weeksPregnant = weeks;
+          
+          // Load prescriptions
+          try {
+            const prefix = `prescriptions/${user!.id}/`;
+            const objects = await listObjects(prefix);
+            prescriptionUrls = await Promise.all(
+              (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
+            );
+          } catch (err) {
+            console.error("Failed to fetch prescriptions:", err);
+          }
+          
+          console.log(`[Profile Loaded] Profile: ${profileParts.length} sections, Prescriptions: ${prescriptionUrls.length}`);
+        }
+      } catch (err) {
+        console.error("Failed to fetch mother profile:", err);
+      }
+    } else {
+      // For GENERAL questions, don't load profile
+      console.log("[Profile Loading] General question detected - skipping profile load");
+    }
+
     // Detect language of user message
-    const userLanguage = detectLanguage(lastUserMessage);
+    const userLanguage = detectLanguage(currentUserMessage);
     
     // Estimate token count
     const allMessagesText = JSON.stringify(messages) + (profileContext || "");
@@ -343,12 +354,12 @@ export async function POST(req: NextRequest) {
     );
     
     // Translate last message for safety check
-    let translatedUserMessage = lastUserMessage;
+    let translatedUserMessage = currentUserMessage;
     if (userLanguage === "bn") {
       try {
-        translatedUserMessage = await translateToEnglish(lastUserMessage);
+        translatedUserMessage = await translateToEnglish(currentUserMessage);
       } catch (error) {
-        translatedUserMessage = lastUserMessage;
+        translatedUserMessage = currentUserMessage;
       }
     }
     
@@ -504,3 +515,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

@@ -98,7 +98,7 @@ export default function Home() {
               
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-neutral-900 leading-[1.1] tracking-tight">
                 {t.home.title}
-          </h1>
+              </h1>
               
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-700 leading-relaxed max-w-2xl font-medium">
                 {t.home.subtitle}
@@ -374,6 +374,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      </main>
+    </main>
   );
 }
