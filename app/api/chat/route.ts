@@ -154,7 +154,14 @@ export async function POST(req: NextRequest) {
           throw new Error("Empty response from AI");
         }
       } catch (error: any) {
-        console.error("AI chat error:", error);
+        console.error("AI chat error (LOGGED-OUT):", error);
+        console.error("Error details:", {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          status: error.status,
+          code: error.code,
+        });
         const errorMessage = userLanguage === "bn"
           ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
           : "Sorry, something went wrong. Please try again in a moment.";
