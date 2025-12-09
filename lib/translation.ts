@@ -54,13 +54,12 @@ export async function translateToEnglish(text: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: `You are a professional medical translator. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English.
+          content: `You are a professional medical translator specializing in pregnancy and maternal health. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English.
 
-CRITICAL RULES (MUST FOLLOW):
-1. PRESERVE QUESTION MARK: If the original text ends with "?", your translation MUST end with "?". If original has no "?", your translation must NOT have "?".
-2. PRESERVE SENTENCE TYPE: Questions → Questions, Statements → Statements
-3. ACCURATE MEANING: Translate the exact meaning, don't change or guess
-4. MEDICAL TERMS: Translate medical terms precisely using the guide below
+CRITICAL RULES:
+1. PRESERVE PUNCTUATION: If the original has a question mark (?), the translation MUST have a question mark. If it's a statement, keep it as a statement.
+2. PRESERVE TONE: Questions stay questions, statements stay statements.
+3. ACCURATE MEDICAL TERMS: Translate medical terms precisely, don't guess or substitute.
 
 IMPORTANT MEDICAL TERMS:
 - "pet" or "পেট" = stomach/abdomen
@@ -117,18 +116,16 @@ Only return the translated text, nothing else.`,
     // Clean up any extra text the model might add
     let cleaned = translated.replace(/^(Translation:|Translated text:|English:)\s*/i, "").trim();
     
-    // CRITICAL: Preserve question mark if original had it
-    const originalHasQuestion = text.trim().endsWith('?');
-    const translatedHasQuestion = cleaned.endsWith('?');
+    // Ensure question mark accuracy (preserve original punctuation)
+    const originalHasQuestion = text.trim().endsWith("?");
+    const translatedHasQuestion = cleaned.trim().endsWith("?");
     
     if (originalHasQuestion && !translatedHasQuestion) {
-      // Original has question mark but translation doesn't - add it
-      cleaned = cleaned + '?';
-      console.log(`[Translation] Added missing question mark to translation`);
+      cleaned = `${cleaned}?`;
+      console.log(`[Translation] Added missing question mark: "${cleaned}"`);
     } else if (!originalHasQuestion && translatedHasQuestion) {
-      // Original has no question mark but translation does - remove it
-      cleaned = cleaned.replace(/\?+$/, '');
-      console.log(`[Translation] Removed extra question mark from translation`);
+      cleaned = cleaned.replace(/\?+$/, "").trim();
+      console.log(`[Translation] Removed extra question mark: "${cleaned}"`);
     }
     
     return cleaned;

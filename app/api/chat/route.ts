@@ -323,20 +323,8 @@ export async function POST(req: NextRequest) {
       console.log("[Profile Loading] General question detected - skipping profile load");
     }
 
-    // Detect language of user message (fast, no API call)
+    // Detect language of user message
     const userLanguage = detectLanguage(currentUserMessage);
-    
-    // Translate ONLY the last message for safety check (optimized - single translation)
-    let translatedUserMessage = currentUserMessage;
-    if (userLanguage === "bn") {
-      try {
-        translatedUserMessage = await translateToEnglish(currentUserMessage);
-        console.log(`[Translation] Original: "${currentUserMessage.substring(0, 50)}..." → Translated: "${translatedUserMessage.substring(0, 50)}..."`);
-      } catch (error) {
-        console.error("[Translation] Failed, using original:", error);
-        translatedUserMessage = currentUserMessage;
-      }
-    }
     
     // Estimate token count
     const allMessagesText = JSON.stringify(messages) + (profileContext || "");
@@ -359,7 +347,35 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Safety check (uses translated message)
+    // Translate ALL user messages
+    const translatedMessages = await Promise.all(
+      messages.map(async (m: any) => {
+        if (m.role === "user") {
+          const msgLanguage = detectLanguage(m.content);
+          if (msgLanguage === "bn") {
+            try {
+              const translated = await translateToEnglish(m.content);
+              return { ...m, content: translated };
+            } catch (error) {
+              return m;
+            }
+          }
+        }
+        return m;
+      })
+    );
+    
+    // Translate last message for safety check
+    let translatedUserMessage = currentUserMessage;
+    if (userLanguage === "bn") {
+      try {
+        translatedUserMessage = await translateToEnglish(currentUserMessage);
+      } catch (error) {
+        translatedUserMessage = currentUserMessage;
+      }
+    }
+    
+    // Safety check
     const safetyCheck = checkSafety(translatedUserMessage, profileContext);
     
     if (safetyCheck.requiresEmergency) {
@@ -379,7 +395,7 @@ export async function POST(req: NextRequest) {
     let reply: string;
     try {
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error("Request timeout")), 40000); // 40 seconds (reduced from 55)
+        setTimeout(() => reject(new Error("Request timeout")), 55000);
       });
       
       // Send messages directly to AI in original language (no translation)
