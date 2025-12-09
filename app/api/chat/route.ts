@@ -409,6 +409,7 @@ export async function POST(req: NextRequest) {
         askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, {
           dailyContext,
           doctorQAContext,
+          motherId: user!.id,
         }),
         timeoutPromise
       ]) as string;
