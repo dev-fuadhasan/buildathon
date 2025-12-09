@@ -7,7 +7,7 @@ let failedKeys = new Set<number>(); // Track keys that failed (rate limit, etc.)
 
 /**
  * Get all available API keys from environment
- * Supports: GROQ_API_KEY, GROQ_API_KEY_1, GROQ_API_KEY_2, ..., GROQ_API_KEY_6
+ * Supports: GROQ_API_KEY, GROQ_API_KEY_1, GROQ_API_KEY_2, ..., GROQ_API_KEY_20
  * Or comma-separated: GROQ_API_KEY=key1,key2,key3,...
  */
 function getAllApiKeys(): string[] {
@@ -24,8 +24,9 @@ function getAllApiKeys(): string[] {
   }
   
   // Method 2: Individual keys GROQ_API_KEY_1, GROQ_API_KEY_2, etc.
+  // Scans up to 20 keys for flexibility
   const foundIndividualKeys: string[] = [];
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 20; i++) {
     const envVarName = `GROQ_API_KEY_${i}`;
     const key = process.env[envVarName];
     if (key && key.trim() && key.trim().length > 0) {
@@ -44,7 +45,7 @@ function getAllApiKeys(): string[] {
   const uniqueKeys = [...new Set(keys)];
   
   if (uniqueKeys.length === 0) {
-    console.warn(`[Groq] No API keys found! Check environment variables: GROQ_API_KEY or GROQ_API_KEY_1 through GROQ_API_KEY_6`);
+    console.warn(`[Groq] No API keys found! Check environment variables: GROQ_API_KEY or GROQ_API_KEY_1 through GROQ_API_KEY_20`);
   } else {
     console.log(`[Groq] Total unique API keys found: ${uniqueKeys.length}`);
   }
@@ -68,7 +69,7 @@ function initializeGroqClients(): void {
   if (apiKeys.length === 0) {
     // During build, env vars may not be available - create a dummy instance
     if (process.env.NODE_ENV === "production" && !process.env.VERCEL && !process.env.NETLIFY) {
-      throw new Error("No GROQ_API_KEY found. Set GROQ_API_KEY or GROQ_API_KEY_1 through GROQ_API_KEY_6");
+      throw new Error("No GROQ_API_KEY found. Set GROQ_API_KEY or GROQ_API_KEY_1 through GROQ_API_KEY_20");
     }
     // Create dummy for build
     console.warn(`[Groq] No keys found, creating dummy instance for build`);
