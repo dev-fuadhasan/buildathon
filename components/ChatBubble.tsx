@@ -46,10 +46,10 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
         
         {/* Text Content */}
         {content && (
-          <div className={`px-5 py-3.5 text-base leading-relaxed whitespace-pre-wrap ${imageUrl ? 'pt-3' : ''}`}>
+          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap ${imageUrl ? 'pt-2 sm:pt-3' : ''}`}>
             <div className="prose prose-sm max-w-none">
               {content.split('\n').map((line, idx) => (
-                <p key={idx} className={idx > 0 ? 'mt-2' : ''}>{line || '\u00A0'}</p>
+                <p key={idx} className={idx > 0 ? 'mt-1.5 sm:mt-2' : ''}>{line || '\u00A0'}</p>
               ))}
             </div>
           </div>
