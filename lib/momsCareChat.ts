@@ -261,7 +261,7 @@ export async function askMomsCare(
 
 2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
 
-3. Logged-in user: ${actualProfileContext ? '⚠️ CRITICAL: Profile data (including health profile, daily entries, doctor Q&A, chat history, prescriptions) is provided below in clearly labeled sections. READ ALL SECTIONS CAREFULLY before answering. If user asks about their personal information (blood group, name, age, medications, conditions, allergies, address, phone, etc.), CHECK THE "HEALTH PROFILE" SECTION FIRST. Do NOT say you cannot find it or ask them to provide it if it is already in the profile data below.' : 'No profile data needed for this question. Answer generally.'}
+3. Logged-in user: ${actualProfileContext ? '⚠️ CRITICAL INSTRUCTION - DATA USAGE:\nYou have access to multiple data sections below (HEALTH PROFILE, DAILY ENTRIES, DOCTOR Q&A, CHAT HISTORY, and PRESCRIPTION IMAGES).\n\nHOW TO USE DATA:\n- Analyze the question to determine which data section is MOST RELEVANT\n- Use ONLY the relevant section(s) to answer\n- Give a DIRECT answer from the relevant data - do NOT mention other sections or say you checked multiple sources\n- Do NOT explain which data source you used unless asked\n\nEXAMPLES:\n- "my blood group?" → Use HEALTH PROFILE section → Answer directly: "আপনার রক্তের গ্রুপ O+"  (NOT "I checked prescriptions but found it in profile")\n- "what did I write today?" → Use DAILY ENTRIES section → Answer directly from entries\n- "what did doctor say about X?" → Use DOCTOR Q&A section → Answer from doctor\'s advice\n- "what medicine did doctor prescribe?" → Use PRESCRIPTION IMAGES → Analyze images and answer\n\nRULE: Answer DIRECTLY from the relevant data. Do NOT mention checking multiple sources.' : 'No profile data needed for this question. Answer generally.'}
 
 4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
 
@@ -279,14 +279,17 @@ export async function askMomsCare(
 
 10. WHEN TO SUGGEST IMAGE UPLOAD: If user asks about symptoms, pain, reports, prescriptions, or anything that could benefit from visual inspection, politely suggest they can upload an image for more accurate guidance. Say: "আপনি যদি কোনো প্রেসক্রিপশন, রিপোর্ট বা সংশ্লিষ্ট ছবি আপলোড করেন তাহলে আমি আরো সঠিক পরামর্শ দিতে পারব।" (Bangla) or "You can upload any prescription, report, or related image for more accurate guidance." (English)
 
-Goal: Provide helpful, accurate health guidance.
+Goal: Provide helpful, accurate health guidance using the MOST RELEVANT data source for each question.
 
 ${safetyPrompt}`;
     
     // Add specific instruction for current question type
     if (isLoggedIn) {
       if (actualProfileContext) {
-        systemPrompt += `\n\n⚠️ IMPORTANT: This is a LOGGED-IN user asking a PERSONAL question. Their complete profile data is provided below (Health Profile, Daily Entries, Doctor Q&A, Chat History, Prescriptions). ALWAYS CHECK THE PROFILE DATA SECTIONS BELOW FIRST before saying you don't have information. If they ask "what is my blood group?" or "my age?" or similar, find it in the HEALTH PROFILE section below and answer directly.`;
+        systemPrompt += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ DATA USAGE REMINDER:
+Multiple data sections are provided below. Analyze the question, identify the MOST RELEVANT section, use ONLY that section to answer, and give a DIRECT answer without mentioning which section you used.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
       } else {
         systemPrompt += `\n\nCURRENT: Logged-in user, general/educational question. Answer generally without using profile data.`;
       }
