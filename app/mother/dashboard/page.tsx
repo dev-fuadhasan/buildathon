@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
+import { safeAsync } from "@/lib/safeAsync";
 
 type Profile = {
   name?: string;
@@ -1052,7 +1053,7 @@ export default function MotherDashboard() {
                                 View
                               </a>
                               <button
-                                onClick={async () => {
+                                onClick={safeAsync(async () => {
                                   if (!confirm("Are you sure you want to delete this prescription?")) {
                                     return;
                                   }
@@ -1079,7 +1080,7 @@ export default function MotherDashboard() {
                                   } finally {
                                     setDeletingPrescription(null);
                                   }
-                                }}
+                                })}
                                 disabled={deletingPrescription === p.key}
                                 className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-4 py-2.5 h-[40px] min-w-[40px]"
                               >
@@ -1458,7 +1459,7 @@ export default function MotherDashboard() {
                                 ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
                                 : "bg-red-500 hover:bg-red-600 text-white"
                             }`}
-                            onClick={async () => {
+                            onClick={safeAsync(async () => {
                               if (isReported) {
                                 setPopup({
                                   isOpen: true,
@@ -1505,7 +1506,7 @@ export default function MotherDashboard() {
                                   });
                                 }
                               }
-                            }}
+                            })}
                             disabled={isReported}
                           >
                             <Icon name="report" size={14} />

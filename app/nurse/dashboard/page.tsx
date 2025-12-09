@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PatientData } from "@/lib/data";
+import { safeAsync } from "@/lib/safeAsync";
 
 type PriorityPatient = {
   patient: PatientData;
@@ -654,7 +655,7 @@ export default function NurseDashboard() {
                               })()}
                             </div>
                             <button
-                              onClick={async () => {
+                              onClick={safeAsync(async () => {
                                 const res = await fetch(`/api/nurse/patients/${item.patient.id}`, {
                                   headers: headers(),
                                 });
@@ -677,7 +678,7 @@ export default function NurseDashboard() {
                                   });
                                   setShowEditModal(true);
                                 }
-                              }}
+                              })}
                               className="text-[10px] px-2.5 py-0.5 rounded bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 font-semibold"
                             >
                               View

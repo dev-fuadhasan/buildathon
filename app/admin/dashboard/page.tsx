@@ -10,6 +10,7 @@ import MobileDashboardMenu from "@/components/MobileDashboardMenu";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
+import { safeAsync } from "@/lib/safeAsync";
 
 type ProfileChange = {
   field: string;
@@ -1871,10 +1872,10 @@ export default function AdminDashboard() {
                     <div className="flex gap-2">
                       <button
                         className="btn-primary bg-green-500 hover:bg-green-600 flex-1"
-                        onClick={async () => {
+                        onClick={safeAsync(async () => {
                           await updateReportStatus(selectedReport.id, "solved", adminDecisionText);
                           setAdminDecisionText("");
-                        }}
+                        })}
                         disabled={!adminDecisionText.trim()}
                       >
                         <span className="flex items-center gap-2">
@@ -1884,10 +1885,10 @@ export default function AdminDashboard() {
                       </button>
                       <button
                         className="btn-primary bg-red-500 hover:bg-red-600 flex-1"
-                        onClick={async () => {
+                        onClick={safeAsync(async () => {
                           await updateReportStatus(selectedReport.id, "rejected", adminDecisionText);
                           setAdminDecisionText("");
-                        }}
+                        })}
                         disabled={!adminDecisionText.trim()}
                       >
                         <span className="flex items-center gap-2">
@@ -1897,10 +1898,10 @@ export default function AdminDashboard() {
                       </button>
                       <button
                         className="btn-secondary flex-1"
-                        onClick={async () => {
+                        onClick={safeAsync(async () => {
                           await updateReportStatus(selectedReport.id, "pending", adminDecisionText || undefined);
                           setAdminDecisionText("");
-                        }}
+                        })}
                       >
                         <span className="flex items-center gap-2">
                           <Icon name="pending" size={18} />
@@ -2142,7 +2143,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={async () => {
+                          onClick={safeAsync(async () => {
                             const action = editor.isPaused ? "unpause" : "pause";
                             const res = await fetch("/api/admin/editors", {
                               method: "POST",
@@ -2166,7 +2167,7 @@ export default function AdminDashboard() {
                                 message: data.error || "Failed to update editor",
                               });
                             }
-                          }}
+                          })}
                           className={`px-4 py-2 rounded-lg ${
                             editor.isPaused
                               ? "bg-green-500 hover:bg-green-600"
@@ -2176,7 +2177,7 @@ export default function AdminDashboard() {
                           {editor.isPaused ? "Unpause" : "Pause"}
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={safeAsync(async () => {
                             if (!confirm(`Are you sure you want to delete editor ${editor.email}?`)) return;
                             const res = await fetch("/api/admin/editors", {
                               method: "POST",
@@ -2200,13 +2201,13 @@ export default function AdminDashboard() {
                                 message: data.error || "Failed to delete editor",
                               });
                             }
-                          }}
+                          })}
                           className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                         >
                           Delete
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={safeAsync(async () => {
                             // Check if editor is also a nurse/other health worker
                             try {
                               const res = await fetch(`/api/admin/doctor-details?email=${encodeURIComponent(editor.email)}`, {
@@ -2232,7 +2233,7 @@ export default function AdminDashboard() {
                               loadActivities(undefined, editor.id);
                               setActiveTab("activity-logs");
                             }
-                          }}
+                          })}
                           className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                         >
                           View {editors.find(e => e.id === editor.id) ? "Profile" : "Logs"}
