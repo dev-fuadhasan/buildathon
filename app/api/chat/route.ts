@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { askMomsCare } from "@/lib/momsCareChat";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, getChatHistory, updateChatHistory, listDailyEntries, listMotherQuestions, ChatMessage } from "@/lib/data";
-import { listObjects, signedUrl } from "@/lib/r2Client";
+import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
-import { isPersonalQuestion, needsFollowUpQuestions } from "@/lib/chatHelper";
-import { getCurrentDateInTimezone } from "@/lib/pregnancyTracker";
 
 // Increase timeout for chat API (60 seconds)
 export const maxDuration = 60;
@@ -183,27 +180,13 @@ export async function POST(req: NextRequest) {
     }
     
     // ============================================================
-    // LOGGED-IN MOTHER (SMART PERSONALIZED MODE)
+    // LOGGED-IN MOTHER (AI-POWERED PERSONALIZED MODE)
     // ============================================================
     
-    // Load previous chat history for logged-in mothers
-    let previousChatHistory: ChatMessage[] = [];
-    try {
-      const history = await getChatHistory(user!.id);
-      if (history && history.messages && history.messages.length > 0) {
-        previousChatHistory = history.messages;
-      }
-    } catch (err) {
-      console.error("Failed to load chat history:", err);
-    }
+    // Clean and limit current session messages
+    messages = cleanMessages(messages);
+    messages = limitConversationHistory(messages, 15);
     
-    // Merge previous history with current session messages
-    // Current session messages take priority (they're the latest)
-    const allMessages = [...previousChatHistory, ...messages];
-    messages = cleanMessages(allMessages);
-    messages = limitConversationHistory(messages, 20); // Allow more history for logged-in users
-    
-    // Get the last user message to detect question type FIRST
     const currentUserMessage = messages
       .filter((m: any) => m.role === "user")
       .pop()?.content || "";
@@ -215,174 +198,11 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // ==========================================
-    // STEP 1: Classify question type (Personal vs General) - AI-based
-    // ==========================================
-    const isPersonal = await isPersonalQuestion(currentUserMessage);
-    
-    console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
-    
-    // ==========================================
-    // STEP 2: Load profile data ONLY if question is PERSONAL
-    // ==========================================
-    let profileContext: string | undefined = undefined;
-    let dailyContext: string | undefined = undefined;
-    let doctorQAContext: string | undefined = undefined;
-    let prescriptionUrls: string[] = [];
-    let weeksPregnant: number | undefined;
-    
-    if (isPersonal) {
-      // Load comprehensive mother data for PERSONAL questions
-      console.log("[Profile Loading] Personal question detected - loading full profile...");
-      
-      try {
-        const mother = await getMother(user!.id);
-        if (mother) {
-          const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
-          const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
-          const months = weeks ? Math.round(weeks / 4.33) : undefined;
-          
-          // Build comprehensive profile context (basic)
-          const profileParts: string[] = [];
-          const dailyParts: string[] = [];
-          const doctorQAParts: string[] = [];
-          
-          // Basic profile
-          if (mother.name) profileParts.push(`নাম: ${mother.name}`);
-          if (mother.age) profileParts.push(`বয়স: ${mother.age}`);
-          if (weeks) profileParts.push(`গর্ভাবস্থার সপ্তাহ: ${weeks} সপ্তাহ (${months || Math.round(weeks / 4.33)} মাস)`);
-          if (mother.dueDate) profileParts.push(`প্রত্যাশিত তারিখ: ${mother.dueDate}`);
-          if (mother.bloodGroup) profileParts.push(`রক্তের গ্রুপ: ${mother.bloodGroup}`);
-          if (mother.previousPregnancies !== undefined) profileParts.push(`আগের গর্ভাবস্থা: ${mother.previousPregnancies}`);
-          
-          // Medical history
-          if (mother.conditions) profileParts.push(`চিকিৎসা অবস্থা/জটিলতা: ${mother.conditions}`);
-          if (mother.allergies) profileParts.push(`অ্যালার্জি: ${mother.allergies}`);
-          if (mother.medications) profileParts.push(`বর্তমান ওষুধ: ${mother.medications}`);
-          if (mother.emergencyContact) profileParts.push(`জরুরি যোগাযোগ: ${mother.emergencyContact} (${mother.emergencyPhone || "N/A"})`);
-          
-          // Load daily entries for recent activity
-          try {
-            const dailyEntries = await listDailyEntries(user!.id);
-            const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
-            const recentEntries = dailyEntries
-              .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-              .slice(0, 5)
-              .map(entry => entry.entry);
-            
-            if (recentEntries.length > 0) {
-              dailyParts.push(`${recentEntries.join("\n")}`);
-            }
-          } catch (err) {
-            console.error("Failed to load daily entries:", err);
-          }
-          
-          // Load recent doctor Q&A
-          try {
-            const questions = await listMotherQuestions(user!.id);
-            const recentQAs = questions
-              .filter(q => q.answer)
-              .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
-              .slice(0, 3)
-              .map(q => `Q: ${q.question}\nA: ${q.answer}`);
-            
-            if (recentQAs.length > 0) {
-              doctorQAParts.push(`${recentQAs.join("\n\n")}`);
-            }
-          } catch (err) {
-            console.error("Failed to load questions:", err);
-          }
-          
-          profileContext = profileParts.length > 0 
-            ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
-            : undefined;
-          dailyContext = dailyParts.length > 0 ? dailyParts.join("\n") : undefined;
-          doctorQAContext = doctorQAParts.length > 0 ? doctorQAParts.join("\n\n") : undefined;
-          weeksPregnant = weeks;
-          
-          // Load prescriptions
-          try {
-            const prefix = `prescriptions/${user!.id}/`;
-            const objects = await listObjects(prefix);
-            prescriptionUrls = await Promise.all(
-              (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
-            );
-          } catch (err) {
-            console.error("Failed to fetch prescriptions:", err);
-          }
-          
-          // Add chat image if provided
-          if (imageUrl) {
-            prescriptionUrls.push(imageUrl);
-          }
-          
-          console.log(`[Profile Loaded] Profile: ${profileParts.length} sections, Prescriptions: ${prescriptionUrls.length}`);
-        }
-      } catch (err) {
-        console.error("Failed to fetch mother profile:", err);
-      }
-    } else {
-      // For GENERAL questions, don't load profile but still add chat image if provided
-      if (imageUrl) {
-        prescriptionUrls = [imageUrl];
-      }
-      console.log("[Profile Loading] General question detected - skipping profile load");
-    }
-
-    // Detect language of user message
+    // Detect language
     const userLanguage = detectLanguage(currentUserMessage);
     
-    // Estimate token count
-    const allMessagesText = JSON.stringify(messages) + (profileContext || "");
-    const estimatedTokens = Math.ceil(allMessagesText.length / 3.5);
-    
-    // Check if token limit is exceeded
-    if (estimatedTokens > 6000) {
-      messages = limitConversationHistory(messages, 12);
-      const newEstimatedTokens = Math.ceil((JSON.stringify(messages) + (profileContext || "")).length / 3.5);
-      if (newEstimatedTokens > 6000) {
-        const errorMessage = userLanguage === "bn"
-          ? "আপনার কথোপকথন খুব দীর্ঘ হয়ে গেছে। অনুগ্রহ করে একটি নতুন প্রশ্ন করুন বা পৃষ্ঠাটি রিফ্রেশ করুন।"
-          : "Your conversation has become too long. Please ask a new question or refresh the page.";
-        
-        return NextResponse.json({
-          reply: errorMessage,
-          safetyWarning: false,
-          riskLevel: "low",
-        });
-      }
-    }
-    
-    // Translate ALL user messages
-    const translatedMessages = await Promise.all(
-      messages.map(async (m: any) => {
-        if (m.role === "user") {
-          const msgLanguage = detectLanguage(m.content);
-          if (msgLanguage === "bn") {
-            try {
-              const translated = await translateToEnglish(m.content);
-              return { ...m, content: translated };
-            } catch (error) {
-              return m;
-            }
-          }
-        }
-        return m;
-      })
-    );
-    
-    // Translate last message for safety check
-    let translatedUserMessage = currentUserMessage;
-    if (userLanguage === "bn") {
-      try {
-        translatedUserMessage = await translateToEnglish(currentUserMessage);
-      } catch (error) {
-        translatedUserMessage = currentUserMessage;
-      }
-    }
-    
-    // Safety check
-    const safetyCheck = checkSafety(translatedUserMessage, profileContext);
+    // Safety check (on original message)
+    const safetyCheck = checkSafety(currentUserMessage);
     
     if (safetyCheck.requiresEmergency) {
       const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
@@ -397,20 +217,81 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Get AI response with personalization metadata
+    // AI-POWERED: Determine if question is personal and needs profile data
+    const { isPersonalQuestion } = await import("@/lib/chatHelper");
+    const isPersonal = await isPersonalQuestion(currentUserMessage);
+    
+    console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
+    
+    // Load profile data ONLY if AI determines question is personal
+    let profileContext: string | undefined = undefined;
+    let prescriptionUrls: string[] = [];
+    let weeksPregnant: number | undefined;
+    
+    if (isPersonal) {
+      console.log("[AI Decision] Personal question - loading profile data...");
+      
+      try {
+        const { getMother, listDailyEntries, listMotherQuestions } = await import("@/lib/data");
+        const { listObjects, signedUrl } = await import("@/lib/r2Client");
+        const { getCurrentDateInTimezone } = await import("@/lib/pregnancyTracker");
+        
+        const mother = await getMother(user!.id);
+        if (mother) {
+          const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+          const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
+          
+          // Build compact profile context
+          const profileParts: string[] = [];
+          if (mother.name) profileParts.push(`Name: ${mother.name}`);
+          if (mother.age) profileParts.push(`Age: ${mother.age}`);
+          if (weeks) profileParts.push(`Weeks pregnant: ${weeks}`);
+          if (mother.bloodGroup) profileParts.push(`Blood group: ${mother.bloodGroup}`);
+          if (mother.conditions) profileParts.push(`Conditions: ${mother.conditions}`);
+          if (mother.allergies) profileParts.push(`Allergies: ${mother.allergies}`);
+          if (mother.medications) profileParts.push(`Medications: ${mother.medications}`);
+          
+          profileContext = profileParts.length > 0 ? `PROFILE:\n${profileParts.join("\n")}` : undefined;
+          weeksPregnant = weeks;
+          
+          // Load prescriptions (limit to 3 for speed)
+          try {
+            const prefix = `prescriptions/${user!.id}/`;
+            const objects = await listObjects(prefix);
+            prescriptionUrls = await Promise.all(
+              (objects || []).slice(0, 3).map(async (obj) => await signedUrl(obj.Key!))
+            );
+          } catch (err) {
+            console.error("Failed to fetch prescriptions:", err);
+          }
+          
+          // Add chat image if provided
+          if (imageUrl) {
+            prescriptionUrls.push(imageUrl);
+          }
+          
+          console.log(`[Profile Loaded] Prescriptions: ${prescriptionUrls.length}`);
+        }
+      } catch (err) {
+        console.error("Failed to fetch mother profile:", err);
+      }
+    } else {
+      // For GENERAL questions, only add chat image if provided
+      if (imageUrl) {
+        prescriptionUrls = [imageUrl];
+      }
+      console.log("[AI Decision] General question - skipping profile load");
+    }
+    
+    // Get AI response with profile data (if personal)
     let reply: string;
     try {
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error("Request timeout")), 55000);
+        setTimeout(() => reject(new Error("Request timeout")), 30000);
       });
       
-      // Send messages directly to AI in original language (no translation)
       reply = await Promise.race([
-        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, {
-          dailyContext,
-          doctorQAContext,
-          motherId: user!.id,
-        }),
+        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
         timeoutPromise
       ]) as string;
       
@@ -498,33 +379,58 @@ export async function POST(req: NextRequest) {
       reply = `${safetyCheck.recommendation}\n\n${reply}`;
     }
     
-    // AI responds directly in user's language (no translation needed)
-    // Store chat history for logged-in mothers only
-    try {
-      const updatedMessages: ChatMessage[] = messages.map((m: any) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        timestamp: new Date().toISOString(),
-      }));
-      
-      // Add the new assistant response
-      updatedMessages.push({
-        role: "assistant",
-        content: reply.trim(),
-        timestamp: new Date().toISOString(),
-      });
-      
-      await updateChatHistory(user!.id, updatedMessages);
-    } catch (err) {
-      console.error("Failed to save chat history:", err);
-      // Don't fail the request if history save fails
-    }
-    
-    return NextResponse.json({
+    // Prepare response FIRST (for speed)
+    const responseData = {
       reply: reply.trim(),
       safetyWarning: safetyCheck.riskLevel !== "low",
       riskLevel: safetyCheck.riskLevel,
-    });
+    };
+    
+    // Save chat history in background (don't wait)
+    // Fire-and-forget: save after response is sent
+    const saveHistory = async () => {
+      try {
+        // Load previous history
+        let previousHistory: ChatMessage[] = [];
+        try {
+          const history = await getChatHistory(user!.id);
+          if (history?.messages) {
+            previousHistory = history.messages;
+          }
+        } catch (err) {
+          console.error("Failed to load previous history:", err);
+        }
+        
+        // Merge previous + current session messages
+        const allMessages = [...previousHistory, ...messages];
+        const cleanedMessages = cleanMessages(allMessages);
+        const limitedMessages = limitConversationHistory(cleanedMessages, 20);
+        
+        const updatedMessages: ChatMessage[] = limitedMessages.map((m: any) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: new Date().toISOString(),
+        }));
+        
+        // Add the new assistant response
+        updatedMessages.push({
+          role: "assistant",
+          content: reply.trim(),
+          timestamp: new Date().toISOString(),
+        });
+        
+        await updateChatHistory(user!.id, updatedMessages);
+        console.log(`[History] Saved ${updatedMessages.length} messages for user ${user!.id}`);
+      } catch (err) {
+        console.error("Failed to save chat history:", err);
+      }
+    };
+    
+    // Trigger save in background (don't await)
+    saveHistory();
+    
+    // Return response immediately
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error("Chat API error:", error);
     
