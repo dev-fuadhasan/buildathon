@@ -288,7 +288,7 @@ Provide this calculation FIRST, then add context.`;
     // Use a vision-capable model if we have images, otherwise use the 70B versatile model
     const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
     const model = hasImages
-      ? "llama-3.2-90b-vision-preview" // Vision model for images (better than 17b)
+      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for images (Groq supported)
       : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
