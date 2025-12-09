@@ -12,6 +12,17 @@ export type SafetyCheck = {
   requiresEmergency: boolean;
 };
 
+// Helpers
+function isQuestionFormat(msg: string): boolean {
+  const trimmed = msg.trim();
+  if (trimmed.endsWith("?")) return true;
+  return /^(how|what|when|why|is|are|can|could|should|would|will|do|does|did)\b/i.test(trimmed);
+}
+
+function hasPersonalIndicator(msg: string): boolean {
+  return /\b(my|i |i'm|i am|i've|ami|amar)\b/i.test(msg);
+}
+
 // Red flag keywords and patterns
 const CRITICAL_RED_FLAGS = [
   // Bleeding
@@ -132,11 +143,18 @@ export function checkSafety(userMessage: string, profileContext?: string): Safet
       const genericEmergencyWords = ["emergency", "urgent", "immediately", "right now", "asap"];
       
       if (isRoutine && genericEmergencyWords.includes(flag.toLowerCase())) {
-        // Skip generic emergency words in routine questions
+        continue;
+      }
+
+      // If the user is asking an informational question (question format) and NOT using personal indicators,
+      // treat as informational and NOT as an emergency report. This prevents false alarms for "how to know" questions.
+      const questionLike = isQuestionFormat(userMessage) || isQuestionFormat(message);
+      const personal = hasPersonalIndicator(userMessage);
+      if (questionLike && !personal) {
         continue;
       }
       
-      // If it's a specific medical emergency symptom, always flag it
+      // If it's a specific medical emergency symptom reported personally, flag it
       criticalFlags.push(flag);
     }
   }
@@ -196,11 +214,11 @@ export function checkSafety(userMessage: string, profileContext?: string): Safet
 export function getSafetyPrompt(): string {
   return `
 CRITICAL SAFETY PROTOCOLS:
-1. If a user reports ANY of these symptoms, you MUST immediately recommend emergency medical care:
+1. If a user reports ANY of these symptoms (not just asks about them), you MUST immediately recommend emergency medical care:
    - Heavy bleeding or bright red blood
    - Severe or excruciating pain
    - No fetal movement or significantly reduced movement
-   - Water breaking (amniotic fluid leakage)
+   - Water breaking (amniotic fluid leakage) WHEN THE USER SAYS IT IS HAPPENING TO THEM (not when asking how to identify)
    - High fever
    - Seizures or convulsions
    - Severe headache with vision problems
