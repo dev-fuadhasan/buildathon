@@ -98,7 +98,7 @@ export default function Home() {
               
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-neutral-900 leading-[1.1] tracking-tight">
                 {t.home.title}
-              </h1>
+          </h1>
               
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-700 leading-relaxed max-w-2xl font-medium">
                 {t.home.subtitle}
@@ -133,7 +133,7 @@ export default function Home() {
               </div>
               
               <p className="text-xs sm:text-sm text-neutral-600 pt-1 sm:pt-2 leading-relaxed">
-                ✨ Free to use • No credit card required • Trusted by thousands of mothers
+                ✨ Free AI support 24/7 • No credit card required • Instant answers anytime
               </p>
             </div>
             
@@ -154,10 +154,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 sm:mb-12 md:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-3 sm:mb-4">
-              Why Choose MomsCare?
+              Why Choose MomsCare AI?
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto font-medium px-2">
-              Your trusted companion throughout your pregnancy journey
+              24/7 AI-powered support for every step of your pregnancy journey
             </p>
           </div>
           
@@ -167,22 +167,22 @@ export default function Home() {
                 icon: "ai", 
                 text: t.home.feature1, 
                 color: "from-purple-500 to-pink-500",
-                title: "AI-Powered Support",
-                description: "Get instant, reliable answers to your pregnancy questions, 24/7."
+                title: "AI-Powered Intelligence",
+                description: "Get instant, personalized pregnancy guidance powered by advanced AI — available anytime, anywhere."
               },
               { 
                 icon: "doctor", 
                 text: t.home.feature2, 
                 color: "from-blue-500 to-cyan-500",
-                title: "Expert Health Workers",
-                description: "Connect with verified healthcare professionals including doctors, nurses, and health workers."
+                title: "Optional Expert Consultations",
+                description: "Need human expertise? Connect with verified healthcare professionals when you need them."
               },
               { 
                 icon: "secure", 
                 text: t.home.feature3, 
                 color: "from-green-500 to-emerald-500",
                 title: "Secure & Private",
-                description: "Your data is encrypted and stored securely. Your privacy matters."
+                description: "Your data is encrypted and stored securely. AI-powered without compromising your privacy."
               },
             ].map((item, idx) => (
               <div
@@ -206,10 +206,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-10 md:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-3 sm:mb-4">
-              Get Started Today
+              Start Your AI Journey Today
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto font-medium px-2">
-              Choose your path and join thousands of mothers and health workers
+              Get instant AI support now, or register for personalized features
             </p>
           </div>
           
@@ -252,7 +252,7 @@ export default function Home() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-neutral-600 mt-3 sm:mt-4">
-                  ✓ Free registration • ✓ Track your pregnancy • ✓ Get expert answers
+                  ✓ Free AI support 24/7 • ✓ Track your pregnancy • ✓ Upload prescriptions
                 </p>
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function Home() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-neutral-600 mt-3 sm:mt-4">
-                  ✓ Quick approval process • ✓ Help mothers in need • ✓ Build your reputation
+                  ✓ Support AI guidance • ✓ Help mothers in need • ✓ Build your reputation
                 </p>
               </div>
             </div>
@@ -312,10 +312,10 @@ export default function Home() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
                   <span className="text-white font-bold text-lg">M</span>
                 </div>
-                <span className="text-2xl font-bold text-white">MomsCare</span>
+                <span className="text-2xl font-bold text-white">MomsCare AI</span>
               </div>
               <p className="text-neutral-400 text-sm leading-relaxed max-w-md">
-                Your trusted companion throughout your pregnancy journey. Get expert guidance, track your progress, and connect with verified healthcare professionals.
+                24/7 AI-powered pregnancy support at your fingertips. Get instant guidance, track your progress, and access healthcare professionals when needed.
               </p>
             </div>
             
@@ -374,6 +374,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </main>
+      </main>
   );
 }

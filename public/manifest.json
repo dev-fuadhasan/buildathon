@@ -1,7 +1,7 @@
 {
-  "name": "MomsCare - AI Maternal Health Assistant",
-  "short_name": "MomsCare",
-  "description": "AI-powered maternal health guidance and support",
+  "name": "MomsCare AI - 24/7 Pregnancy Support",
+  "short_name": "MomsCare AI",
+  "description": "Instant AI-powered pregnancy guidance available anytime, anywhere",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

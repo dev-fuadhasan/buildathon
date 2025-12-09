@@ -22,8 +22,8 @@ export default function ChatPage() {
   const [lang] = useState(() => getLanguage());
   
   const initialMessage = lang === "bn" 
-    ? "হাই! আমি MomsCare, আপনার AI গর্ভাবস্থা সহায়ক। আপনার গর্ভাবস্থার যাত্রা সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন!"
-    : "Hi! I'm MomsCare, your AI pregnancy assistant. Ask me anything about your pregnancy journey!";
+    ? "হাই! আমি MomsCare AI, আপনার ২৪/৭ গর্ভাবস্থা সহায়ক। আপনার গর্ভাবস্থার যাত্রা সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন!"
+    : "Hi! I'm MomsCare AI, your 24/7 pregnancy assistant. Ask me anything about your pregnancy journey!";
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);

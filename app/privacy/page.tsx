@@ -16,7 +16,7 @@ export default function PrivacyPage() {
               Data Collection & Use
             </h2>
             <p className="text-slate-700 leading-relaxed">
-              MomsCare collects personal health information to provide pregnancy and maternal health guidance. We only collect necessary information and use it solely for your care.
+              MomsCare AI collects personal health information to provide AI-powered pregnancy guidance and maternal health support. We only collect necessary information and use it solely for your care.
             </p>
           </section>
 

@@ -7,8 +7,8 @@ import GlobalErrorHandler from "@/components/GlobalErrorHandler";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MomsCare - AI-Powered Maternal Health Assistant",
-  description: "Supporting pregnant mothers with AI-powered guidance and medical advice",
+  title: "MomsCare AI - 24/7 Pregnancy Support",
+  description: "Get instant, personalized pregnancy guidance from AI — available anytime. Track your journey, upload prescriptions, and consult doctors when needed.",
   manifest: "/manifest.json",
 };
 

@@ -30,17 +30,17 @@ export const translations = {
     },
     // Homepage
     home: {
-      title: "Pregnancy guidance with trusted doctors and AI",
-      subtitle: "Chat with MomsCare AI, track your pregnancy, upload prescriptions, and get answers from approved doctors — all in one place.",
-      chatButton: "Chat with MomsCare",
+      title: "AI-Powered Pregnancy Guidance",
+      subtitle: "Get instant, personalized pregnancy support from MomsCare AI — available 24/7. Track your journey, upload prescriptions, and consult approved doctors when needed.",
+      chatButton: "Chat with MomsCare AI",
       motherButton: "I'm a mother",
       mothersTitle: "Mothers",
-      mothersDesc: "Register, manage your pregnancy profile, upload prescriptions, and ask doctors private questions.",
+      mothersDesc: "Chat with AI anytime for instant pregnancy guidance. Register to track your profile, upload prescriptions, and ask doctors questions when needed.",
       doctorsTitle: "Health Workers",
-      doctorsDesc: "Join as a doctor, nurse, or health worker. Doctors can answer mother questions, while nurses manage patient records.",
-      feature1: "AI chatbot tuned for pregnancy safety",
-      feature2: "Doctor answers with profile-aware context",
-      feature3: "Secure prescription uploads to Cloudflare R2",
+      doctorsDesc: "Join as a doctor, nurse, or health worker to support mothers with professional advice alongside AI guidance.",
+      feature1: "24/7 AI chatbot specialized in pregnancy safety",
+      feature2: "Personalized AI responses with profile-aware insights",
+      feature3: "Optional doctor consultations and secure prescription storage",
     },
     // Mother Dashboard
     mother: {
@@ -216,17 +216,17 @@ export const translations = {
     },
     // Homepage
     home: {
-      title: "বিশ্বস্ত ডাক্তার এবং AI সহ গর্ভাবস্থার নির্দেশনা",
-      subtitle: "MomsCare AI এর সাথে চ্যাট করুন, আপনার গর্ভাবস্থা ট্র্যাক করুন, প্রেসক্রিপশন আপলোড করুন এবং অনুমোদিত ডাক্তারদের কাছ থেকে উত্তর পান — সব এক জায়গায়।",
-      chatButton: "MomsCare এর সাথে চ্যাট করুন",
+      title: "AI-চালিত গর্ভাবস্থার নির্দেশনা",
+      subtitle: "MomsCare AI থেকে তাৎক্ষণিক, ব্যক্তিগতকৃত গর্ভাবস্থা সহায়তা পান — ২৪/৭ উপলব্ধ। আপনার যাত্রা ট্র্যাক করুন, প্রেসক্রিপশন আপলোড করুন এবং প্রয়োজনে অনুমোদিত ডাক্তারদের পরামর্শ নিন।",
+      chatButton: "MomsCare AI এর সাথে চ্যাট করুন",
       motherButton: "আমি একজন মা",
       mothersTitle: "মায়েরা",
-      mothersDesc: "নিবন্ধন করুন, আপনার গর্ভাবস্থার প্রোফাইল পরিচালনা করুন, প্রেসক্রিপশন আপলোড করুন এবং ডাক্তারদের ব্যক্তিগত প্রশ্ন জিজ্ঞাসা করুন।",
+      mothersDesc: "তাৎক্ষণিক গর্ভাবস্থা নির্দেশনার জন্য যেকোনো সময় AI এর সাথে চ্যাট করুন। প্রোফাইল ট্র্যাক করতে, প্রেসক্রিপশন আপলোড করতে এবং প্রয়োজনে ডাক্তারদের প্রশ্ন জিজ্ঞাসা করতে নিবন্ধন করুন।",
       doctorsTitle: "স্বাস্থ্যকর্মী",
-      doctorsDesc: "ডাক্তার, নার্স বা স্বাস্থ্যকর্মী হিসাবে যোগদান করুন। ডাক্তাররা মায়েদের প্রশ্নের উত্তর দিতে পারেন, যখন নার্সরা রোগীর রেকর্ড পরিচালনা করেন।",
-      feature1: "গর্ভাবস্থার নিরাপত্তার জন্য টিউন করা AI চ্যাটবট",
-      feature2: "প্রোফাইল-সচেতন প্রসঙ্গ সহ ডাক্তারের উত্তর",
-      feature3: "Cloudflare R2 এ নিরাপদ প্রেসক্রিপশন আপলোড",
+      doctorsDesc: "AI নির্দেশনার পাশাপাশি পেশাদার পরামর্শ দিয়ে মায়েদের সমর্থন করতে ডাক্তার, নার্স বা স্বাস্থ্যকর্মী হিসাবে যোগ দিন।",
+      feature1: "২৪/৭ AI চ্যাটবট গর্ভাবস্থার নিরাপত্তায় বিশেষায়িত",
+      feature2: "প্রোফাইল-সচেতন অন্তর্দৃষ্টি সহ ব্যক্তিগতকৃত AI প্রতিক্রিয়া",
+      feature3: "ঐচ্ছিক ডাক্তার পরামর্শ এবং নিরাপদ প্রেসক্রিপশন সংরক্ষণ",
     },
     // Mother Dashboard
     mother: {

@@ -608,7 +608,7 @@ export default function MotherDashboard() {
                     Welcome{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}! 👋
                   </h1>
                   <p className="text-base sm:text-lg md:text-xl text-neutral-700 font-medium mb-4 md:mb-6">
-                    Track your pregnancy journey with personalized guidance.
+                    Get 24/7 AI-powered pregnancy support tailored to your journey.
                   </p>
                   {weeksPregnant && (
                     <div className="flex flex-wrap gap-4">

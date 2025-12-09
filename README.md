@@ -1,14 +1,20 @@
 # 🌸 MomsCare - AI-Powered Pregnancy Care Platform
 
-A complete web application for pregnant mothers featuring AI chatbot assistance, doctor consultations, prescription management, and health tracking.
+**The primary goal is to provide 24/7 AI-powered pregnancy support.** A complete platform featuring intelligent AI assistance, with optional doctor consultations, prescription management, and health tracking.
 
 ## 🚀 Features
 
-- **AI Chatbot**: Personalized AI assistant using Groq API for pregnancy-related questions
-- **Mother System**: Register, track progress, upload prescriptions, ask questions to doctors
-- **Doctor System**: Answer questions from mothers, view profiles and prescriptions
-- **Admin System**: Approve/reject doctors, view analytics
-- **Cloudflare R2 Storage**: Secure file storage for prescriptions (PDF/JPG/PNG)
+### **🤖 Primary Feature: AI-Powered Support**
+- **24/7 AI Chatbot**: Instant, personalized pregnancy guidance using advanced Groq AI
+- **Image Analysis**: Upload images for AI-powered visual assessment
+- **Personalized Responses**: AI adapts to your pregnancy stage and profile
+- **Multi-language Support**: Works in English, Bangla, and Banglish
+
+### **👥 Secondary Features**
+- **Mother System**: Track pregnancy progress, upload prescriptions, consult doctors
+- **Doctor System**: Healthcare professionals can answer questions from mothers
+- **Admin System**: Manage healthcare provider approvals and analytics
+- **Cloudflare R2 Storage**: Secure file storage for prescriptions
 
 ## 📋 Prerequisites
 
