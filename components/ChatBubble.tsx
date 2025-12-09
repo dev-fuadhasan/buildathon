@@ -26,13 +26,19 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
       >
         {/* Image (if present) */}
         {imageUrl && (
-          <div className="relative w-full rounded-t-2xl overflow-hidden">
+          <div className="relative w-full rounded-t-2xl overflow-hidden bg-slate-50">
             <div className="relative w-full h-48 sm:h-64">
               <Image
                 src={imageUrl}
                 alt="Attached image"
                 fill
-                className="object-contain bg-slate-50"
+                className="object-contain"
+                unoptimized={imageUrl.includes('?') || imageUrl.includes('X-Amz')} // Unoptimized for signed URLs
+                onError={(e) => {
+                  console.error("Image load error:", imageUrl);
+                  // Fallback to showing broken image icon
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
           </div>

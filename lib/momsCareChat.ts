@@ -85,26 +85,26 @@ export async function askMomsCare(
     const isPersonalizedMode = isLoggedIn && profileContext && profileContext.includes("MOTHER PROFILE DATA");
     const isGeneralQuestion = isLoggedIn && isPersonal === false;
     
-    // Check if question needs comprehensive answer
-    const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki") || 
+    // Check if image is provided
+    const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
+    
+    // Check if question needs comprehensive answer (more selective criteria)
+    const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki ") || 
                                lastUserMessage.toLowerCase().includes("what things") ||
-                               lastUserMessage.toLowerCase().includes("what should") ||
-                               lastUserMessage.toLowerCase().includes("how to") ||
-                               lastUserMessage.toLowerCase().includes("tips") ||
-                               lastUserMessage.toLowerCase().includes("guidelines") ||
+                               lastUserMessage.toLowerCase().includes("what are the") ||
+                               lastUserMessage.toLowerCase().includes("list of") ||
+                               lastUserMessage.toLowerCase().includes("tips for") ||
+                               lastUserMessage.toLowerCase().includes("guidelines for") ||
                                lastUserMessage.toLowerCase().includes("mene colbe") ||
-                               lastUserMessage.toLowerCase().includes("kora uchit") ||
-                               lastUserMessage.toLowerCase().includes("list") ||
-                               lastUserMessage.toLowerCase().includes("care") ||
-                               lastUserMessage.toLowerCase().includes("follow");
+                               lastUserMessage.toLowerCase().includes("mene chole");
     
     // Dynamic answer length instruction
     const answerLengthInstruction = needsComprehensive
       ? "Provide a COMPREHENSIVE answer with clear points or bullet list when needed. For 'what things' or 'ki ki' questions, list ALL relevant items."
       : "Keep answers concise but complete. For simple questions, give short answers. For complex topics, provide adequate details.";
     
-    // Check if image is provided
-    const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
+    // Debug logging
+    console.log(`[AI Mode] Comprehensive: ${needsComprehensive}, HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}`);
     const imageInstruction = hasImage 
       ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
@@ -237,9 +237,22 @@ Provide this calculation FIRST, then add context.`;
       // If this is the last user message and we have prescription URLs, include images
       const isLastUserMessage = role === "user" && index === filteredMessages.length - 1;
       if (isLastUserMessage && prescriptionUrls && prescriptionUrls.length > 0) {
-        const textContent = content + (prescriptionUrls.length > 0 
-          ? `\n\nI have ${prescriptionUrls.length} prescription(s) uploaded. Please analyze them and provide recommendations based on my pregnancy profile.` 
-          : "");
+        // Determine if images are prescriptions or chat images based on context
+        const hasPrescriptionFolder = prescriptionUrls.some(url => url.includes('/prescriptions/'));
+        const hasChatImageFolder = prescriptionUrls.some(url => url.includes('/chat-images/'));
+        
+        let imageContext = "";
+        if (hasPrescriptionFolder && hasChatImageFolder) {
+          imageContext = `\n\n[${prescriptionUrls.length} image(s) attached: prescriptions and/or health-related photos. Please analyze them carefully.]`;
+        } else if (hasPrescriptionFolder) {
+          imageContext = `\n\n[${prescriptionUrls.length} prescription/medical report(s) attached. Please analyze and provide guidance.]`;
+        } else if (hasChatImageFolder) {
+          imageContext = `\n\n[Health-related image attached. Please analyze it in context of the question.]`;
+        } else {
+          imageContext = `\n\n[${prescriptionUrls.length} medical image(s) attached.]`;
+        }
+        
+        const textContent = content + imageContext;
         
         formattedMessages.push({
           role: "user",
@@ -248,7 +261,7 @@ Provide this calculation FIRST, then add context.`;
               type: "text" as const, 
               text: textContent,
             },
-            ...prescriptionUrls.slice(0, 3).map((url) => ({
+            ...prescriptionUrls.slice(0, 5).map((url) => ({
               type: "image_url" as const,
               image_url: {
                 url: url,
@@ -273,9 +286,12 @@ Provide this calculation FIRST, then add context.`;
     }
 
     // Use a vision-capable model if we have images, otherwise use the 70B versatile model
-    const model = prescriptionUrls && prescriptionUrls.length > 0
-      ? "meta-llama/llama-4-scout-17b-16e-instruct" // Vision model for prescription images
+    const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
+    const model = hasImages
+      ? "llama-3.2-90b-vision-preview" // Vision model for images (better than 17b)
       : "llama-3.3-70b-versatile"; // More capable 70B model for better accuracy
+    
+    console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
     // Dynamic AI parameters based on question type
     const aiParams = needsComprehensive ? {
