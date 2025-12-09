@@ -287,19 +287,19 @@ Provide this calculation FIRST, then add context.`;
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
-    // Dynamic AI parameters based on question type
+    // Dynamic AI parameters based on question type (matching Groq API spec)
     const aiParams = needsComprehensive ? {
-      temperature: 0.5, // Higher for more creative list generation
-      max_tokens: 6000, // More tokens for comprehensive answers
-      top_p: 0.9, // Higher for more diverse responses
-      frequency_penalty: 0.2, // Lower to allow listing multiple items
-      presence_penalty: 0.1, // Lower to allow thorough coverage
+      temperature: 0.5,
+      max_completion_tokens: 6000, // Groq uses max_completion_tokens not max_tokens
+      top_p: 0.9,
+      stream: false,
+      stop: null,
     } : {
-      temperature: 0.4, // Balanced for specific questions
-      max_tokens: 4000, // Standard token limit
-      top_p: 0.85, // Focused responses
-      frequency_penalty: 0.3, // Moderate repetition prevention
-      presence_penalty: 0.2, // Moderate topic adherence
+      temperature: 0.4,
+      max_completion_tokens: 4000, // Groq uses max_completion_tokens not max_tokens
+      top_p: 0.85,
+      stream: false,
+      stop: null,
     };
 
     // Create timeout wrapper to prevent 502 errors
@@ -317,9 +317,8 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        ...aiParams,
-        stop: needsComprehensive ? [] : ["\n\n\n\n", "====", "----"], // No stop sequences for comprehensive answers
-      }),
+        ...aiParams, // Includes all correct Groq parameters
+      }) as Promise<any>, // Cast to avoid stream type conflict
       timeoutPromise
     ]);
 
