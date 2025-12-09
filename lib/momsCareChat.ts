@@ -261,7 +261,7 @@ export async function askMomsCare(
 
 2. Logged-out user: you have no personal data. Do not mention this unless the user directly asks.
 
-3. Logged-in user: ${actualProfileContext ? 'Profile data is provided below. Use it to personalize your answer.' : 'No profile data needed for this question. Answer generally.'}
+3. Logged-in user: ${actualProfileContext ? '⚠️ CRITICAL: Profile data (including health profile, daily entries, doctor Q&A, chat history, prescriptions) is provided below in clearly labeled sections. READ ALL SECTIONS CAREFULLY before answering. If user asks about their personal information (blood group, name, age, medications, conditions, allergies, address, phone, etc.), CHECK THE "HEALTH PROFILE" SECTION FIRST. Do NOT say you cannot find it or ask them to provide it if it is already in the profile data below.' : 'No profile data needed for this question. Answer generally.'}
 
 4. A question is health-related if it mentions pregnancy, symptoms, pain, medicine, journey safety, daily habits, or mother/baby well-being.
 
@@ -286,7 +286,7 @@ ${safetyPrompt}`;
     // Add specific instruction for current question type
     if (isLoggedIn) {
       if (actualProfileContext) {
-        systemPrompt += `\n\nCURRENT: Logged-in user, personal question. Profile data provided below - use it for personalized guidance.`;
+        systemPrompt += `\n\n⚠️ IMPORTANT: This is a LOGGED-IN user asking a PERSONAL question. Their complete profile data is provided below (Health Profile, Daily Entries, Doctor Q&A, Chat History, Prescriptions). ALWAYS CHECK THE PROFILE DATA SECTIONS BELOW FIRST before saying you don't have information. If they ask "what is my blood group?" or "my age?" or similar, find it in the HEALTH PROFILE section below and answer directly.`;
       } else {
         systemPrompt += `\n\nCURRENT: Logged-in user, general/educational question. Answer generally without using profile data.`;
       }
@@ -360,14 +360,11 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Trim contexts to avoid huge prompts causing 504/slow responses
-    const trimmedProfile = actualProfileContext ? actualProfileContext.slice(0, 1000) : "";
-    const trimmedDaily = (contextDecision.useDaily && dailyContextRaw) ? dailyContextRaw.slice(0, 500) : "";
-    const trimmedDoctorQA = (contextDecision.useDoctorQA && doctorQAContextRaw) ? doctorQAContextRaw.slice(0, 500) : "";
-
-    const profileNote = trimmedProfile ? `\n\n${trimmedProfile}` : "";
-    const dailyNote = trimmedDaily ? `\n\nRECENT DAILY NOTES:\n${trimmedDaily}` : "";
-    const doctorQANote = trimmedDoctorQA ? `\n\nRECENT DOCTOR ADVICE:\n${trimmedDoctorQA}` : "";
+    // Keep full context - don't trim! The profile data is already loaded only for personal questions
+    // and is structured with clear sections, so the AI needs to see ALL of it
+    const profileNote = actualProfileContext ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📋 MOTHER'S COMPLETE PROFILE DATA (READ CAREFULLY):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${actualProfileContext}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━` : "";
+    const dailyNote = (contextDecision.useDaily && dailyContextRaw) ? `\n\n${dailyContextRaw}` : "";
+    const doctorQANote = (contextDecision.useDoctorQA && doctorQAContextRaw) ? `\n\n${doctorQAContextRaw}` : "";
 
     // Filter and format messages - only include user and assistant messages
     const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");

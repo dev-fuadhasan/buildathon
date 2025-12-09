@@ -302,17 +302,26 @@ export async function shouldUseProfileData(
       messages: [
         {
           role: "system",
-          content: `You are a medical assistant. Decide if the user's question requires analyzing their personal profile data (pregnancy week, medical history, prescriptions, etc.) to give a good answer.
+          content: `You are a medical assistant. Decide if the user's question requires analyzing their personal profile data to answer.
 
-USE PROFILE DATA when:
-- Question is about user's specific situation: "my pain", "my medication", "should I"
-- Question needs personalization: "what should I eat", "can I travel"
-- Question about user's pregnancy stage, conditions, medications
+ALWAYS USE PROFILE DATA when user asks about THEIR OWN INFORMATION:
+- "my blood group", "amar blood group", "রক্তের গ্রুপ"
+- "my age", "amar boyosh", "বয়স"
+- "my name", "amar naam", "নাম"
+- "my address", "amar thikana", "ঠিকানা"
+- "my phone", "amar phone", "ফোন"
+- "my conditions", "amar somossa", "সমস্যা"
+- "my medications", "amar ousudh", "ঔষধ"
+- "my allergies", "amar allergy", "অ্যালার্জি"
+- Any question about "my/amar/আমার" personal details
+
+ALSO USE PROFILE DATA when:
+- Question needs personalization: "what should I eat", "can I travel", "should I"
+- Question about user's pregnancy stage, symptoms, prescriptions
 
 DON'T USE PROFILE DATA when:
-- General knowledge question: "What is anemia?", "Why is iron important?"
-- Educational question: "How does ultrasound work?"
-- General advice: "What should pregnant women eat?" (not "what should I eat")
+- Pure educational question: "What is anemia?", "Why is iron important?"
+- General advice not specific to user: "What should pregnant women eat?" (not "what should I eat")
 
 Respond with ONLY one word: "YES" or "NO"`,
         },
