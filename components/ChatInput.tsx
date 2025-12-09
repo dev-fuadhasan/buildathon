@@ -24,7 +24,13 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
     if ((!text && !currentImage) || sending || disabled) return;
     setSending(true);
     try {
-      await onSend(text || (lang === "bn" ? "ছবি দেখুন" : "See image"));
+      // If image without text, add contextual message
+      const messageToSend = text || (
+        lang === "bn" 
+          ? "এই ছবি দেখুন এবং বিশ্লেষণ করুন। আমার কোন পরামর্শ বা নির্দেশনা প্রয়োজন?" 
+          : "Please see and analyze this image. What guidance or advice do I need?"
+      );
+      await onSend(messageToSend);
       setValue("");
     } finally {
       setSending(false);

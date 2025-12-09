@@ -289,28 +289,24 @@ Provide this calculation FIRST, then add context.`;
     const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
     const model = hasImages
       ? "meta-llama/llama-4-maverick-17b-128e-instruct" // CORRECT Groq vision model
-      : "llama-3.3-70b-versatile"; // Text model for better accuracy
+      : "llama-3.3-70b-versatile"; // Text-only model for better accuracy
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
-    // Dynamic AI parameters based on question type (GROQ API SPEC)
+    // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
     const aiParams = needsComprehensive ? {
-      temperature: 0.5,
-      max_completion_tokens: 6000, // GROQ uses max_completion_tokens, NOT max_tokens
+      temperature: 0.6,
+      max_tokens: 6000,
       top_p: 0.9,
-      stream: false, // Required by Groq API
-      stop: null, // Use null instead of empty array
     } : {
-      temperature: 0.4,
-      max_completion_tokens: 4000, // GROQ uses max_completion_tokens, NOT max_tokens
+      temperature: 0.5,
+      max_tokens: 4000,
       top_p: 0.85,
-      stream: false, // Required by Groq API
-      stop: null, // Use null instead of array
     };
 
     // Create timeout wrapper to prevent 502 errors
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 50000); // 50 seconds
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 55000); // 55 seconds
     });
     
     const completion = await Promise.race([
@@ -323,8 +319,9 @@ Provide this calculation FIRST, then add context.`;
           },
           ...formattedMessages,
         ],
-        ...aiParams, // Includes all correct Groq API parameters (temperature, max_completion_tokens, top_p, stream, stop)
-      }) as Promise<any>, // Cast to avoid stream type conflict (we set stream: false)
+        ...aiParams,
+        stop: needsComprehensive ? null : ["\n\n\n\n"],
+      }),
       timeoutPromise
     ]);
 
