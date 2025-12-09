@@ -217,19 +217,24 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // AI-POWERED: Determine if question is personal and needs profile data
+    // STEP 1: Classify question to determine which data is needed
+    const { classifyQuestion, filterContext: filterContextByType } = await import("@/lib/questionClassifier");
     const { isPersonalQuestion } = await import("@/lib/chatHelper");
+    
+    const questionClassification = classifyQuestion(currentUserMessage);
     const isPersonal = await isPersonalQuestion(currentUserMessage);
     
-    console.log(`[Question Type] ${isPersonal ? "PERSONAL" : "GENERAL"}: "${currentUserMessage.substring(0, 50)}..."`);
+    console.log(`[Question Classification] Type: ${questionClassification.primary}${questionClassification.secondary ? ` + ${questionClassification.secondary}` : ''}, Personal: ${isPersonal}`);
     
-    // Load ALL profile data if AI determines question is personal
-    let profileContext: string | undefined = undefined;
-    let prescriptionUrls: string[] = [];
+    // STEP 2: Load ALL data types separately (only if personal question)
+    let rawProfileData: string | undefined = undefined;
+    let rawDailyData: string | undefined = undefined;
+    let rawDoctorQAData: string | undefined = undefined;
+    let allPrescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
     
     if (isPersonal) {
-      console.log("[AI Decision] Personal question - loading FULL profile data...");
+      console.log("[Data Loading] Personal question - loading all data types...");
       
       try {
         const { getMother, listDailyEntries, listMotherQuestions } = await import("@/lib/data");
@@ -242,10 +247,8 @@ export async function POST(req: NextRequest) {
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
           const months = weeks ? Math.round(weeks / 4.33) : undefined;
           
-          // Build comprehensive profile context
+          // Build PROFILE data (basic info only)
           const profileParts: string[] = [];
-          
-          // Basic profile (ALL fields from dashboard)
           profileParts.push("=== HEALTH PROFILE ===");
           if (mother.name) profileParts.push(`Full Name: ${mother.name}`);
           if (mother.email) profileParts.push(`Email: ${mother.email}`);
@@ -261,8 +264,10 @@ export async function POST(req: NextRequest) {
           if (mother.medications) profileParts.push(`Current Medications: ${mother.medications}`);
           if (mother.emergencyContact) profileParts.push(`Emergency Contact Name: ${mother.emergencyContact}`);
           if (mother.emergencyPhone) profileParts.push(`Emergency Contact Phone: ${mother.emergencyPhone}`);
+          rawProfileData = profileParts.join("\n");
+          weeksPregnant = weeks;
           
-          // Load daily entries
+          // Build DAILY ENTRIES data (separate)
           try {
             const dailyEntries = await listDailyEntries(user!.id);
             const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
@@ -271,19 +276,18 @@ export async function POST(req: NextRequest) {
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .slice(0, 10);
             
-            console.log(`[Data Load] Daily Entries: ${recentEntries.length} entries found`);
-            
             if (recentEntries.length > 0) {
-              profileParts.push("\n=== RECENT DAILY ENTRIES ===");
+              const dailyParts: string[] = ["=== RECENT DAILY ENTRIES ==="];
               recentEntries.forEach((entry, idx) => {
-                profileParts.push(`${idx + 1}. [${entry.date}] ${entry.entry}`);
+                dailyParts.push(`${idx + 1}. [${entry.date}] ${entry.entry}`);
               });
+              rawDailyData = dailyParts.join("\n");
             }
           } catch (err) {
             console.error("Failed to load daily entries:", err);
           }
           
-          // Load recent doctor Q&A
+          // Build DOCTOR Q&A data (separate)
           try {
             const questions = await listMotherQuestions(user!.id);
             const recentQAs = questions
@@ -291,74 +295,62 @@ export async function POST(req: NextRequest) {
               .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
               .slice(0, 5);
             
-            console.log(`[Data Load] Doctor Q&A: ${recentQAs.length} questions found`);
-            
             if (recentQAs.length > 0) {
-              profileParts.push("\n=== RECENT DOCTOR Q&A ===");
+              const doctorQAParts: string[] = ["=== RECENT DOCTOR Q&A ==="];
               recentQAs.forEach((qa, idx) => {
-                profileParts.push(`${idx + 1}. Q: ${qa.question}`);
-                profileParts.push(`   A: ${qa.answer}`);
+                doctorQAParts.push(`${idx + 1}. Q: ${qa.question}`);
+                doctorQAParts.push(`   A: ${qa.answer}`);
               });
+              rawDoctorQAData = doctorQAParts.join("\n");
             }
           } catch (err) {
             console.error("Failed to load doctor Q&A:", err);
           }
           
-          // Load chat history (previous conversations)
-          try {
-            const { getChatHistory } = await import("@/lib/data");
-            const history = await getChatHistory(user!.id);
-            
-            console.log(`[Data Load] Chat History: ${history?.messages?.length || 0} messages found`);
-            
-            if (history?.messages && history.messages.length > 0) {
-              const recentHistory = history.messages
-                .slice(-10) // Last 10 messages
-                .map((msg, idx) => `${idx + 1}. ${msg.role === "user" ? "Mother" : "AI"}: ${msg.content.substring(0, 150)}...`);
-              
-              if (recentHistory.length > 0) {
-                profileParts.push("\n=== RECENT CHAT HISTORY ===");
-                profileParts.push(...recentHistory);
-              }
-            }
-          } catch (err) {
-            console.error("Failed to load chat history:", err);
-          }
-          
-          profileContext = profileParts.length > 0 ? profileParts.join("\n") : undefined;
-          weeksPregnant = weeks;
-          
-          // Load prescriptions (limit to 3 for speed)
+          // Load prescriptions
           try {
             const prefix = `prescriptions/${user!.id}/`;
             const objects = await listObjects(prefix);
-            prescriptionUrls = await Promise.all(
+            allPrescriptionUrls = await Promise.all(
               (objects || []).slice(0, 3).map(async (obj) => await signedUrl(obj.Key!))
             );
-            console.log(`[Data Load] Prescriptions: ${prescriptionUrls.length} files found`);
           } catch (err) {
             console.error("Failed to fetch prescriptions:", err);
           }
           
           // Add chat image if provided
           if (imageUrl) {
-            prescriptionUrls.push(imageUrl);
+            allPrescriptionUrls.push(imageUrl);
           }
-          
-          console.log(`[✅ FULL PROFILE LOADED] Sections: ${profileParts.length}, Prescriptions: ${prescriptionUrls.length}, Total context chars: ${profileContext?.length || 0}`);
         }
       } catch (err) {
-        console.error("Failed to fetch mother profile:", err);
+        console.error("Failed to fetch mother data:", err);
       }
     } else {
       // For GENERAL questions, only add chat image if provided
       if (imageUrl) {
-        prescriptionUrls = [imageUrl];
+        allPrescriptionUrls = [imageUrl];
       }
-      console.log("[AI Decision] General question - skipping profile load");
+      console.log("[Data Loading] General question - skipping data load");
     }
     
-    // Get AI response with profile data (if personal)
+    // STEP 3: Filter data based on question classification
+    const filteredData = filterContextByType(questionClassification, {
+      profile: rawProfileData,
+      prescriptions: allPrescriptionUrls,
+      daily: rawDailyData,
+      doctorQA: rawDoctorQAData,
+    });
+    
+    // STEP 4: Use ONLY filtered data
+    const profileContext = filteredData.filteredProfile;
+    const prescriptionUrls = filteredData.filteredPrescriptions || [];
+    const dailyContext = filteredData.filteredDaily;
+    const doctorQAContext = filteredData.filteredDoctorQA;
+    
+    console.log(`[✅ FILTERED DATA] Profile: ${!!profileContext}, Prescriptions: ${prescriptionUrls.length}, Daily: ${!!dailyContext}, DoctorQA: ${!!doctorQAContext}`);
+    
+    // Get AI response with ONLY relevant filtered data
     let reply: string;
     try {
       const timeoutPromise = new Promise<string>((_, reject) => {
@@ -366,7 +358,11 @@ export async function POST(req: NextRequest) {
       });
       
       reply = await Promise.race([
-        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
+        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, {
+          dailyContext,
+          doctorQAContext,
+          motherId: user!.id,
+        }),
         timeoutPromise
       ]) as string;
       

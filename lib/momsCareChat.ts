@@ -193,42 +193,18 @@ export async function askMomsCare(
     // AI-BASED DECISIONS
     // ==========================================
     
-    // Available extra contexts
+    // Available extra contexts (already filtered by question classifier)
     const dailyContextRaw = extraContexts?.dailyContext;
     const doctorQAContextRaw = extraContexts?.doctorQAContext;
     const motherId = extraContexts?.motherId;
 
-    // Decision 1: AI decides which contexts to include (profile, prescriptions, daily, doctorQA)
-    const contextDecision = await decideContextNeeds(
-      lastUserMessage,
-      isPersonal || false,
-      !!(prescriptionUrls && prescriptionUrls.length > 0),
-      !!profileContext,
-      !!dailyContextRaw,
-      !!doctorQAContextRaw
-    );
-
-    // Apply profile usage decision (still keep legacy shouldUseProfileData for compatibility)
-    let actualProfileContext: string | undefined = undefined;
-    if (contextDecision.useProfile && profileContext) {
-      const useProfile = await shouldUseProfileData(lastUserMessage, profileContext);
-      if (useProfile) {
-        actualProfileContext = profileContext;
-        console.log(`[AI Decision] Using profile data for personalized answer`);
-      } else {
-        console.log(`[AI Decision] NOT using profile data - question is general/educational`);
-      }
-    }
-
-    // Decision 2: Are follow-up questions needed?
-    const followUpDecision = await needsFollowUpQuestions(lastUserMessage, isPersonal || false, messages);
-    const followUpInstruction = followUpDecision.needsFollowUp && followUpDecision.questions.length > 0
-      ? `\n\nFOLLOW-UP QUESTIONS NEEDED: After your main answer, ask these follow-up questions naturally in the conversation:\n${followUpDecision.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nAsk these questions in a conversational way, not as a list.`
-      : "";
+    // Use provided context as-is (already filtered before calling this function)
+    let actualProfileContext: string | undefined = profileContext;
     
-    if (followUpDecision.needsFollowUp) {
-      console.log(`[AI Decision] Follow-up questions needed: ${followUpDecision.questions.length}`);
-    }
+    console.log(`[Context Usage] Profile: ${!!actualProfileContext}, Daily: ${!!dailyContextRaw}, DoctorQA: ${!!doctorQAContextRaw}, Prescriptions: ${prescriptionUrls?.length || 0}`);
+    
+    // Let AI naturally decide if follow-up questions are needed (no extra AI call)
+    const followUpInstruction = "";
     
     // Check if question needs comprehensive answer (more selective criteria)
     const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki ") || 
@@ -252,30 +228,21 @@ export async function askMomsCare(
       ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
     
-    // System prompt - MomsCare AI (SIMPLIFIED for better accuracy)
-    let systemPrompt = `You are MomsCare AI, a pregnancy and maternal health assistant.${languageInstruction}${imageInstruction}
+    // System prompt - ULTRA SIMPLIFIED for maximum accuracy
+    let systemPrompt = `You are MomsCare AI, a pregnancy health assistant.${languageInstruction}${imageInstruction}
 
 RULES:
-1. Only answer health/pregnancy questions. For non-health topics, say: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
+1. Only answer health/pregnancy questions. Non-health → say: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
 
-2. ${actualProfileContext ? 'USER DATA: The mother\'s personal data is provided below in labeled sections. Find the answer in the appropriate section and respond directly.' : 'No personal data available. Answer generally.'}
+2. ${actualProfileContext || dailyContextRaw || doctorQAContextRaw ? 'User data is provided below with clear labels. Use it to answer.' : 'No personal data. Answer generally.'}
 
-3. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, difficulty breathing, high fever with symptoms.
+3. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
 
 4. ${answerLengthInstruction}
 
-5. Do not invent symptoms or information not provided by the user.
-
 ${safetyPrompt}`;
     
-    // Add specific instruction for logged-in users with profile data
-    if (isLoggedIn && actualProfileContext) {
-      systemPrompt += `\n\nDATA AVAILABLE: User's personal data is organized below. Answer questions directly from the relevant data.${followUpInstruction}`;
-    } else if (isLoggedIn) {
-      systemPrompt += `\n\nGeneral question - no personal data needed.`;
-    } else {
-      systemPrompt += `\n\nLogged-out user - no personal data available.`;
-    }
+    // No extra instructions needed - data speaks for itself
 
     // Extract weeks pregnant for RAG
     let trimester: number | undefined;
@@ -343,10 +310,10 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Present data simply and clearly - let AI parse it naturally
+    // Present ONLY filtered data - already selected by question classifier
     const profileNote = actualProfileContext ? `\n\n${actualProfileContext}` : "";
-    const dailyNote = (contextDecision.useDaily && dailyContextRaw) ? `\n\n${dailyContextRaw}` : "";
-    const doctorQANote = (contextDecision.useDoctorQA && doctorQAContextRaw) ? `\n\n${doctorQAContextRaw}` : "";
+    const dailyNote = dailyContextRaw ? `\n\n${dailyContextRaw}` : "";
+    const doctorQANote = doctorQAContextRaw ? `\n\n${doctorQAContextRaw}` : "";
 
     // Filter and format messages - only include user and assistant messages
     const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
