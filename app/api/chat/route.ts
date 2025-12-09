@@ -226,6 +226,8 @@ export async function POST(req: NextRequest) {
     // STEP 2: Load profile data ONLY if question is PERSONAL
     // ==========================================
     let profileContext: string | undefined = undefined;
+    let dailyContext: string | undefined = undefined;
+    let doctorQAContext: string | undefined = undefined;
     let prescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
     
@@ -240,8 +242,10 @@ export async function POST(req: NextRequest) {
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
           const months = weeks ? Math.round(weeks / 4.33) : undefined;
           
-          // Build comprehensive profile context
+          // Build comprehensive profile context (basic)
           const profileParts: string[] = [];
+          const dailyParts: string[] = [];
+          const doctorQAParts: string[] = [];
           
           // Basic profile
           if (mother.name) profileParts.push(`নাম: ${mother.name}`);
@@ -267,7 +271,7 @@ export async function POST(req: NextRequest) {
               .map(entry => entry.entry);
             
             if (recentEntries.length > 0) {
-              profileParts.push(`\nসাম্প্রতিক দৈনিক এন্ট্রি:\n${recentEntries.join("\n")}`);
+              dailyParts.push(`${recentEntries.join("\n")}`);
             }
           } catch (err) {
             console.error("Failed to load daily entries:", err);
@@ -283,7 +287,7 @@ export async function POST(req: NextRequest) {
               .map(q => `Q: ${q.question}\nA: ${q.answer}`);
             
             if (recentQAs.length > 0) {
-              profileParts.push(`\nসাম্প্রতিক ডাক্তারের পরামর্শ:\n${recentQAs.join("\n\n")}`);
+              doctorQAParts.push(`${recentQAs.join("\n\n")}`);
             }
           } catch (err) {
             console.error("Failed to load questions:", err);
@@ -292,6 +296,8 @@ export async function POST(req: NextRequest) {
           profileContext = profileParts.length > 0 
             ? `MOTHER PROFILE DATA:\n${profileParts.join("\n")}`
             : undefined;
+          dailyContext = dailyParts.length > 0 ? dailyParts.join("\n") : undefined;
+          doctorQAContext = doctorQAParts.length > 0 ? doctorQAParts.join("\n\n") : undefined;
           weeksPregnant = weeks;
           
           // Load prescriptions
@@ -400,7 +406,10 @@ export async function POST(req: NextRequest) {
       
       // Send messages directly to AI in original language (no translation)
       reply = await Promise.race([
-        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true),
+        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, {
+          dailyContext,
+          doctorQAContext,
+        }),
         timeoutPromise
       ]) as string;
       

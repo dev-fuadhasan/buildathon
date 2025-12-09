@@ -11,6 +11,70 @@ export type ChatMessage = {
   content: string;
 };
 
+type ContextDecision = {
+  useProfile: boolean;
+  usePrescriptions: boolean;
+  useDaily: boolean;
+  useDoctorQA: boolean;
+};
+
+async function decideContextNeeds(
+  userMessage: string,
+  isPersonal: boolean,
+  hasImages: boolean,
+  hasProfileContext: boolean,
+  hasDaily: boolean,
+  hasDoctorQA: boolean
+): Promise<ContextDecision> {
+  // Default/fallback decision
+  const fallback: ContextDecision = {
+    useProfile: isPersonal && hasProfileContext,
+    usePrescriptions: hasImages,
+    useDaily: isPersonal && hasDaily,
+    useDoctorQA: isPersonal && hasDoctorQA,
+  };
+
+  if (!isGroqConfigured()) {
+    return fallback;
+  }
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content: `You are a medical assistant. Decide which context sources to load to answer the user's question. Be efficient: include only what is likely useful.\nRespond in JSON ONLY:\n{\n  "useProfile": true/false,\n  "usePrescriptions": true/false,\n  "useDaily": true/false,\n  "useDoctorQA": true/false\n}\nGuidance:\n- If question is personal about the user and health → likely use profile.\n- If symptoms/meds/reports/prescriptions mentioned → consider prescriptions.\n- If question about habits, mood, sleep, diet, daily symptoms → consider daily.\n- If question about prior doctor advice → consider doctorQA.\n- If general/educational → usually skip.\nKeep answers short. JSON only.`,
+        },
+        {
+          role: "user",
+          content: `Question: ${userMessage}\nIs personal: ${isPersonal}\nHas images uploaded: ${hasImages}\nAvailable: profile=${hasProfileContext}, daily=${hasDaily}, doctorQA=${hasDoctorQA}\nWhich contexts should be included?`,
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 80,
+    });
+
+    const resp = completion.choices?.[0]?.message?.content?.trim() || "";
+    const match = resp.match(/\{[\s\S]*\}/);
+    if (!match) return fallback;
+    const parsed = JSON.parse(match[0]);
+
+    const decision: ContextDecision = {
+      useProfile: !!parsed.useProfile && hasProfileContext,
+      usePrescriptions: !!parsed.usePrescriptions && hasImages,
+      useDaily: !!parsed.useDaily && hasDaily,
+      useDoctorQA: !!parsed.useDoctorQA && hasDoctorQA,
+    };
+
+    console.log(`[Context Decision] profile=${decision.useProfile} prescriptions=${decision.usePrescriptions} daily=${decision.useDaily} doctorQA=${decision.useDoctorQA}`);
+    return decision;
+  } catch (err) {
+    console.error("[Context Decision] AI failed, using fallback:", (err as any)?.message);
+    return fallback;
+  }
+}
+
 /**
  * Ask the MomsCare assistant a question with optional profile context and prescription images.
  * Completely rewritten for better accuracy, relevance, and response quality.
@@ -22,6 +86,10 @@ export async function askMomsCare(
   weeksPregnant?: number,
   isPersonal?: boolean,
   isLoggedIn?: boolean,
+  extraContexts?: {
+    dailyContext?: string;
+    doctorQAContext?: string;
+  }
 ): Promise<string> {
   if (!isGroqConfigured()) {
     throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
@@ -89,9 +157,23 @@ export async function askMomsCare(
     // AI-BASED DECISIONS
     // ==========================================
     
-    // Decision 1: Should we use profile data? (Only for logged-in users)
+    // Available extra contexts
+    const dailyContextRaw = extraContexts?.dailyContext;
+    const doctorQAContextRaw = extraContexts?.doctorQAContext;
+
+    // Decision 1: AI decides which contexts to include (profile, prescriptions, daily, doctorQA)
+    const contextDecision = await decideContextNeeds(
+      lastUserMessage,
+      isPersonal || false,
+      !!(prescriptionUrls && prescriptionUrls.length > 0),
+      !!profileContext,
+      !!dailyContextRaw,
+      !!doctorQAContextRaw
+    );
+
+    // Apply profile usage decision (still keep legacy shouldUseProfileData for compatibility)
     let actualProfileContext: string | undefined = undefined;
-    if (isLoggedIn && profileContext) {
+    if (contextDecision.useProfile && profileContext) {
       const useProfile = await shouldUseProfileData(lastUserMessage, profileContext);
       if (useProfile) {
         actualProfileContext = profileContext;
@@ -100,7 +182,7 @@ export async function askMomsCare(
         console.log(`[AI Decision] NOT using profile data - question is general/educational`);
       }
     }
-    
+
     // Decision 2: Are follow-up questions needed?
     const followUpDecision = await needsFollowUpQuestions(lastUserMessage, isPersonal || false, messages);
     const followUpInstruction = followUpDecision.needsFollowUp && followUpDecision.questions.length > 0
@@ -241,14 +323,14 @@ Provide this calculation FIRST, then add context.`;
       }
     }
     
-    // Trim profile context to avoid huge prompts causing 504/slow responses
-    const trimmedProfile = actualProfileContext
-      ? actualProfileContext.slice(0, 1800)
-      : "";
+    // Trim contexts to avoid huge prompts causing 504/slow responses
+    const trimmedProfile = actualProfileContext ? actualProfileContext.slice(0, 1500) : "";
+    const trimmedDaily = (contextDecision.useDaily && dailyContextRaw) ? dailyContextRaw.slice(0, 800) : "";
+    const trimmedDoctorQA = (contextDecision.useDoctorQA && doctorQAContextRaw) ? doctorQAContextRaw.slice(0, 800) : "";
 
-    const profileNote = trimmedProfile
-      ? `\n\n${trimmedProfile}`
-      : "";
+    const profileNote = trimmedProfile ? `\n\n${trimmedProfile}` : "";
+    const dailyNote = trimmedDaily ? `\n\nRECENT DAILY NOTES:\n${trimmedDaily}` : "";
+    const doctorQANote = trimmedDoctorQA ? `\n\nRECENT DOCTOR ADVICE:\n${trimmedDoctorQA}` : "";
 
     // Filter and format messages - only include user and assistant messages
     const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
@@ -344,7 +426,7 @@ Provide this calculation FIRST, then add context.`;
         messages: [
           { 
             role: "system", 
-            content: systemPrompt + profileNote + guidelinesContext + calculationContext + datasetContext 
+            content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
           },
           ...formattedMessages,
         ],
