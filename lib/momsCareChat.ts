@@ -2,7 +2,7 @@ import { groq, isGroqConfigured } from "./groqClient";
 import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
 import { searchDatasetByLanguage, searchDatasetDual, formatDatasetContext, type Language } from "./dualDatasetLoader";
-import { detectLanguage } from "./translation";
+import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
 import { shouldUseProfileData, needsFollowUpQuestions } from "./chatHelper";
 
@@ -125,6 +125,7 @@ export async function askMomsCare(
     dailyContext?: string;
     doctorQAContext?: string;
     motherId?: string;
+    translatedQuery?: string; // Pre-translated query to avoid duplicate translation
   }
 ): Promise<string> {
   if (!isGroqConfigured()) {
@@ -146,6 +147,8 @@ export async function askMomsCare(
     // ==========================================
     const forcedLanguage = getForcedLanguage();
     const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
+    
+    // Response language instruction: Match user's input language
     const languageInstruction = userLanguage === "bn"
       ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
       : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
@@ -153,29 +156,58 @@ export async function askMomsCare(
     // ==========================================
     // STEP 3: Search dual dataset based on language
     // ==========================================
-    // ML-ENGINEERED DATASET SEARCH (No translation needed!)
+    // For better search results: Translate Banglish to English for search
+    // But always respond in the user's original language
     // ==========================================
     
     // Check if query is Banglish (romanized Bangla without Bengali script)
     const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
     const isBanglish = userLanguage === "bn" && !hasBengaliScript;
     
-    let relevantDatasetItems;
+    let relevantDatasetItems: any[] = [];
+    let searchQuery = lastUserMessage; // Default: use original query
     
     if (isBanglish) {
-      // 🎯 DUAL SEARCH: Search BOTH EN + BN datasets simultaneously
-      // No translation = No translation errors!
+      // 🎯 For Banglish: Translate to English for better search, then search with translated query
       console.log(`[Dual Search] Banglish detected: "${lastUserMessage}"`);
-      console.log(`[Dual Search] Searching both EN + BN datasets...`);
-      relevantDatasetItems = searchDatasetDual(lastUserMessage, 3);
+      
+      // Use pre-translated query if available (to avoid duplicate translation)
+      let translatedQuery = extraContexts?.translatedQuery;
+      
+      if (!translatedQuery) {
+        // Only translate if not already provided
+        try {
+          translatedQuery = await translateToEnglish(lastUserMessage);
+          console.log(`[Dual Search] Translated to English for search: "${translatedQuery}"`);
+        } catch (error) {
+          console.error(`[Dual Search] Translation failed, using original Banglish:`, error);
+          // Fallback: search with original Banglish
+          relevantDatasetItems = searchDatasetDual(lastUserMessage, 3);
+        }
+      } else {
+        console.log(`[Dual Search] Using pre-translated query: "${translatedQuery}"`);
+      }
+      
+      if (translatedQuery) {
+        searchQuery = translatedQuery; // Use translated query for search
+        // Search with translated English query for better results
+        relevantDatasetItems = searchDatasetByLanguage(translatedQuery, "en", 3);
+      }
+    } else if (userLanguage === "en") {
+      // English query: Search English dataset
+      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "en", 3);
     } else {
-      // Normal search for English or Bangla with script
-      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, userLanguage, 3);
+      // Bangla with script: Search Bangla dataset
+      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "bn", 3);
     }
     
     const datasetContext = relevantDatasetItems.length > 0 
       ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage) // Format in user's expected language
       : "";
+    
+    // Log language and response expectation
+    console.log(`[Language] User input language: ${userLanguage} (${isBanglish ? 'Banglish' : hasBengaliScript ? 'Bangla with script' : 'English'})`);
+    console.log(`[Language] Expected response language: ${userLanguage === "bn" ? "Bangla (বাংলা)" : "English"}`);
     
     // Log dataset context usage for debugging
     if (relevantDatasetItems.length > 0) {
@@ -208,52 +240,79 @@ export async function askMomsCare(
     // Let AI naturally decide if follow-up questions are needed (no extra AI call)
     const followUpInstruction = "";
     
-    // Check if question needs comprehensive answer (more selective criteria)
-    const needsComprehensive = lastUserMessage.toLowerCase().includes("ki ki ") || 
-                               lastUserMessage.toLowerCase().includes("what things") ||
-                               lastUserMessage.toLowerCase().includes("what are the") ||
-                               lastUserMessage.toLowerCase().includes("list of") ||
-                               lastUserMessage.toLowerCase().includes("tips for") ||
-                               lastUserMessage.toLowerCase().includes("guidelines for") ||
-                               lastUserMessage.toLowerCase().includes("mene colbe") ||
-                               lastUserMessage.toLowerCase().includes("mene chole");
-    
-    // Dynamic answer length instruction
-    const answerLengthInstruction = needsComprehensive
-      ? "Provide a COMPREHENSIVE answer with clear points or bullet list when needed. For 'what things' or 'ki ki' questions, list ALL relevant items."
-      : "Keep answers concise but complete. For simple questions, give short answers. For complex topics, provide adequate details.";
+    // AI will intelligently detect question type - no keyword matching needed
+    // The system prompt will handle understanding intent
     
     // Debug logging
-    console.log(`[AI Mode] Comprehensive: ${needsComprehensive}, HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}, UseProfile: ${!!actualProfileContext}`);
+    console.log(`[AI Mode] HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}, UseProfile: ${!!actualProfileContext}`);
     
     const imageInstruction = hasImage 
       ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
       : "";
     
-    // System prompt - ULTRA SIMPLIFIED for maximum accuracy
-    let systemPrompt = `You are MomsCare AI, a pregnancy health assistant.${languageInstruction}${imageInstruction}
+    // Language-aware messages
+    const greetingResponse = userLanguage === "bn"
+      ? 'হাই! আমি MomsCare AI। আমি গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত প্রশ্নে সাহায্য করতে পারি। আপনি কী জানতে চান?'
+      : 'Hi! I\'m MomsCare AI. I can help you with pregnancy and health-related questions. What would you like to know?';
+    
+    const thanksResponse = userLanguage === "bn"
+      ? 'আপনাকে স্বাগতম! আর কোনো প্রশ্ন থাকলে জানাবেন।'
+      : 'You\'re welcome! Feel free to ask if you have any more questions.';
+    
+    const nonHealthMessage = userLanguage === "bn" 
+      ? "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি। আপনার কোনো স্বাস্থ্য-সম্পর্কিত প্রশ্ন আছে?"
+      : "I can only help with health and pregnancy-related questions. Do you have any health-related questions?";
+    
+    // System prompt - Enhanced with intelligent question understanding
+    let systemPrompt = `You are MomsCare AI, a friendly and helpful pregnancy health assistant.${languageInstruction}${imageInstruction}
 
-RULES:
-1. Answer ALL pregnancy and health questions. This includes questions with these terms:
+CRITICAL RULES:
+
+1. HANDLE GREETINGS AND CASUAL MESSAGES:
+   - For greetings (hi, hello, hey, good morning, good evening, good afternoon, good night, namaste, assalamu alaikum, হাই, নমস্কার, আসসালামু আলাইকুম, etc.):
+     Respond warmly: "${greetingResponse}"
+   
+   - For thanks/gratitude (thanks, thank you, ধন্যবাদ, shukriya, ধন্যবাদ, etc.):
+     Respond politely: "${thanksResponse}"
+   
+   - For casual chat (not health-related): Politely redirect to health topics
+     Say: "${nonHealthMessage}"
+
+2. UNDERSTAND QUESTION INTENT - Before answering, detect what the user wants:
+   - "Which / What / ki ki / kon kon" → They want a list of specific, named items.
+     → Always give clear, specific names (not categories).
+     Example: "Which items?" → List specific items (e.g., Spinach, Salmon, Walking, Yoga).
+   - "How / kivabe" → They want step-by-step instructions
+   - "Why / keno" → They want explanations
+   - "What is / ki" → They want definitions/explanations
+   - "Should I / korte hobe / ki korbo" → They want advice/recommendations
+
+3. ANSWER FORMAT - Match the format to the intent:
+   - List questions → Numbered or bulleted list with specific item names
+   - How-to questions → Step-by-step
+   - Why/What questions → Clear explanation
+   - General questions → Simple, focused answer
+   - Match the detail level to the question - if they ask for a list, give a list with names
+
+4. Answer ALL pregnancy and health questions. This includes questions with these terms:
    - Pregnancy: pregnant, pregnancy, gorbhobostha, gorvoboti, gorbhoboti, gorvo, গর্ভবতী, গর্ভাবস্থা
    - Mother: mother, ma, maa, মা, mayera, মায়েরা
    - Baby: baby, shishu, শিশু, baccha, বাচ্চা
    - Health: health, স্বাস্থ্য, sasto, swasthyo
    
-   Non-health (greetings, casual chat) → say: "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি।"
+5. ${actualProfileContext || dailyContextRaw || doctorQAContextRaw ? 'User data provided below with labels. Use it to answer.' : hasImage ? 'No profile data available. If user sent images, ALWAYS analyze them. For questions with "my/amar", use the images to provide personalized guidance.' : 'No personal data. Answer generally.'}
 
-2. ${actualProfileContext || dailyContextRaw || doctorQAContextRaw ? 'User data provided below with labels. Use it to answer.' : hasImage ? 'No profile data available. If user sent images, ALWAYS analyze them. For questions with "my/amar", use the images to provide personalized guidance.' : 'No personal data. Answer generally.'}
-
-3. CRITICAL - DATASET USAGE:
+6. CRITICAL - DATASET USAGE:
    - Reference data (Q&A examples) may be provided below
    - ONLY use reference data if it's DIRECTLY RELEVANT to the user's EXACT question
    - If reference Q&A is about DIFFERENT topics (e.g. user asks about running but reference is about food), IGNORE IT COMPLETELY
    - Answer from your OWN KNOWLEDGE if reference data doesn't match
    - NEVER mix topics: If user asks about exercise, don't answer about food/nutrition
+   - If user asks for a LIST and reference data doesn't have a list, use your knowledge to provide a comprehensive list
 
-4. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
+7. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
 
-5. ${answerLengthInstruction}
+8. Ask a follow-up only if absolutely necessary to give a correct answer.Otherwise answer directly.
 
 ${safetyPrompt}`;
     
@@ -403,14 +462,11 @@ Provide this calculation FIRST, then add context.`;
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
 
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
-    const aiParams = needsComprehensive ? {
-      temperature: 0.5,
-      max_tokens: 2600, // further reduce latency
+    // Use balanced parameters that work well for all question types
+    const aiParams = {
+      temperature: 0.5, // Balanced for both factual and creative responses
+      max_tokens: 2400, // Enough for comprehensive lists and detailed answers
       top_p: 0.9,
-    } : {
-      temperature: 0.4,
-      max_tokens: 1800, // further reduce latency
-      top_p: 0.85,
     };
 
     // Create timeout wrapper to prevent 502/504 errors
@@ -429,7 +485,7 @@ Provide this calculation FIRST, then add context.`;
           ...formattedMessages,
         ],
         ...aiParams,
-        stop: needsComprehensive ? null : ["\n\n\n\n"],
+        stop: ["\n\n\n\n"], // Stop on excessive newlines
       }),
       timeoutPromise
     ]);
@@ -448,29 +504,31 @@ Provide this calculation FIRST, then add context.`;
     // Remove excessive newlines (keep up to 2 for formatting)
     cleanedReply = cleanedReply.replace(/\n{4,}/g, "\n\n");
     
-    // Only remove EXACT duplicate consecutive sentences (not similar ones)
-    if (!needsComprehensive) {
-      // For non-comprehensive answers, do light deduplication
-      const lines = cleanedReply.split('\n');
-      const dedupedLines: string[] = [];
-      let lastLine = '';
-      
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        // Only skip if EXACTLY the same as previous line
-        if (trimmedLine !== lastLine) {
-          dedupedLines.push(line);
-          lastLine = trimmedLine;
-        }
+    // Remove EXACT duplicate consecutive sentences (light deduplication)
+    const lines = cleanedReply.split('\n');
+    const dedupedLines: string[] = [];
+    let lastLine = '';
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      // Only skip if EXACTLY the same as previous line
+      if (trimmedLine !== lastLine) {
+        dedupedLines.push(line);
+        lastLine = trimmedLine;
       }
-      cleanedReply = dedupedLines.join('\n');
     }
+    cleanedReply = dedupedLines.join('\n');
     
     // Final minimal cleanup
     cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces before newlines
     cleanedReply = cleanedReply.replace(/\n\s+/g, "\n"); // Remove leading spaces after newlines
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.trim();
+    
+    // Log response language for verification
+    const responseLanguage = detectLanguage(cleanedReply);
+    console.log(`[Response] Generated response language: ${responseLanguage} (expected: ${userLanguage})`);
+    console.log(`[Response] Response preview: "${cleanedReply.substring(0, 100)}..."`);
     
     return cleanedReply;
   } catch (error: any) {

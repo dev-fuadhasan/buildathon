@@ -1,43 +1,4 @@
-import { groq, isGroqConfigured } from "./groqClient";
-
-// Translation cache to reduce duplicate API calls
-const translationCache = new Map<string, string>();
-const CACHE_MAX_SIZE = 1000; // Max 1000 cached translations
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours TTL
-
-interface CachedTranslation {
-  value: string;
-  timestamp: number;
-}
-
-const translationCacheWithTTL = new Map<string, CachedTranslation>();
-
-// Clean old cache entries periodically
-function cleanCache(): void {
-  const now = Date.now();
-  for (const [key, entry] of translationCacheWithTTL.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
-      translationCacheWithTTL.delete(key);
-    }
-  }
-  
-  // Limit cache size
-  if (translationCacheWithTTL.size > CACHE_MAX_SIZE) {
-    const entries = Array.from(translationCacheWithTTL.entries());
-    entries.sort((a, b) => a[1].timestamp - b[1].timestamp); // Oldest first
-    const toDelete = entries.slice(0, entries.length - CACHE_MAX_SIZE);
-    for (const [key] of toDelete) {
-      translationCacheWithTTL.delete(key);
-    }
-  }
-}
-
-// Run cleanup periodically (only in Node.js environments, not in serverless)
-if (typeof setInterval !== 'undefined' && typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-  // In development, clean cache every hour
-  setInterval(cleanCache, 60 * 60 * 1000);
-}
-// In production/serverless, cleanup happens on-demand during cache operations
+import { translateWithGroq, isTranslationConfigured } from "./translationClient";
 
 /**
  * Detect if text contains Bangla/Bengali characters or is in Banglish
@@ -75,98 +36,33 @@ export function detectLanguage(text: string): "en" | "bn" {
 }
 
 /**
- * Translate text from Bangla/Banglish to English using Groq AI
- * Enhanced with medical/pregnancy term awareness
+ * Translate text from Bangla/Banglish to English using Groq
+ * Simple translation - just translate, nothing more
  */
 export async function translateToEnglish(text: string): Promise<string> {
-  if (!isGroqConfigured()) {
-    throw new Error("Groq API is not configured");
+  if (!isTranslationConfigured()) {
+    throw new Error("Translation API is not configured. Set TRANS_KEY_1 through TRANS_KEY_20");
   }
 
-  if (!groq) {
-    throw new Error("Groq client is not initialized");
-  }
-
-  // Check cache first (case-insensitive, trimmed)
-  const cacheKey = text.trim().toLowerCase();
-  const cached = translationCacheWithTTL.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    console.log(`[Translation] Cache hit for: "${text.substring(0, 50)}..."`);
-    return cached.value;
-  }
+  console.log(`[Translation] Input (BN/Banglish): "${text}"`);
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: `You are a professional medical translator specializing in pregnancy and maternal health. Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English.
+    // Simple translation prompt
+    const prompt = `Translate the following text from Bengali (Bangla) or Banglish (Bengali written in English) to clear, accurate English. Preserve punctuation and question marks. Only return the translated text, nothing else.
 
-CRITICAL RULES:
-1. PRESERVE PUNCTUATION: If the original has a question mark (?), the translation MUST have a question mark. If it's a statement, keep it as a statement.
-2. PRESERVE TONE: Questions stay questions, statements stay statements.
-3. ACCURATE MEDICAL TERMS: Translate medical terms precisely, don't guess or substitute.
+Text to translate: ${text}`;
 
-IMPORTANT MEDICAL TERMS:
-- "pet" or "পেট" = stomach/abdomen
-- "pet betha" or "পেট ব্যথা" = stomach pain/abdominal pain
-- "pet fule geche" or "পেট ফুলে গেছে" = stomach is swollen/bloated (NOT pain!)
-- "fule geche" or "ফুলে গেছে" = swollen/bloated/inflated
-- "beshi" or "বেশি" = very/much/a lot/more
-- "bomi" or "বমি" = vomiting/nausea
-- "ghono bomi" or "ঘন ঘন বমি" = frequent vomiting
-- "mas" or "মাস" = month
-- "saptah" or "সপ্তাহ" = week
-- "kharap" or "খারাপ" = bad/not good
-- "valo" or "ভালো" = good
-- "lokkhon" or "লক্ষণ" = symptom/sign
-- "dokkhin" or "ডাক্তার" = doctor
-- "osustho" or "অসুস্থ" = sick/unwell
-- "jhor" or "জ্বর" = fever
-- "pet kharap" or "পেট খারাপ" = stomach upset/diarrhea
-- "matha betha" or "মাথা ব্যথা" = headache
-- "dhoron" or "ধরন" = type/kind
-- "kemon" or "কেমন" = how/what kind
-- "koto" or "কত" = how much/how many
-- "ki" or "কি" = what/is/does (question word)
-- "amar" or "আমার" = my
+    const translated = await translateWithGroq(prompt);
+    let cleaned = translated.replace(/^(Translation:|Translated text:|English:)\s*/i, "").trim();
 
-EXAMPLES:
-- "Amar pet ki beshi fule geche?" → "Is my stomach very swollen?" (NOT "I am experiencing severe stomach pain")
-- "Amar pet betha korche" → "I have stomach pain"
-- "Pet fule geche" → "Stomach is swollen/bloated"
-- "Ki khabar khawa uchit?" → "What food should I eat?"
-
-Translate accurately preserving:
-- Exact medical meaning
-- Question marks and punctuation
-- Question vs statement structure
-- All medical terms precisely
-
-Only return the translated text, nothing else.`,
-        },
-        {
-          role: "user",
-          content: text,
-        },
-      ],
-      temperature: 0.2, // Lower temperature for more accurate translation
-      max_tokens: 1000,
-    });
-
-    const translated = completion.choices?.[0]?.message?.content?.trim();
-    if (!translated) {
+    if (!cleaned) {
       throw new Error("Translation failed");
     }
 
-    // Clean up any extra text the model might add
-    let cleaned = translated.replace(/^(Translation:|Translated text:|English:)\s*/i, "").trim();
-    
-    // Ensure question mark accuracy (preserve original punctuation)
+    // Preserve question marks
     const originalHasQuestion = text.trim().endsWith("?");
     const translatedHasQuestion = cleaned.trim().endsWith("?");
-    
+
     if (originalHasQuestion && !translatedHasQuestion) {
       cleaned = `${cleaned}?`;
       console.log(`[Translation] Added missing question mark: "${cleaned}"`);
@@ -174,77 +70,43 @@ Only return the translated text, nothing else.`,
       cleaned = cleaned.replace(/\?+$/, "").trim();
       console.log(`[Translation] Removed extra question mark: "${cleaned}"`);
     }
-    
-    // Cache the translation
-    const cacheKey = text.trim().toLowerCase();
-    translationCacheWithTTL.set(cacheKey, {
-      value: cleaned,
-      timestamp: Date.now()
-    });
-    cleanCache(); // Clean old entries
-    
+
+    console.log(`[Translation] Output (EN): "${cleaned}"`);
     return cleaned;
   } catch (error: any) {
     console.error("Translation to English error:", error);
-    // If translation fails, return original text
     return text;
   }
 }
 
 /**
- * Translate text from English to Bangla using Groq AI
+ * Translate text from English to Bangla using Groq
+ * Simple translation - just translate, nothing more
  */
 export async function translateToBangla(text: string): Promise<string> {
-  if (!isGroqConfigured()) {
-    throw new Error("Groq API is not configured");
+  if (!isTranslationConfigured()) {
+    throw new Error("Translation API is not configured. Set TRANS_KEY_1 through TRANS_KEY_20");
   }
 
-  if (!groq) {
-    throw new Error("Groq client is not initialized");
-  }
-
-  // Check cache first (case-insensitive, trimmed)
-  const cacheKey = `bn:${text.trim().toLowerCase()}`;
-  const cached = translationCacheWithTTL.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    console.log(`[Translation] Cache hit for EN→BN: "${text.substring(0, 50)}..."`);
-    return cached.value;
-  }
+  console.log(`[Translation] Input (EN): "${text}"`);
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional translator. Translate the following text from English to clear, natural Bengali (Bangla). Preserve the meaning and context accurately. Use proper Bengali script. Only return the translated text, nothing else.",
-        },
-        {
-          role: "user",
-          content: text,
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 2000,
-    });
+    // Simple translation prompt
+    const prompt = `Translate the following text from English to clear, natural Bengali (Bangla). Use proper Bengali script. Only return the translated text, nothing else.
 
-    const translated = completion.choices?.[0]?.message?.content?.trim();
-    if (!translated) {
+Text to translate: ${text}`;
+
+    const translated = await translateWithGroq(prompt);
+    const cleaned = translated.trim();
+    
+    if (!cleaned) {
       throw new Error("Translation failed");
     }
-
-    // Cache the translation
-    const cacheKey = `bn:${text.trim().toLowerCase()}`;
-    translationCacheWithTTL.set(cacheKey, {
-      value: translated,
-      timestamp: Date.now()
-    });
-    cleanCache(); // Clean old entries
-
-    return translated;
+    
+    console.log(`[Translation] Output (BN): "${cleaned}"`);
+    return cleaned;
   } catch (error: any) {
     console.error("Translation to Bangla error:", error);
-    // If translation fails, return original text
     return text;
   }
 }

@@ -139,9 +139,14 @@ export async function POST(req: NextRequest) {
         // Prepare image URLs array
         const imageUrls = imageUrl ? [imageUrl] : [];
         
-        // Send messages directly to AI in original language (no translation)
+        // Pass translated message to avoid duplicate translation in askMomsCare
+        const extraContexts = userLanguage === "bn" && translatedUserMessage !== lastUserMessage
+          ? { translatedQuery: translatedUserMessage }
+          : undefined;
+        
+        // Send messages directly to AI in original language
         reply = await Promise.race([
-          askMomsCare(messages, undefined, imageUrls, undefined, false, false),
+          askMomsCare(messages, undefined, imageUrls, undefined, false, false, extraContexts),
           timeoutPromise
         ]) as string;
         
