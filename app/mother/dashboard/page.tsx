@@ -4,10 +4,11 @@ import DashboardCard from "@/components/DashboardCard";
 import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
-import MobileDashboardMenu from "@/components/MobileDashboardMenu";
+import DailyQuestionPopup from "@/components/DailyQuestionPopup";
 import Icon from "@/components/Icon";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
@@ -19,6 +20,7 @@ type Profile = {
   age?: number;
   phone?: string;
   address?: string;
+  area?: string;
   bloodGroup?: string;
   weeksPregnant?: number;
   daysPregnant?: number;
@@ -76,6 +78,40 @@ type Question = {
   adminDecisionAt?: string;
 };
 
+const AREA_OPTIONS = [
+  "Dhaka",
+  "Chittagong",
+  "Sylhet",
+  "Rajshahi",
+  "Rangpur",
+  "Khulna",
+  "Barishal",
+  "Mymensingh",
+  "Pabna",
+  "Cumilla",
+  "Bogura",
+  "Narayaganj",
+  "Kushtia",
+];
+
+const AREA_LINKS: Record<string, string> = {
+  Dhaka: "https://www.doctorbangladesh.com/gynecologist-dhaka/",
+  Chittagong: "https://www.doctorbangladesh.com/gynecologist-chittagong/",
+  Sylhet: "https://www.doctorbangladesh.com/gynecologist-sylhet/",
+  Rajshahi: "https://www.doctorbangladesh.com/gynecologist-rajshahi/",
+  Rangpur: "https://www.doctorbangladesh.com/gynecologist-rangpur/",
+  Khulna: "https://www.doctorbangladesh.com/gynecologist-khulna/",
+  Barishal: "https://www.doctorbangladesh.com/gynecologist-barisal/",
+  Mymensingh: "https://www.doctorbangladesh.com/gynecologist-mymensingh/",
+  Pabna: "https://www.doctorbangladesh.com/gynecologist-pabna/",
+  Cumilla: "https://www.doctorbangladesh.com/gynecologist-cumilla/",
+  Bogura: "https://www.doctorbangladesh.com/gynecologist-bogura/",
+  Narayaganj: "https://www.doctorbangladesh.com/gynecologist-Narayanganj/",
+  Kushtia: "https://www.doctorbangladesh.com/gynecologist-kushtia/",
+};
+
+const SCRAPINGDOG_API_KEY = process.env.NEXT_PUBLIC_SCRAPINGDOG_API_KEY || "";
+
 export default function MotherDashboard() {
   const t = useTranslation();
   const router = useRouter();
@@ -88,7 +124,8 @@ export default function MotherDashboard() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | null>(null);
+  const [showCards, setShowCards] = useState(true);
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
   const [newEntryText, setNewEntryText] = useState("");
@@ -97,6 +134,27 @@ export default function MotherDashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [doctorArea, setDoctorArea] = useState<string>("");
+  const [doctorLoading, setDoctorLoading] = useState(false);
+  const [doctorError, setDoctorError] = useState("");
+  type Doctor = {
+    name: string;
+    qualifications?: string;
+    specialty?: string;
+    designation?: string;
+    hospital?: string;
+    image?: string;
+    detailsUrl?: string;
+  };
+  const [doctorList, setDoctorList] = useState<Doctor[]>([]);
+  const [selectedDoctorDetails, setSelectedDoctorDetails] = useState<{
+    doctor: Doctor;
+    details?: string;
+    chambers?: string;
+    appointments?: string;
+    about?: string;
+  } | null>(null);
+  const [doctorDetailsLoading, setDoctorDetailsLoading] = useState(false);
   const commentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
     isOpen: false,
@@ -104,72 +162,129 @@ export default function MotherDashboard() {
     title: "",
     message: "",
   });
+  const [showQuestionPopup, setShowQuestionPopup] = useState(false);
+  const [questionSession, setQuestionSession] = useState<any>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
     setToken(t);
     if (!t) return;
-    // Get mother ID from token
     try {
       const payload = JSON.parse(atob(t.split('.')[1]));
       setMotherId(payload.id || "");
     } catch {
       // Will be set when profile loads
     }
-    
-    // Restore active tab from localStorage
-    const savedTab = localStorage.getItem("motherDashboardTab");
-    if (savedTab && ["profile", "prescriptions", "questions", "progress", "journal", "notifications"].includes(savedTab)) {
-      setActiveTab(savedTab as any);
-    }
+
+    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor"];
+
+    const updateFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const paramTab = params.get("tab");
+      if (paramTab && validTabs.includes(paramTab)) {
+        setActiveTab(paramTab as any);
+        setShowCards(false);
+      } else {
+        setActiveTab(null);
+        setShowCards(true);
+      }
+    };
+
+    updateFromUrl();
+    window.addEventListener("popstate", updateFromUrl);
     
     fetchProfile(t);
     fetchPrescriptions(t);
     fetchQuestions(t);
     fetchDailyEntries(t);
     fetchNotifications(t);
-    // Update pregnancy progress and check for daily tasks
-    // Recommendations are now sent automatically via cron job at 8 AM and 8 PM
     updatePregnancyProgress(t);
     checkDailyTask(t);
     
-    // Set up real-time updates with different intervals for different data
+    // Check questions in background (don't block dashboard)
+    // Use setTimeout to avoid blocking initial render
+    setTimeout(() => {
+      checkDailyQuestions(t);
+    }, 500);
     
-    // Frequent updates (every 30 seconds) - for notifications and questions
     const frequentInterval = setInterval(() => {
-      fetchNotifications(t); // Check for new notifications
-      fetchQuestions(t); // Check for new answers or comments
-    }, 30 * 1000); // Every 30 seconds
+      fetchNotifications(t);
+      fetchQuestions(t);
+    }, 30 * 1000);
     
-    // Medium updates (every 2 minutes) - for prescriptions and daily entries
     const mediumInterval = setInterval(() => {
       fetchPrescriptions(t);
       fetchDailyEntries(t);
-    }, 2 * 60 * 1000); // Every 2 minutes
+    }, 2 * 60 * 1000);
     
-    // Less frequent updates (every 5 minutes) - for profile, progress, and daily tasks
     const slowInterval = setInterval(() => {
       updatePregnancyProgress(t);
       checkDailyTask(t);
-      fetchProfile(t); // Check if account was paused
-    }, 5 * 60 * 1000); // Every 5 minutes
+      fetchProfile(t);
+    }, 5 * 60 * 1000);
     
     return () => {
+      window.removeEventListener("popstate", updateFromUrl);
       clearInterval(frequentInterval);
       clearInterval(mediumInterval);
       clearInterval(slowInterval);
     };
   }, []);
   
-  // Save active tab to localStorage when it changes
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("motherDashboardTab", activeTab);
+    if (!doctorArea && profile?.area) {
+      setDoctorArea(profile.area);
     }
-  }, [activeTab, token]);
+  }, [profile, doctorArea]);
+
+  // Auto fetch doctors when entering the tab with a known area
+  useEffect(() => {
+    if (activeTab === "find-doctor" && doctorArea && doctorList.length === 0 && !doctorLoading) {
+      fetchDoctorList(doctorArea);
+    }
+  }, [activeTab, doctorArea, doctorList.length, doctorLoading]);
 
   const authHeaders = (t = token) =>
     t ? { Authorization: `Bearer ${t}` } : undefined;
+
+  const checkDailyQuestions = async (t = token) => {
+    try {
+      const res = await fetch("/api/mother/daily-questions", {
+        headers: authHeaders(t),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[Dashboard] Daily questions response:", {
+          shouldShow: data.shouldShow,
+          hasSession: !!data.session,
+          sessionCompleted: data.session?.completed,
+          questionsCount: data.questions?.length || 0,
+        });
+        
+        // Only update session state, don't show popup here
+        setQuestionSession(data.session);
+        
+        // Only show popup if:
+        // 1. shouldShow is true (it's after the configured time)
+        // 2. Session exists and is not completed
+        // 3. There are actually questions to show
+        if (data.shouldShow && data.session && !data.session.completed && data.questions && data.questions.length > 0) {
+          console.log("[Dashboard] Showing question popup");
+          setShowQuestionPopup(true);
+        } else {
+          console.log("[Dashboard] Not showing popup - shouldShow:", data.shouldShow, "session:", !!data.session, "completed:", data.session?.completed, "questions:", data.questions?.length || 0);
+          setShowQuestionPopup(false);
+        }
+      } else {
+        const errorData = await res.json();
+        console.error("[Dashboard] Error response from daily-questions API:", errorData);
+      }
+    } catch (err) {
+      console.error("Error checking daily questions:", err);
+      // On error, don't block the dashboard
+      setShowQuestionPopup(false);
+    }
+  };
 
   const fetchProfile = async (t = token) => {
     const res = await fetch("/api/mother/profile", { headers: authHeaders(t) });
@@ -253,6 +368,298 @@ export default function MotherDashboard() {
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  const parseDoctorMarkdown = (markdown: string): Doctor[] => {
+    if (!markdown || markdown.trim().length === 0) {
+      return [];
+    }
+
+    const entries: Doctor[] = [];
+    const lines = markdown.split('\n').map(l => l.trim()).filter(Boolean);
+    let currentDoctor: Partial<Doctor> = {};
+    let pendingImage: string | null = null;
+    let pendingDetailsUrl: string | null = null;
+
+    lines.forEach((line, index) => {
+      // Extract image URL from markdown image syntax: [![alt](imageUrl)](link)
+      // Handle both with and without bullet point prefix
+      const imageMatch = line.match(/\[!\[.*?\]\((.*?)\)\]/);
+      if (imageMatch) {
+        pendingImage = imageMatch[1];
+        // Also extract details URL from the link part
+        const linkMatch = line.match(/\]\((https?:\/\/[^\)]+)\)/);
+        if (linkMatch && linkMatch[1].includes('doctorbangladesh.com')) {
+          pendingDetailsUrl = linkMatch[1];
+        }
+        return;
+      }
+
+      // Check if this is a new doctor entry (H3 header with doctor name)
+      // Handle both with and without indentation
+      const h3Match = line.match(/^###\s+\[([^\]]+)\]/);
+      if (h3Match) {
+        // Save previous doctor if exists
+        if (currentDoctor.name) {
+          entries.push(currentDoctor as Doctor);
+        }
+        // Start new doctor
+        currentDoctor = {
+          name: h3Match[1].trim()
+        };
+        
+        // Use pending image if available
+        if (pendingImage) {
+          currentDoctor.image = pendingImage;
+          pendingImage = null;
+        }
+        
+        // Extract details URL from H3 link
+        const linkMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/);
+        if (linkMatch && linkMatch[2].includes('doctorbangladesh.com')) {
+          currentDoctor.detailsUrl = linkMatch[2];
+        } else if (pendingDetailsUrl) {
+          currentDoctor.detailsUrl = pendingDetailsUrl;
+          pendingDetailsUrl = null;
+        }
+        return;
+      }
+
+      // Extract from bullet points
+      if ((line.startsWith('*') || line.startsWith('-')) && currentDoctor.name) {
+        const content = line.replace(/^[*\-]\s+/, '').trim();
+        
+        // Remove markdown bold formatting
+        const cleanContent = content.replace(/\*\*(.*?)\*\*/g, '$1');
+
+        // Qualifications (contains MBBS, FCPS, etc.)
+        if (/MBBS|FCPS|MS|DGO|MCPS|MRCOG|FRCOG|BCS|Diploma|Fellowship|Training|Awarded|MACP|AFACS|CMU|DMU|CCD|DMAS|FMAS|FART|FICS|FICMCH|DRH|DOWH|MD|MMED|MPH|DMED|PhD|MSc|MMEd|FRCS|FACS|FRSH|DFFP|PGT|CCU|TVS|FICMCH|DHR/i.test(cleanContent) && !currentDoctor.qualifications) {
+          currentDoctor.qualifications = cleanContent;
+        }
+        // Specialty (contains Specialist, Surgeon, etc. but not Hospital/Institute)
+        else if (/Specialist|Surgeon|Gynecologist|Obstetrician|Infertility|Laparoscopic|Hysteroscopic/i.test(cleanContent) && 
+                 !/(Hospital|Medical College|Clinic|Center|Institute|University|ICMH)/i.test(cleanContent) && 
+                 !currentDoctor.specialty) {
+          currentDoctor.specialty = cleanContent;
+        }
+        // Designation (contains Professor, Consultant, etc.)
+        else if (/(Professor|Consultant|Assistant|Associate|Senior|Head|Director|Coordinator|Chief|Former|Ex|Vice Principal)/i.test(cleanContent) && 
+                 !/(Hospital|Medical College|Clinic|Center|Institute|University)/i.test(cleanContent) && 
+                 !currentDoctor.designation) {
+          currentDoctor.designation = cleanContent;
+        }
+        // Hospital (contains Hospital, Medical College, Clinic, Center, Institute, University, ICMH)
+        else if (/(Hospital|Medical College|Clinic|Center|Institute|University|ICMH)/i.test(cleanContent) && !currentDoctor.hospital) {
+          currentDoctor.hospital = cleanContent;
+        }
+      }
+    });
+
+    // Add last doctor
+    if (currentDoctor.name) {
+      entries.push(currentDoctor as Doctor);
+    }
+
+    return entries;
+  };
+
+  const fetchDoctorDetails = async (doctor: Doctor) => {
+    if (!doctor.detailsUrl) {
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "Doctor details URL not available.",
+      });
+      return;
+    }
+
+    setDoctorDetailsLoading(true);
+    setSelectedDoctorDetails({ doctor });
+
+    try {
+      const params = new URLSearchParams({
+        api_key: SCRAPINGDOG_API_KEY,
+        url: doctor.detailsUrl,
+        dynamic: 'false',
+        markdown: 'true'
+      });
+
+      const res = await fetch(`https://api.scrapingdog.com/scrape?${params.toString()}`);
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch doctor details (${res.status})`);
+      }
+      
+      const markdown = await res.text();
+      
+      if (!markdown || markdown.trim().length === 0) {
+        throw new Error("No data received from the server.");
+      }
+
+      // Parse markdown to extract details
+      const lines = markdown.split('\n').map(l => l.trim()).filter(Boolean);
+      let details = "";
+      let chambers = "";
+      let appointments = "";
+      let about = "";
+      let currentSection = "";
+      let collectingContent = false;
+      let previousLine = "";
+
+      lines.forEach((line, index) => {
+        // Detect headers with underline (both = and -)
+        const isUnderline = /^[-=]+$/.test(line) && previousLine && previousLine.length > 0;
+        const isHeader = /^#{1,3}\s/.test(line) || isUnderline;
+        let headerText = "";
+        let shouldProcessHeader = false;
+
+        if (isUnderline) {
+          headerText = previousLine;
+          shouldProcessHeader = true;
+        } else if (/^#{1,3}\s/.test(line)) {
+          headerText = line.replace(/^#{1,3}\s+/, '').trim();
+          shouldProcessHeader = true;
+        }
+
+        // Process section headers
+        if (shouldProcessHeader && headerText) {
+          const lowerHeader = headerText.toLowerCase();
+          
+          if (/chamber.*appointment|appointment.*chamber/i.test(headerText)) {
+            currentSection = "chambers";
+            collectingContent = true;
+          } else if (/^about/i.test(headerText)) {
+            currentSection = "about";
+            collectingContent = true;
+          } else {
+            // Stop collecting if we hit a different section
+            if (/more.*doctor|join.*doctor|add profile|contact|advertisement|payment|privacy|disclaimer|copyright/i.test(headerText)) {
+              currentSection = "";
+              collectingContent = false;
+            } else if (!/^[A-Z][a-z]+.*Dr\.|Dr\..*[A-Z]/.test(headerText)) {
+              // Unknown section, stop collecting
+              currentSection = "";
+              collectingContent = false;
+            }
+          }
+          previousLine = line;
+          return; // Skip processing the underline line itself
+        }
+
+        // Extract content based on section
+        if (collectingContent && line && !isHeader && currentSection) {
+          // Skip image lines, navigation links, and other non-content
+          if (line.match(/^!\[.*\]\(|^\[.*\]\(http|^\[Call Now\]|^\[See Chambers\]|^\[.*\]\(fb:|^\[.*\]\(tel:/) ||
+              /more.*doctor|join.*doctor|add profile|contact|advertisement|payment|privacy|disclaimer|copyright/i.test(line)) {
+            previousLine = line;
+            return;
+          }
+
+          const cleanLine = line.replace(/^[*\-]\s*/, '').trim();
+          
+          // Remove markdown formatting but keep structure
+          let processedLine = cleanLine
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold, keep text
+            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1'); // Remove links, keep text
+
+          if (processedLine && processedLine.length > 2) {
+            // Skip rating lines and empty lines
+            if (/^★+|rating|review|^\d+\)$/.test(processedLine)) {
+              previousLine = line;
+              return;
+            }
+
+            if (currentSection === "chambers") {
+              // Collect ALL chamber and appointment information
+              if (!chambers) chambers = processedLine;
+              else chambers += "\n" + processedLine;
+            } else if (currentSection === "about") {
+              // Collect about section content
+              // Skip if it's just the doctor name or very short
+              if (processedLine.length > 20 && !/^[A-Z][a-z]+.*Dr\.|Dr\..*[A-Z]/.test(processedLine)) {
+                if (!about) about = processedLine;
+                else about += "\n" + processedLine;
+              }
+            }
+          }
+        }
+
+        previousLine = line;
+      });
+
+      setSelectedDoctorDetails({
+        doctor,
+        details: details || undefined,
+        chambers: chambers || undefined,
+        appointments: appointments || undefined,
+        about: about || undefined,
+      });
+    } catch (err: any) {
+      console.error("Error fetching doctor details:", err);
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: err?.message || "Could not load doctor details. Please try again.",
+      });
+      setSelectedDoctorDetails(null);
+    } finally {
+      setDoctorDetailsLoading(false);
+    }
+  };
+
+  const fetchDoctorList = async (area: string) => {
+    if (!area) {
+      setDoctorError("Please select an area");
+      return;
+    }
+    if (!SCRAPINGDOG_API_KEY) {
+      setDoctorError("API key is not configured. Please contact support.");
+      return;
+    }
+    const url = AREA_LINKS[area];
+    if (!url) {
+      setDoctorError("No doctor list available for this area yet.");
+      return;
+    }
+    setDoctorLoading(true);
+    setDoctorError("");
+    setDoctorList([]);
+    try {
+      const params = new URLSearchParams({
+        api_key: SCRAPINGDOG_API_KEY,
+        url: url,
+        dynamic: 'false',
+        markdown: 'true'
+      });
+
+      const res = await fetch(`https://api.scrapingdog.com/scrape?${params.toString()}`);
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch doctors (${res.status})`);
+      }
+      
+      const markdown = await res.text();
+      
+      if (!markdown || markdown.trim().length === 0) {
+        throw new Error("No data received from the server. Please try again.");
+      }
+      
+      const parsed = parseDoctorMarkdown(markdown);
+      
+      if (parsed.length === 0) {
+        throw new Error("Could not parse doctor information. Please try again later.");
+      }
+      
+      setDoctorList(parsed);
+    } catch (err: any) {
+      console.error("Error fetching doctors:", err);
+      setDoctorError(err?.message || "Could not load doctor list. Please try again.");
+      setDoctorList([]);
+    } finally {
+      setDoctorLoading(false);
     }
   };
 
@@ -575,15 +982,71 @@ export default function MotherDashboard() {
     );
   }
 
-  const tabs = [
-    { id: "profile", label: t.mother.profile, icon: "profile" },
-    { id: "prescriptions", label: t.mother.prescriptions, icon: "prescription" },
-    { id: "questions", label: t.mother.questions, icon: "question" },
-    { id: "progress", label: t.mother.progress, icon: "progress" },
-    { id: "journal", label: "Daily Entry", icon: "daily-entry" },
-    { id: "notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
-    { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/mother/dashboard" },
-    { id: "logout", label: "Logout", action: "logout" as const },
+  const navigateToTab = (tab: "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "profile" | "find-doctor") => {
+    setActiveTab(tab);
+    setShowCards(false);
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", tab);
+    router.push(`/mother/dashboard?${params.toString()}`);
+  };
+
+  const navigationCards = [
+    {
+      id: "chat",
+      title: "MomsCare AI Chat",
+      description: "Get instant answers from MomsCare AI.",
+      icon: "chat",
+      href: "/chat",
+      accent: "from-pink-500 to-rose-500",
+    },
+    {
+      id: "profile",
+      title: "Profile Details",
+      description: "View and update your health profile and preferences.",
+      icon: "profile",
+      action: () => navigateToTab("profile"),
+      accent: "from-indigo-500 to-blue-500",
+    },
+    {
+      id: "prescriptions",
+      title: "Prescription",
+      description: "Upload or review prescriptions for better guidance.",
+      icon: "prescription",
+      action: () => navigateToTab("prescriptions"),
+      accent: "from-cyan-500 to-teal-500",
+    },
+    {
+      id: "questions",
+      title: "Q&A",
+      description: "Ask doctors, read answers, and comments.",
+      icon: "question",
+      action: () => navigateToTab("questions"),
+      accent: "from-purple-500 to-violet-500",
+    },
+    {
+      id: "journal",
+      title: "Daily Entry",
+      description: "Log daily notes, symptoms, and mood changes.",
+      icon: "daily-entry",
+      action: () => navigateToTab("journal"),
+      accent: "from-amber-500 to-orange-500",
+    },
+    {
+      id: "progress",
+      title: "Progress",
+      description: "Track your pregnancy journey and milestones.",
+      icon: "progress",
+      action: () => navigateToTab("progress"),
+      accent: "from-emerald-500 to-green-500",
+    },
+    {
+      id: "find-doctor",
+      title: "Find a Doctor",
+      description: "See gynecologists near you by area.",
+      icon: "doctor",
+      action: () => navigateToTab("find-doctor"),
+      accent: "from-rose-500 to-orange-500",
+    },
   ];
 
   // Calculate days left to due date
@@ -594,13 +1057,30 @@ export default function MotherDashboard() {
 
   return (
     <Layout>
-        <div className="space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0">
-          {/* Mobile Menu */}
-          <MobileDashboardMenu tabs={tabs} activeTab={activeTab} onTabChange={(id) => setActiveTab(id as any)} />
-
-          {/* Hero Section */}
+      {showQuestionPopup && token && (
+        <DailyQuestionPopup
+          token={token}
+          onComplete={() => {
+            setShowQuestionPopup(false);
+            checkDailyQuestions(token); // Refresh to get updated session
+          }}
+        />
+      )}
+        {/* Block main content ONLY if questions popup is actually showing */}
+        <div className={`space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0 ${showQuestionPopup && questionSession && !questionSession.completed ? 'pointer-events-none opacity-50' : ''}`}>
+          {/* Hero Section with notification access */}
           <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-6 sm:p-8 md:p-12 mt-6 border border-pink-200 shadow-lg">
             <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              aria-label="View notifications"
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-pink-200 shadow-md flex items-center justify-center hover:shadow-lg hover:scale-[1.02] transition-all"
+            >
+              <Icon name="notifications" size={22} className="text-pink-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white" />
+              )}
+            </button>
             <div className="relative z-10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
                 <div className="flex-1">
@@ -642,6 +1122,140 @@ export default function MotherDashboard() {
             message={popup.message}
           />
 
+          {/* Doctor Details Popup */}
+          {selectedDoctorDetails && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">Doctor Details</h2>
+                  <button
+                    onClick={() => setSelectedDoctorDetails(null)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <Icon name="close" size={24} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {doctorDetailsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <Icon name="sync" size={32} className="animate-spin text-pink-600" />
+                        <p className="text-gray-600">Loading doctor details...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Doctor Info */}
+                      <div className="flex items-start gap-4 pb-4 border-b border-gray-200">
+                        {selectedDoctorDetails.doctor.image ? (
+                          <img
+                            src={selectedDoctorDetails.doctor.image}
+                            alt={selectedDoctorDetails.doctor.name}
+                            className="w-24 h-24 rounded-xl object-cover border-2 border-pink-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            {selectedDoctorDetails.doctor.name}
+                          </h3>
+                          {selectedDoctorDetails.doctor.qualifications && (
+                            <p className="text-sm text-gray-600 mb-1">
+                              {selectedDoctorDetails.doctor.qualifications}
+                            </p>
+                          )}
+                          {selectedDoctorDetails.doctor.specialty && (
+                            <p className="text-sm text-pink-600 font-medium mb-1">
+                              {selectedDoctorDetails.doctor.specialty}
+                            </p>
+                          )}
+                          {selectedDoctorDetails.doctor.designation && (
+                            <p className="text-xs text-gray-500 mb-1">
+                              {selectedDoctorDetails.doctor.designation}
+                            </p>
+                          )}
+                          {selectedDoctorDetails.doctor.hospital && (
+                            <p className="text-xs text-gray-600">
+                              {selectedDoctorDetails.doctor.hospital}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Chambers */}
+                      {selectedDoctorDetails.chambers && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <Image
+                              src="/icons/clinic.png"
+                              alt="Clinic"
+                              width={18}
+                              height={18}
+                              className="object-contain"
+                            />
+                            Chambers
+                          </h4>
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {selectedDoctorDetails.chambers}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Appointments */}
+                      {selectedDoctorDetails.appointments && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <Icon name="clock" size={18} className="text-pink-600" />
+                            Appointment Details
+                          </h4>
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {selectedDoctorDetails.appointments}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Additional Details */}
+                      {selectedDoctorDetails.details && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <Icon name="info" size={18} className="text-pink-600" />
+                            Additional Information
+                          </h4>
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {selectedDoctorDetails.details}
+                          </p>
+                        </div>
+                      )}
+
+                      {!selectedDoctorDetails.chambers && 
+                       !selectedDoctorDetails.appointments && !selectedDoctorDetails.details && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No additional details available for this doctor.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                  <button
+                    onClick={() => setSelectedDoctorDetails(null)}
+                    className="w-full btn-primary"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Message Alert - For simple messages */}
           {message && !popup.isOpen && (
             <div className={`rounded-xl p-4 mb-6 border-2 shadow-md flex items-start gap-3 ${
@@ -664,89 +1278,57 @@ export default function MotherDashboard() {
             </div>
           )}
 
-          {/* Main Dashboard Cards - Overview */}
-          {activeTab === "profile" && (
+          {/* Quick navigation cards to replace tabs */}
+          {showCards && (
             <section>
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* AI Chat Card - Primary CTA */}
-                <Link
-                  href="/chat"
-                  className="group relative rounded-xl bg-white border-2 border-pink-300 p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] hover:border-pink-400"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                      <Icon name="chat" size={28} className="text-white brightness-0 invert" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg font-bold text-neutral-900">Chat with MomsCare AI</h3>
-                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 text-xs font-bold rounded-full">
-                          PRIMARY
-                        </span>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {navigationCards.map((card) => {
+                  const CardContent = (
+                    <div className="flex items-start gap-4">
+                      <div className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                        <Icon name={card.icon} size={24} className="text-white" />
                       </div>
-                      <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
-                        Get instant answers to your pregnancy questions.
-                      </p>
-                      <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                        <span>Start Chatting</span>
-                        <span>→</span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Prescription Upload Card */}
-                <button
-                  onClick={() => setActiveTab("prescriptions")}
-                  className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-[1.01] hover:border-pink-300"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                      <Icon name="prescription" size={28} className="text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-neutral-900 mb-1">Upload Prescription</h3>
-                      <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
-                        Upload your prescriptions for better AI guidance.
-                      </p>
-                      <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                        <span>Upload Now</span>
-                        <span>→</span>
-                      </div>
-                      {prescriptions.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-neutral-200">
-                          <p className="text-xs text-neutral-500">
-                            {prescriptions.length} prescription{prescriptions.length !== 1 ? 's' : ''} uploaded
-                          </p>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-neutral-900">{card.title}</h3>
                         </div>
-                      )}
+                        <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
+                          {card.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
+                          <span>{card.href ? "Open" : "Go to section"}</span>
+                          <span>→</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  );
+
+                  if (card.href) {
+                    return (
+                      <Link
+                        key={card.id}
+                        href={card.href}
+                        className="group relative rounded-xl bg-white border-2 border-neutral-200 p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300"
+                        onClick={() => setShowCards(false)}
+                      >
+                        {CardContent}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={card.id}
+                      onClick={() => card.action && card.action()}
+                      className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300"
+                    >
+                      {CardContent}
+                    </button>
+                  );
+                })}
               </div>
             </section>
           )}
-
-          {/* Tabs - Desktop Only */}
-          <div className="hidden lg:flex gap-2 border-b-2 border-neutral-200 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-            {tabs.filter(tab => tab.action !== "logout" && tab.action !== "navigate").map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`tab flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 whitespace-nowrap ${
-                  activeTab === tab.id ? "tab-active" : "tab-inactive"
-                }`}
-              >
-                {tab.icon && <Icon name={tab.icon} size={20} />}
-                <span>{tab.label}</span>
-                {tab.badge && tab.badge > 0 && (
-                  <span className="ml-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
@@ -866,6 +1448,23 @@ export default function MotherDashboard() {
                       }
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Area you live
+                  </label>
+                  <select
+                    className="input w-full"
+                    value={profile.area || ""}
+                    onChange={(e) => setProfile({ ...profile, area: e.target.value || undefined })}
+                  >
+                    <option value="">Select area</option>
+                    {AREA_OPTIONS.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -1557,6 +2156,67 @@ export default function MotherDashboard() {
         {/* Progress Tab */}
         {activeTab === "progress" && (
           <div className="grid gap-6 md:grid-cols-2">
+            {/* Daily Questions Status */}
+            <DashboardCard title="Daily Health Questions">
+              {questionSession ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="font-medium">Today's Progress</span>
+                      <span className="text-pink-600 font-semibold">
+                        {questionSession.answeredCount} / {questionSession.totalQuestions}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
+                      <div
+                        className={`h-4 rounded-full transition-all duration-500 ${
+                          questionSession.completed ? "bg-green-500" : "bg-pink-500"
+                        }`}
+                        style={{ width: `${Math.round((questionSession.answeredCount / questionSession.totalQuestions) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  {questionSession.completed ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-green-800 text-sm font-medium">
+                        ✓ All questions completed for today
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <p className="text-yellow-800 text-sm">
+                        Please complete today's health questions
+                      </p>
+                    </div>
+                  )}
+                  {questionSession.earlyProblems && questionSession.earlyProblems.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-800 mb-2">Early Detection Alerts:</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-red-700 mb-2">
+                        {questionSession.earlyProblems.map((problem: string, idx: number) => (
+                          <li key={idx}>{problem}</li>
+                        ))}
+                      </ul>
+                      {(questionSession as any).earlyProblemRecommendation && (
+                        <div className="mt-2 pt-2 border-t border-red-300">
+                          <p className="text-xs font-medium mb-1 text-red-800">Recommendation:</p>
+                          <p className="text-xs text-red-700">{(questionSession as any).earlyProblemRecommendation}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(!questionSession.earlyProblems || questionSession.earlyProblems.length === 0) && (questionSession as any).earlyProblemRecommendation && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-800 mb-2">Health Status:</h4>
+                      <p className="text-sm text-green-700">{(questionSession as any).earlyProblemRecommendation}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm">Loading question status...</p>
+              )}
+            </DashboardCard>
+            
             <DashboardCard title="Pregnancy Progress">
               {progress ? (
                 <div className="space-y-4">
@@ -1832,6 +2492,208 @@ export default function MotherDashboard() {
               )}
             </DashboardCard>
           </div>
+        )}
+
+        {/* Find a Doctor Tab */}
+        {activeTab === "find-doctor" && (
+          <DashboardCard title={
+            <span className="flex items-center gap-2">
+              <Icon name="doctor" size={20} />
+              Find a Doctor
+            </span>
+          }>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 w-full">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Choose your area
+                  </label>
+                  <select
+                    className="input w-full"
+                    value={doctorArea}
+                    onChange={(e) => setDoctorArea(e.target.value)}
+                  >
+                    <option value="">Select area</option>
+                    {AREA_OPTIONS.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    We'll fetch gynecologists from the selected city list.
+                  </p>
+                </div>
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium text-slate-700 mb-2 opacity-0">
+                    Action
+                  </label>
+                  <button
+                    className="btn-primary w-full sm:w-auto whitespace-nowrap min-h-[42px] flex items-center justify-center"
+                    onClick={() => fetchDoctorList(doctorArea)}
+                    disabled={!doctorArea || doctorLoading}
+                  >
+                    {doctorLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Icon name="sync" size={18} className="animate-spin" />
+                        Loading...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Icon name="doctor" size={18} />
+                        Find Doctors
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {doctorError && (
+                <div className="rounded-lg border-2 border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {doctorError}
+                </div>
+              )}
+
+              {doctorLoading && (
+                <div className="flex items-center gap-2 text-slate-600 text-sm">
+                  <Icon name="sync" size={18} className="animate-spin" />
+                  Fetching doctor list...
+                </div>
+              )}
+
+              {!doctorLoading && !doctorError && doctorList.length === 0 && (
+                <div className="text-sm text-slate-500">
+                  Select an area and tap "Find Doctors" to see the list.
+                </div>
+              )}
+
+              {!doctorLoading && doctorList.length > 0 && (
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {doctorList.map((doc, idx) => (
+                    <div
+                      key={`${doc.name}-${idx}`}
+                      className="group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:shadow-xl hover:border-pink-200 transition-all duration-300 flex flex-col h-full overflow-hidden"
+                    >
+                      {/* Header Section with Image */}
+                      <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-5 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          {doc.image ? (
+                            <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 border-white shadow-md relative bg-gradient-to-br from-pink-500 to-rose-500">
+                              <img 
+                                src={doc.image} 
+                                alt={doc.name}
+                                className="w-full h-full object-cover relative z-10"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center z-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="8" r="5"/>
+                                  <path d="M20 21a8 8 0 0 0-16 0"/>
+                                </svg>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-2.5 rounded-xl shadow-sm flex-shrink-0 w-14 h-14 flex items-center justify-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                                <circle cx="12" cy="8" r="5"/>
+                                <path d="M20 21a8 8 0 0 0-16 0"/>
+                              </svg>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 leading-snug truncate group-hover:text-pink-700 transition-colors">
+                              {doc.name}
+                            </h3>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="p-5 flex-1 flex flex-col gap-3.5">
+                        {doc.qualifications && (
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-blue-50">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                                <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>
+                                <path d="M22 10v6"/>
+                                <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.qualifications}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {doc.specialty && (
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-pink-50">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-600">
+                                <path d="M11 2v2"/>
+                                <path d="M5 2v2"/>
+                                <path d="M5 5c0 4 2.5 6 5.5 6 2.65 0 4-2 4.5-5"/>
+                                <path d="M8 15a6 6 0 1 0 12 0v-3"/>
+                                <circle cx="20" cy="10" r="2"/>
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-700 leading-relaxed break-words font-medium">{doc.specialty}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {doc.designation && (
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-purple-50">
+                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.designation}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {doc.hospital && (
+                          <div className="flex items-start gap-3 pt-1 border-t border-gray-100">
+                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-emerald-50">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                                <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                                <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                                <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                                <path d="M10 6h4"/>
+                                <path d="M10 10h4"/>
+                                <path d="M10 14h4"/>
+                                <path d="M10 18h4"/>
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.hospital}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer with See Details Button */}
+                      {doc.detailsUrl && (
+                        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
+                          <button
+                            onClick={() => fetchDoctorDetails(doc)}
+                            className="w-full btn-secondary text-center flex items-center justify-center gap-2 text-sm py-2.5"
+                          >
+                            <Icon name="view" size={16} />
+                            See Details
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DashboardCard>
         )}
 
         {/* Notifications Tab */}

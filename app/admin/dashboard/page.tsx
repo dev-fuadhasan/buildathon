@@ -84,9 +84,12 @@ type AdminActivity = {
 type Editor = {
   id: string;
   email: string;
+  name?: string;
   lastActivity?: string;
   isPaused: boolean;
   totalActivities: number;
+  status?: "active" | "paused" | "deleted";
+  createdAt?: string;
 };
 
 export default function AdminDashboard() {
@@ -99,11 +102,24 @@ export default function AdminDashboard() {
   const [allNurses, setAllNurses] = useState<Doctor[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "nurses" | "reports" | "live-chat" | "editors" | "activity-logs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "nurses" | "reports" | "live-chat" | "editors" | "activity-logs" | "settings">("overview");
+  const [adminSettings, setAdminSettings] = useState<{
+    morningRecommendationHour: number;
+    morningRecommendationMinute: number;
+    eveningRecommendationHour: number;
+    eveningRecommendationMinute: number;
+    questionHour: number;
+    questionMinute: number;
+    questionsPerDay: number;
+  } | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [allActivities, setAllActivities] = useState<AdminActivity[]>([]); // Store all activities for client-side filtering
   const [editors, setEditors] = useState<Editor[]>([]);
   const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
+  const [createEditorModal, setCreateEditorModal] = useState(false);
+  const [newEditor, setNewEditor] = useState({ email: "", password: "", name: "" });
+  const [creatingEditor, setCreatingEditor] = useState(false);
   const [activityFilters, setActivityFilters] = useState<{
     adminEmail?: string;
     adminType?: "super_admin" | "editor" | "all";
@@ -185,7 +201,7 @@ export default function AdminDashboard() {
       
       // Restore active tab from localStorage
       const savedTab = localStorage.getItem("adminDashboardTab");
-      if (savedTab && ["overview", "analytics", "doctors", "mothers", "nurses", "reports", "live-chat", "editors", "activity-logs"].includes(savedTab)) {
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "nurses", "reports", "live-chat", "editors", "activity-logs", "settings"].includes(savedTab)) {
         setActiveTab(savedTab as any);
       }
       
@@ -197,7 +213,7 @@ export default function AdminDashboard() {
       loadAnalytics(t);
       loadReports(t);
       
-      // Load editors and activities if super admin (will be loaded after adminType is set)
+      // Load editors, activities, and settings if super admin (will be loaded after adminType is set)
       
       // Set up real-time updates
       
@@ -228,11 +244,12 @@ export default function AdminDashboard() {
     }
   }, []);
   
-  // Load editors and activities when adminType is set
+  // Load editors, activities, and settings when adminType is set
   useEffect(() => {
     if (token && adminType === "super_admin") {
       loadEditors(token);
       loadActivities(token);
+      loadAdminSettings(token);
     }
   }, [adminType, token]);
 
@@ -297,6 +314,70 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setReports(data.reports || []);
+    }
+  };
+
+  const createEditor = async () => {
+    if (!newEditor.email || !newEditor.password) {
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Validation Error",
+        message: "Email and password are required",
+      });
+      return;
+    }
+
+    if (newEditor.password.length < 6) {
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Validation Error",
+        message: "Password must be at least 6 characters long",
+      });
+      return;
+    }
+
+    try {
+      setCreatingEditor(true);
+      const res = await fetch("/api/admin/editors/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers() },
+        body: JSON.stringify({
+          email: newEditor.email,
+          password: newEditor.password,
+          name: newEditor.name || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setPopup({
+          isOpen: true,
+          type: "success",
+          title: "Success",
+          message: "Editor created successfully",
+        });
+        setCreateEditorModal(false);
+        setNewEditor({ email: "", password: "", name: "" });
+        loadEditors();
+      } else {
+        setPopup({
+          isOpen: true,
+          type: "error",
+          title: "Error",
+          message: data.error || "Failed to create editor",
+        });
+      }
+    } catch (err) {
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Network Error",
+        message: "Network error. Please try again.",
+      });
+    } finally {
+      setCreatingEditor(false);
     }
   };
 
@@ -411,6 +492,61 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setOverview(data.overview);
+    }
+  };
+
+  const loadAdminSettings = async (t = token) => {
+    try {
+      const res = await fetch("/api/admin/settings", { headers: headers(t) });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminSettings(data.settings);
+      }
+    } catch (err) {
+      console.error("Error loading admin settings:", err);
+    }
+  };
+
+  const saveAdminSettings = async () => {
+    if (!adminSettings) return;
+    
+    try {
+      setSavingSettings(true);
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...headers(),
+        },
+        body: JSON.stringify(adminSettings),
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        setPopup({
+          isOpen: true,
+          type: "success",
+          title: "Settings Saved",
+          message: "Admin settings have been updated successfully.",
+        });
+        setAdminSettings(data.settings);
+      } else {
+        setPopup({
+          isOpen: true,
+          type: "error",
+          title: "Save Failed",
+          message: data.error || "Failed to save settings. Please try again.",
+        });
+      }
+    } catch (err) {
+      setPopup({
+        isOpen: true,
+        type: "error",
+        title: "Network Error",
+        message: "Network error. Please try again.",
+      });
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -570,6 +706,7 @@ export default function AdminDashboard() {
     ...(adminType === "super_admin" ? [
       { id: "editors", label: "Editors", icon: "editor" },
       { id: "activity-logs", label: "Activity Logs", icon: "log" },
+      { id: "settings", label: "Settings", icon: "settings" },
     ] : []),
     { id: "dashboard", label: "Dashboard", icon: "overview", action: "navigate" as const, href: "/admin/dashboard" },
     { id: "logout", label: "Logout", action: "logout" as const },
@@ -2110,15 +2247,104 @@ export default function AdminDashboard() {
 
         {activeTab === "editors" && adminType === "super_admin" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <h2 className="text-2xl font-bold">Editor Management</h2>
-              <button
-                onClick={() => loadEditors()}
-                className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
-              >
-                Refresh
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCreateEditorModal(true)}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2"
+                >
+                  <Icon name="add" size={20} />
+                  Create Editor
+                </button>
+                <button
+                  onClick={() => loadEditors()}
+                  className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600"
+                >
+                  Refresh
+                </button>
+              </div>
             </div>
+
+            {/* Create Editor Modal */}
+            {createEditorModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold">Create New Editor</h3>
+                    <button
+                      onClick={() => {
+                        setCreateEditorModal(false);
+                        setNewEditor({ email: "", password: "", name: "" });
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <Icon name="close" size={24} />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={newEditor.email}
+                        onChange={(e) => setNewEditor({ ...newEditor, email: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                        placeholder="editor@example.com"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={newEditor.password}
+                        onChange={(e) => setNewEditor({ ...newEditor, password: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                        placeholder="Minimum 6 characters"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newEditor.name}
+                        onChange={(e) => setNewEditor({ ...newEditor, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                        placeholder="Editor name"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <button
+                        onClick={createEditor}
+                        disabled={creatingEditor}
+                        className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {creatingEditor ? "Creating..." : "Create Editor"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCreateEditorModal(false);
+                          setNewEditor({ email: "", password: "", name: "" });
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {editors.length === 0 ? (
               <p className="text-center py-8 text-slate-500">No editors found.</p>
@@ -2129,6 +2355,9 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-bold text-lg">{editor.email}</h3>
+                        {editor.name && (
+                          <p className="text-sm text-slate-600 font-medium">{editor.name}</p>
+                        )}
                         <p className="text-sm text-slate-500">
                           Last activity: {editor.lastActivity ? new Date(editor.lastActivity).toLocaleString() : "Never"}
                         </p>
@@ -2482,6 +2711,169 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab - Only for Super Admin */}
+        {activeTab === "settings" && adminType === "super_admin" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-800">System Settings</h2>
+            <p className="text-slate-600">Configure notification and question timing for all mothers.</p>
+            
+            {adminSettings ? (
+              <div className="bg-white rounded-lg shadow p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Morning Recommendation Time
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Hour (0-23)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={adminSettings.morningRecommendationHour}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          morningRecommendationHour: parseInt(e.target.value) || 8,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Minute (0-59)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={adminSettings.morningRecommendationMinute ?? 0}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          morningRecommendationMinute: parseInt(e.target.value) || 0,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Current: {String(adminSettings.morningRecommendationHour).padStart(2, '0')}:{String(adminSettings.morningRecommendationMinute ?? 0).padStart(2, '0')} (Default: 08:00 / 8:00 AM)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Evening Recommendation Time
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Hour (0-23)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={adminSettings.eveningRecommendationHour}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          eveningRecommendationHour: parseInt(e.target.value) || 20,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Minute (0-59)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={adminSettings.eveningRecommendationMinute ?? 0}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          eveningRecommendationMinute: parseInt(e.target.value) || 0,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Current: {String(adminSettings.eveningRecommendationHour).padStart(2, '0')}:{String(adminSettings.eveningRecommendationMinute ?? 0).padStart(2, '0')} (Default: 20:00 / 8:00 PM)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Daily Questions Time
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Hour (0-23)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={adminSettings.questionHour}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          questionHour: parseInt(e.target.value) || 21,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">Minute (0-59)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={adminSettings.questionMinute ?? 0}
+                        onChange={(e) => setAdminSettings({
+                          ...adminSettings,
+                          questionMinute: parseInt(e.target.value) || 0,
+                        })}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Current: {String(adminSettings.questionHour).padStart(2, '0')}:{String(adminSettings.questionMinute ?? 0).padStart(2, '0')} (Default: 21:00 / 9:00 PM)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Questions Per Day
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={adminSettings.questionsPerDay}
+                    onChange={(e) => setAdminSettings({
+                      ...adminSettings,
+                      questionsPerDay: parseInt(e.target.value) || 10,
+                    })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Current: {adminSettings.questionsPerDay} questions per day (Default: 10)
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={saveAdminSettings}
+                    disabled={savingSettings}
+                    className="w-full sm:w-auto px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingSettings ? "Saving..." : "Save Settings"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <p className="text-slate-500">Loading settings...</p>
               </div>
             )}
           </div>

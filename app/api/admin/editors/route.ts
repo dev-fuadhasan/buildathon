@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { listAdminActivities } from "@/lib/data";
+import { listAdminActivities, listAllEditors, getEditor, saveEditor } from "@/lib/data";
 import { logActivity } from "@/lib/adminActivity";
 
 /**
@@ -13,41 +13,79 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get all activities to determine editor status
+    // Get all stored editors
+    const storedEditors = await listAllEditors();
+    
+    // Get all activities to determine editor activity status
     const activities = await listAdminActivities(undefined, 1000);
     
-    // Get unique editors from activities
-    const editorIds = new Set<string>();
-    const editorEmails = new Map<string, string>();
+    // Create a map of editor info from stored editors
+    const editorMap = new Map<string, {
+      id: string;
+      email: string;
+      name?: string;
+      status: "active" | "paused" | "deleted";
+      createdAt: string;
+      lastActivity?: string;
+      isPaused: boolean;
+      totalActivities: number;
+    }>();
     
+    // Initialize with stored editors
+    storedEditors.forEach(editor => {
+      editorMap.set(editor.id, {
+        id: editor.id,
+        email: editor.email,
+        name: editor.name,
+        status: editor.status,
+        createdAt: editor.createdAt,
+        isPaused: editor.status === "paused",
+        totalActivities: 0,
+      });
+    });
+    
+    // Also include legacy editors from activities (for backward compatibility)
     activities.forEach(activity => {
       if (activity.adminType === "editor") {
-        editorIds.add(activity.adminId);
-        editorEmails.set(activity.adminId, activity.adminEmail);
+        if (!editorMap.has(activity.adminId)) {
+          editorMap.set(activity.adminId, {
+            id: activity.adminId,
+            email: activity.adminEmail,
+            status: "active",
+            createdAt: activity.timestamp,
+            isPaused: false,
+            totalActivities: 0,
+          });
+        }
       }
     });
     
-    // Get editor info and their last activity
-    const editors = Array.from(editorIds).map(editorId => {
-      const editorActivities = activities.filter(a => a.adminId === editorId);
-      const lastActivity = editorActivities.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )[0];
-      
-      // Check if editor is paused (we'll need to store this in a separate file or use activities)
-      // For now, we'll check if there's a "pause_editor" activity
-      const pauseActivity = editorActivities.find(a => a.action === "pause_editor");
-      const isPaused = !!pauseActivity && 
-        (!editorActivities.find(a => a.action === "unpause_editor" && new Date(a.timestamp) > new Date(pauseActivity.timestamp)));
-      
-      return {
-        id: editorId,
-        email: editorEmails.get(editorId) || "Unknown",
-        lastActivity: lastActivity?.timestamp,
-        isPaused,
-        totalActivities: editorActivities.length,
-      };
+    // Update editor info with activity data
+    activities.forEach(activity => {
+      if (activity.adminType === "editor" && editorMap.has(activity.adminId)) {
+        const editor = editorMap.get(activity.adminId)!;
+        editor.totalActivities++;
+        
+        // Update last activity
+        if (!editor.lastActivity || new Date(activity.timestamp) > new Date(editor.lastActivity)) {
+          editor.lastActivity = activity.timestamp;
+        }
+        
+        // Check pause status from activities (for legacy editors)
+        if (activity.action === "pause_editor") {
+          const unpauseActivity = activities.find(a => 
+            a.adminId === activity.adminId &&
+            a.action === "unpause_editor" && 
+            new Date(a.timestamp) > new Date(activity.timestamp)
+          );
+          if (!unpauseActivity) {
+            editor.isPaused = true;
+          }
+        }
+      }
     });
+    
+    const editors = Array.from(editorMap.values());
     
     return NextResponse.json({ editors });
   } catch (error: any) {
@@ -60,7 +98,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Pause or delete an editor (only for super admin)
+ * Pause, unpause, or delete an editor (only for super admin)
  */
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -78,23 +116,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if this is a stored editor (not legacy)
+    const storedEditor = await getEditor(editorId);
+    
+    if (storedEditor) {
+      // Update stored editor status
+      const now = new Date().toISOString();
+      if (action === "delete") {
+        storedEditor.status = "deleted";
+      } else if (action === "pause") {
+        storedEditor.status = "paused";
+      } else if (action === "unpause") {
+        storedEditor.status = "active";
+      }
+      storedEditor.updatedAt = now;
+      
+      await saveEditor(storedEditor);
+    }
+
     // Log the action
     await logActivity(
       user,
       action === "delete" ? "delete_editor" : `${action}_editor`,
       "editor",
       editorId,
-      { action, timestamp: new Date().toISOString() },
+      { 
+        action, 
+        timestamp: new Date().toISOString(),
+        editorEmail: storedEditor?.email || "Unknown"
+      },
       req
     );
-
-    // For pause/unpause, we're just logging it - the actual enforcement would need
-    // to check these logs during login. For delete, we're just logging it.
-    // In a real system, you'd store editor status in a database.
     
     return NextResponse.json({ 
       success: true, 
-      message: `Editor ${action} action logged successfully` 
+      message: `Editor ${action} action completed successfully` 
     });
   } catch (error: any) {
     console.error("Error managing editor:", error);

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listAllMothers } from "@/lib/data";
+import { listAllMothers, getAdminSettings } from "@/lib/data";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { detectTimezoneFromIP } from "@/lib/timezoneDetector";
 
 /**
  * This endpoint should be called by a cron job every 5 minutes
  * It will:
- * 1. Check all mothers and send recommendations at 8 AM and 8 PM in their local timezone
+ * 1. Check all mothers and send recommendations at configured times (default 8 AM and 8 PM) in their local timezone
  * 2. Update pregnancy days at 12:00 AM (midnight) in their local timezone
+ * 3. Mark daily questions as ready at configured time (default 9 PM) in their local timezone
  * 
  * To set up a cron job:
  * - Vercel: Use Vercel Cron Jobs in vercel.json
@@ -17,6 +18,8 @@ import { detectTimezoneFromIP } from "@/lib/timezoneDetector";
 export async function GET(req: NextRequest) {
   try {
     const mothers = await listAllMothers();
+    const settings = await getAdminSettings();
+    
     const results = {
       processed: 0,
       recommendations: {
@@ -25,6 +28,10 @@ export async function GET(req: NextRequest) {
       },
       pregnancyUpdates: {
         updated: 0,
+        skipped: 0,
+      },
+      questions: {
+        triggered: 0,
         skipped: 0,
       },
       errors: [] as string[],
@@ -44,9 +51,18 @@ export async function GET(req: NextRequest) {
         const { hour, minute } = getCurrentTimeInTimezone(timezone);
         const today = getCurrentDateInTimezone(timezone);
         
+        // Get settings values
+        const morningHour = settings.morningRecommendationHour;
+        const morningMinute = settings.morningRecommendationMinute ?? 0;
+        const eveningHour = settings.eveningRecommendationHour;
+        const eveningMinute = settings.eveningRecommendationMinute ?? 0;
+        const questionHour = settings.questionHour;
+        const questionMinute = settings.questionMinute ?? 0;
+        
         // Log for debugging (only log when it's close to important times to avoid spam)
-        if ((hour === 7 && minute >= 55) || (hour === 8 && minute <= 10) || 
-            (hour === 19 && minute >= 55) || (hour === 20 && minute <= 10) ||
+        if ((hour === morningHour - 1 && minute >= 55) || (hour === morningHour && minute <= morningMinute + 5) || 
+            (hour === eveningHour - 1 && minute >= 55) || (hour === eveningHour && minute <= eveningMinute + 5) ||
+            (hour === questionHour - 1 && minute >= 55) || (hour === questionHour && minute <= questionMinute + 5) ||
             (hour === 0 && minute <= 5)) {
           console.log(`[Cron] Mother ${mother.email || mother.id} - Timezone: ${timezone}, Local Time: ${hour}:${minute.toString().padStart(2, '0')}, Date: ${today}`);
         }
@@ -74,15 +90,15 @@ export async function GET(req: NextRequest) {
           results.pregnancyUpdates.skipped++;
         }
         
-        // 2. Check and send recommendations at 8:00-8:05 AM or 8:00-8:05 PM
+        // 2. Check and send recommendations at configured times (default 8:00 AM and 20:00 PM)
         let timeOfDay: "morning" | "evening" | null = null;
         
-        if (hour === 8 && minute >= 0 && minute <= 5 && mother.lastMorningAdviceDate !== today) {
+        if (hour === settings.morningRecommendationHour && minute >= morningMinute && minute <= morningMinute + 5 && mother.lastMorningAdviceDate !== today) {
           timeOfDay = "morning";
-          console.log(`[Cron] ✅ Sending morning recommendation to ${mother.email || mother.id} (${timezone})`);
-        } else if (hour === 20 && minute >= 0 && minute <= 5 && mother.lastNightAdviceDate !== today) {
+          console.log(`[Cron] ✅ Sending morning recommendation to ${mother.email || mother.id} at ${hour}:${minute.toString().padStart(2, '0')} (${timezone})`);
+        } else if (hour === settings.eveningRecommendationHour && minute >= eveningMinute && minute <= eveningMinute + 5 && mother.lastNightAdviceDate !== today) {
           timeOfDay = "evening";
-          console.log(`[Cron] ✅ Sending evening recommendation to ${mother.email || mother.id} (${timezone})`);
+          console.log(`[Cron] ✅ Sending evening recommendation to ${mother.email || mother.id} at ${hour}:${minute.toString().padStart(2, '0')} (${timezone})`);
         }
 
         if (timeOfDay) {
@@ -101,6 +117,18 @@ export async function GET(req: NextRequest) {
           }
         } else {
           results.recommendations.skipped++;
+        }
+        
+        // 3. Check and trigger daily questions at configured time (default 21:00 / 9 PM)
+        // Note: We don't set lastQuestionDate here - it will be set when mother actually answers questions
+        // The popup will show if lastQuestionDate !== today, so questions will be available after the configured time
+        if (hour === questionHour && minute >= questionMinute && minute <= questionMinute + 5) {
+          // Questions are now available for today - they will be shown when mother opens the site
+          // The API endpoint will check if lastQuestionDate !== today and show questions
+          results.questions.triggered++;
+          console.log(`[Cron] ✅ Daily questions available for ${mother.email || mother.id} at ${hour}:${minute.toString().padStart(2, '0')} (${timezone})`);
+        } else {
+          results.questions.skipped++;
         }
         
         results.processed++;

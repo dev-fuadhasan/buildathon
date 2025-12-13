@@ -41,6 +41,18 @@ export default function MotherRegister() {
             Create your MomsCare account to personalize guidance and ask doctors questions.
           </p>
         </div>
+
+        {/* Demo Account Info */}
+        <div className="bg-blue-50/60 border border-blue-200/60 rounded-lg p-4 space-y-2">
+          <p className="text-sm text-blue-900/80 font-medium">
+            You can easily create new accounts but if you want to check an already created demo account then use these credentials
+          </p>
+          <div className="text-sm text-blue-800/70 space-y-1">
+            <p><span className="font-semibold">Email:</span> demo@mother.com</p>
+            <p><span className="font-semibold">Password:</span> mother</p>
+          </div>
+        </div>
+
         <form onSubmit={onSubmit} className="card space-y-4">
           <input
             className="input"

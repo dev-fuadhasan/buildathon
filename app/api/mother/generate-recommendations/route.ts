@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, listDailyEntries, saveNotification, getNotifications, Notification } from "@/lib/data";
+import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, getAdminSettings } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
@@ -41,29 +41,32 @@ export async function POST(req: NextRequest) {
     const { hour, minute, second } = getCurrentTimeInTimezone(timezone);
     const today = getCurrentDateInTimezone(timezone);
     
+    // Get admin settings for timing
+    const settings = await getAdminSettings();
+    const morningMinute = settings.morningRecommendationMinute ?? 0;
+    const eveningMinute = settings.eveningRecommendationMinute ?? 0;
+    
     // Log current time for debugging
     const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
     console.log(`[Recommendation Check] Timezone: ${timezone}, Local Time: ${timeStr}, Date: ${today}, Last Morning: ${mother.lastMorningAdviceDate}, Last Evening: ${mother.lastNightAdviceDate}`);
     
     // Determine which recommendation should be sent
-    // STRICT TIMING: Only send at exactly 8:00 AM and 8:00 PM (with 5 minute window for checking)
-    // Morning recommendation: ONLY at 8:00-8:05 AM
-    // Evening recommendation: ONLY at 8:00-8:05 PM (20:00-20:05)
+    // Use configured times from admin settings (with 5 minute window for checking)
     let timeOfDay: "morning" | "evening" | null = null;
     
-    // Check if it's exactly 8:00-8:05 AM and morning recommendation hasn't been sent today
-    if (hour === 8 && minute >= 0 && minute <= 5 && mother.lastMorningAdviceDate !== today) {
+    // Check if it's at the configured morning time and morning recommendation hasn't been sent today
+    if (hour === settings.morningRecommendationHour && minute >= morningMinute && minute <= morningMinute + 5 && mother.lastMorningAdviceDate !== today) {
       timeOfDay = "morning";
       console.log(`[Recommendation] ✅ Sending morning recommendation at ${timeStr} (${timezone})`);
     }
-    // Check if it's exactly 8:00-8:05 PM (20:00-20:05) and evening recommendation hasn't been sent today
-    else if (hour === 20 && minute >= 0 && minute <= 5 && mother.lastNightAdviceDate !== today) {
+    // Check if it's at the configured evening time and evening recommendation hasn't been sent today
+    else if (hour === settings.eveningRecommendationHour && minute >= eveningMinute && minute <= eveningMinute + 5 && mother.lastNightAdviceDate !== today) {
       timeOfDay = "evening";
       console.log(`[Recommendation] ✅ Sending evening recommendation at ${timeStr} (${timezone})`);
     }
-    // DO NOT send recommendations at any other time - only at 8 AM and 8 PM
+    // DO NOT send recommendations at any other time
     else {
-      console.log(`[Recommendation] ⏭️ Skipping - Current time ${timeStr} is not 8:00-8:05 AM or 8:00-8:05 PM`);
+      console.log(`[Recommendation] ⏭️ Skipping - Current time ${timeStr} is not at configured recommendation times`);
     }
 
     if (!timeOfDay) {

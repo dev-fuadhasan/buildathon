@@ -24,6 +24,8 @@ export type MotherProfile = {
   lastJournalEntryDate?: string; // YYYY-MM-DD
   lastMorningAdviceDate?: string; // YYYY-MM-DD
   lastNightAdviceDate?: string; // YYYY-MM-DD
+  lastQuestionDate?: string; // YYYY-MM-DD - Last date questions were shown
+  answeredQuestionIds?: string[]; // IDs of questions already answered (to avoid repeats)
   createdAt: string;
   updatedAt: string;
 };
@@ -60,6 +62,17 @@ export type DoctorProfile = {
   changes?: ProfileChange[]; // Track what fields were changed
   createdAt: string;
   updatedAt: string;
+};
+
+export type EditorProfile = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  name?: string;
+  status: "active" | "paused" | "deleted"; // Editor account status
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string; // Super admin ID who created this editor
 };
 
 // Patient data for nurses/others
@@ -205,6 +218,29 @@ export type DailyEntry = {
   updatedAt: string;
 };
 
+export type DailyQuestion = {
+  id: string;
+  motherId: string;
+  questionId: string; // ID from question dataset
+  date: string; // YYYY-MM-DD format
+  answer: "yes" | "no";
+  createdAt: string;
+};
+
+export type DailyQuestionSession = {
+  id: string;
+  motherId: string;
+  date: string; // YYYY-MM-DD format
+  questionIds: string[]; // IDs of questions shown today
+  answeredCount: number; // How many answered so far
+  totalQuestions: number; // Total questions for today (usually 10)
+  completed: boolean; // Whether all questions are answered
+  earlyProblems?: string[]; // Detected early problems/alerts based on answers (AI-generated)
+  earlyProblemRecommendation?: string; // AI-generated recommendation (1-2 sentences)
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Notification = {
   id: string;
   motherId: string;
@@ -233,13 +269,17 @@ export type AdminActivity = {
 
 const motherKey = (id: string) => `mothers/${id}.json`;
 const doctorKey = (id: string) => `doctors/${id}.json`;
+const editorKey = (id: string) => `editors/${id}.json`;
 const questionKey = (id: string) => `questions/${id}.json`;
 const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
+const dailyQuestionKey = (motherId: string, questionId: string) => `daily-questions/${motherId}/${questionId}.json`;
+const dailyQuestionSessionKey = (motherId: string, date: string) => `daily-question-sessions/${motherId}/${date}.json`;
 const patientKey = (hospitalClinicName: string, patientId: string) => `patients/${encodeURIComponent(hospitalClinicName)}/${patientId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
 const adminActivityKey = (id: string) => `admin-activities/${id}.json`;
+const adminSettingsKey = "admin-settings.json";
 
 async function listJson<T>(prefix: string): Promise<T[]> {
   try {
@@ -315,6 +355,35 @@ export async function getDoctor(id: string) {
 
 export async function saveDoctor(profile: DoctorProfile) {
   return putJson(doctorKey(profile.id), profile);
+}
+
+export async function getEditor(id: string) {
+  return getJson<EditorProfile>(editorKey(id));
+}
+
+export async function saveEditor(profile: EditorProfile) {
+  return putJson(editorKey(profile.id), profile);
+}
+
+export async function findEditorByEmail(email: string) {
+  try {
+    const editors = await listJson<EditorProfile>("editors/");
+    return editors.find((e) => e.email.toLowerCase() === email.toLowerCase() && e.status !== "deleted") || null;
+  } catch (err) {
+    console.error("Error finding editor by email:", err);
+    return null;
+  }
+}
+
+export async function listAllEditors() {
+  try {
+    const editors = await listJson<EditorProfile>("editors/");
+    // Filter out deleted editors
+    return editors.filter((e) => e.status !== "deleted");
+  } catch (err) {
+    console.error("[Data] Error in listAllEditors:", err);
+    return [];
+  }
 }
 
 export async function getQuestion(id: string) {
@@ -879,6 +948,113 @@ export async function searchPatients(hospitalClinicName: string, query: string):
   } catch (err) {
     console.error("Error searching patients:", err);
     return [];
+  }
+}
+
+// Daily Question Functions
+export async function saveDailyQuestion(question: DailyQuestion): Promise<void> {
+  try {
+    await putJson(dailyQuestionKey(question.motherId, question.id), question);
+  } catch (err) {
+    console.error("Error saving daily question:", err);
+    throw err;
+  }
+}
+
+export async function getDailyQuestion(motherId: string, questionId: string): Promise<DailyQuestion | null> {
+  try {
+    return await getJson<DailyQuestion>(dailyQuestionKey(motherId, questionId));
+  } catch (err) {
+    console.error("Error getting daily question:", err);
+    return null;
+  }
+}
+
+export async function listDailyQuestions(motherId: string, date?: string): Promise<DailyQuestion[]> {
+  try {
+    const questions = await listJson<DailyQuestion>(`daily-questions/${motherId}/`);
+    if (date) {
+      return questions.filter(q => q.date === date);
+    }
+    return questions;
+  } catch (err) {
+    console.error("Error listing daily questions:", err);
+    return [];
+  }
+}
+
+export async function getDailyQuestionSession(motherId: string, date: string): Promise<DailyQuestionSession | null> {
+  try {
+    return await getJson<DailyQuestionSession>(dailyQuestionSessionKey(motherId, date));
+  } catch (err) {
+    console.error("Error getting daily question session:", err);
+    return null;
+  }
+}
+
+export async function saveDailyQuestionSession(session: DailyQuestionSession): Promise<void> {
+  try {
+    await putJson(dailyQuestionSessionKey(session.motherId, session.date), session);
+  } catch (err) {
+    console.error("Error saving daily question session:", err);
+    throw err;
+  }
+}
+
+// Admin Settings Type and Functions
+export type AdminSettings = {
+  morningRecommendationHour: number; // Default: 8
+  morningRecommendationMinute: number; // Default: 0
+  eveningRecommendationHour: number; // Default: 20 (8 PM)
+  eveningRecommendationMinute: number; // Default: 0
+  questionHour: number; // Default: 21 (9 PM)
+  questionMinute: number; // Default: 0
+  questionsPerDay: number; // Default: 10
+  updatedAt: string;
+  updatedBy: string; // Admin email
+};
+
+export async function getAdminSettings(): Promise<AdminSettings> {
+  try {
+    const settings = await getJson<AdminSettings>(adminSettingsKey);
+    if (settings) {
+      return settings;
+    }
+    // Return defaults if not set
+    return {
+      morningRecommendationHour: 8,
+      morningRecommendationMinute: 0,
+      eveningRecommendationHour: 20,
+      eveningRecommendationMinute: 0,
+      questionHour: 21,
+      questionMinute: 0,
+      questionsPerDay: 10,
+      updatedAt: new Date().toISOString(),
+      updatedBy: "system",
+    };
+  } catch (err) {
+    console.error("Error getting admin settings:", err);
+    // Return defaults on error
+    return {
+      morningRecommendationHour: 8,
+      morningRecommendationMinute: 0,
+      eveningRecommendationHour: 20,
+      eveningRecommendationMinute: 0,
+      questionHour: 21,
+      questionMinute: 0,
+      questionsPerDay: 10,
+      updatedAt: new Date().toISOString(),
+      updatedBy: "system",
+    };
+  }
+}
+
+export async function saveAdminSettings(settings: AdminSettings): Promise<void> {
+  try {
+    await putJson(adminSettingsKey, settings);
+  } catch (err) {
+    console.error("Error saving admin settings:", err);
+    throw err;
   }
 }
 

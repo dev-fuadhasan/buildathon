@@ -11,18 +11,19 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.740.0",
     "@aws-sdk/s3-request-presigner": "^3.740.0",
+    "@google/genai": "^1.0.0",
     "@react-email/components": "^1.0.1",
     "@react-email/render": "^2.0.0",
     "bcryptjs": "^2.4.3",
     "csv-parse": "^6.1.0",
     "groq-sdk": "^0.8.0",
-    "@google/genai": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "resend": "^6.5.2",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,6 +32,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/xlsx": "^0.0.35",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",

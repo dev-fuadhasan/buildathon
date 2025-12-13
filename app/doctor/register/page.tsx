@@ -127,6 +127,25 @@ export default function DoctorRegister() {
           <p className="text-slate-600">Submit your details for admin approval</p>
         </div>
 
+        {/* Demo Account Info */}
+        <div className="bg-blue-50/60 border border-blue-200/60 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-blue-900/80 font-medium">
+            You can easily create a new account, but it requires admin approval. If you want to check an account already created, use these credentials.
+          </p>
+          <div className="text-sm text-blue-800/70 space-y-2">
+            <div>
+              <p className="font-semibold mb-1">For doctor:</p>
+              <p className="ml-2"><span className="font-medium">Email:</span> demo@doctor.com</p>
+              <p className="ml-2"><span className="font-medium">Password:</span> doctor</p>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">For nurse:</p>
+              <p className="ml-2"><span className="font-medium">Email:</span> demo@nurse1.com</p>
+              <p className="ml-2"><span className="font-medium">Password:</span> 123456</p>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={onSubmit} className="card space-y-6">
           {/* Role Selection */}
           <div>
