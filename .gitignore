@@ -54,3 +54,26 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Documentation files (not needed for production)
+*.md
+!README.md
+API_RESTRICTION_ANALYSIS.md
+BANGLISH_SOLUTION.md
+CRON_SETUP.md
+DUAL_DATASET_IMPLEMENTATION.md
+GROQ_API_FIXES.md
+ICONS_AND_IMAGES_LIST.md
+IMPROVEMENT_PLAN.md
+MULTI_KEY_AND_AI_CLASSIFICATION.md
+TEST_SMART_CHAT_CLASSIFICATION.md
+TROUBLESHOOTING_MULTI_KEY.md
+PROJECT_DOCUMENTATION.md
+
+# Unnecessary files
+doctor-details-response.txt
+Qn_DS.xlsx
+DoctorCard.tsx
+Doctor Card Icons/
+icons_and_illustrations/
+scripts/
