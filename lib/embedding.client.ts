@@ -20,7 +20,7 @@ let pipelineProgress: number = 0;
  * Lazy-load the embedding model (only once)
  * Uses dynamic import to avoid server-side inclusion
  */
-async function getEmbeddingPipeline() {
+export async function getEmbeddingPipeline() {
   if (pipelinePromise) return pipelinePromise;
 
   pipelinePromise = (async () => {

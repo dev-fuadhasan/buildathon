@@ -21,6 +21,7 @@ import {
   searchSimilar as searchSimilarUtil,
   isModelLoaded,
   getModelLoadingPromise,
+  getEmbeddingPipeline,
 } from '../lib/embedding.client';
 import { getModelProgress } from '../lib/embedding.client';
 
@@ -59,7 +60,17 @@ export function useEmbedding() {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const promise = getModelLoadingPromise();
+        // If pipeline not started, start it proactively so progress is reported
+        let promise = getModelLoadingPromise();
+        if (!promise) {
+          try {
+            // Kick off pipeline load
+            promise = getEmbeddingPipeline();
+          } catch (e) {
+            // ignore - getEmbeddingPipeline may throw if not client, will be caught below
+          }
+        }
+
         if (promise) {
           // Poll progress while loading to surface a progress bar in UI
           const pollInterval = 200;
