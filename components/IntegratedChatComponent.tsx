@@ -125,10 +125,20 @@ export function IntegratedChatComponent({ userId, disabled = false, onMessageSen
           // The hook in this component doesn't expose embed directly, so dynamic import to avoid changing hook signature
           const { embedText } = await import('@/lib/embedding.client');
           const e = await embedText(userMessage.content, true);
-          if (Array.isArray(e) && e.length === 384) embeddingToSend = e;
+          // Check if embedding was successfully generated
+          if (e && Array.isArray(e) && e.length === 384) {
+            embeddingToSend = e;
+            console.log('[Integrated Chat] ✅ Client embedding generated successfully');
+          } else if (e === null) {
+            console.warn('[Integrated Chat] Client embedding returned null, proceeding without it');
+          } else {
+            console.warn('[Integrated Chat] Unexpected embedding format, received:', e?.length);
+          }
         } catch (err) {
           console.warn('[Integrated Chat] Failed to compute client embedding:', err);
         }
+      } else {
+        console.log('[Integrated Chat] Model not ready, proceeding without client embedding');
       }
 
       const response = await fetch('/api/chat', {

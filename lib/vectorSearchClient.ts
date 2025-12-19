@@ -83,6 +83,12 @@ export async function semanticSearch(
     // Step 1: Generate embedding for user query
     console.log('[Vector Search] Generating query embedding...');
     const queryEmbedding = await embedText(query, true);
+    
+    // If embedding failed, return empty results
+    if (!queryEmbedding) {
+      console.warn('[Vector Search] Failed to generate query embedding, returning empty results');
+      return [];
+    }
 
     // Step 2: Prepare reference embeddings
     const referenceEmbeddings = qaDatabase.map(qa => qa.embedding);

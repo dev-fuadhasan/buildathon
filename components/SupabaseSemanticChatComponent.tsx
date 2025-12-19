@@ -78,7 +78,7 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
         const emergencyMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `🚨 EMERGENCY\n\n${safety.recommendations.join('\n')}\n\nCall emergency services immediately!`,
+          content: `🚨 EMERGENCY\\n\\n${safety.recommendations.join('\\n')}\\n\\nCall emergency services immediately!`,
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, emergencyMsg]);
@@ -112,8 +112,13 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
       if (isModelReady) {
         try {
           const e = await embed(userText, true);
-          if (Array.isArray(e) && e.length === 384) {
+          // Check if embedding was successfully generated
+          if (e && Array.isArray(e) && e.length === 384) {
             embeddingToSend = e;
+            console.log('[Chat] ✅ Client embedding generated successfully');
+          } else if (e === null) {
+            // This means the embedding failed gracefully
+            console.warn('[Chat] Client embedding returned null, proceeding without it');
           } else if (Array.isArray(e)) {
             // If model returns different dim, still allow server fallback via context
             console.warn('[Chat] Generated embedding had unexpected dimension:', e.length);
@@ -121,6 +126,8 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
         } catch (err) {
           console.warn('[Chat] Failed to generate client embedding:', err);
         }
+      } else {
+        console.log('[Chat] Model not ready, proceeding without client embedding');
       }
 
       const response = await fetch('/api/chat', {

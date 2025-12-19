@@ -58,7 +58,11 @@ export async function getEmbeddingPipeline() {
         console.error('[Embedding] Xenova is required for client-side embeddings.');
         console.error('[Embedding] This library may have incompatibilities with the current runtime environment.');
         
-        throw new Error(`Xenova import failed: ${errMsg}. This prevents client-side embeddings. Consider using server-side embeddings instead.`);
+        // Instead of throwing, we'll return a mock object that allows graceful degradation
+        // This enables the chat to work without client-side embeddings
+        modelLoaded = false;
+        pipelinePromise = null;
+        return null;
       }
 
       // Some bundlers/types expose different shapes; cast to `any` to safely access `.default`
@@ -129,7 +133,8 @@ export async function getEmbeddingPipeline() {
       
       modelLoaded = false;
       pipelinePromise = null;
-      throw error;
+      // Return null instead of throwing to allow graceful degradation
+      return null;
     }
   })();
 
@@ -185,13 +190,19 @@ export function normalizeEmbedding(embedding: number[]): number[] {
 export async function embedText(
   text: string,
   isQuery: boolean = true
-): Promise<number[]> {
+): Promise<number[] | null> {
   if (!text || typeof text !== 'string') {
     throw new Error('Text must be a non-empty string');
   }
 
   try {
     const pipeline = await getEmbeddingPipeline();
+    
+    // If pipeline is null, it means the model failed to load
+    if (!pipeline) {
+      console.warn('[Embedding] Pipeline not available, returning null');
+      return null;
+    }
 
     // Model expects plain text; for consistency we keep a light prefix
     const prefix = isQuery ? 'query: ' : 'passage: ';
@@ -225,7 +236,8 @@ export async function embedText(
     return embedding;
   } catch (error) {
     console.error('[Embedding] Error generating embedding:', error);
-    throw error;
+    // Return null instead of throwing to allow graceful degradation
+    return null;
   }
 }
 

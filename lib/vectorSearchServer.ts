@@ -114,9 +114,11 @@ export async function semanticSearchWithFallback(
     if (!initializeSupabase()) {
       console.error('[🔍 VECTOR SEARCH] ❌ Supabase init failed');
       console.log('='.repeat(60));
-      return [];
+      // Fallback to keyword search when Supabase is not available
+      return await keywordSearch(query, maxResults);
     }
   }
+  
   try {
     const q = query.trim();
     if (q.length === 0) {
@@ -131,12 +133,24 @@ export async function semanticSearchWithFallback(
       embeddingArray = clientEmbedding.map(v => Number(v));
       console.log('[VECTOR SEARCH] Client embedding received (384-d)');
     } else {
-      console.log('[VECTOR SEARCH] No client embedding provided; aborting vector search');
-      console.log('='.repeat(60));
-      return [];
+      // Generate embedding server-side if client embedding is not available
+      console.log('[VECTOR SEARCH] No client embedding provided; generating server-side embedding');
+      try {
+        const serverEmbedding = await generateServerSideEmbedding(q);
+        if (!serverEmbedding || serverEmbedding.length !== 384) {
+          throw new Error('Invalid server-side embedding generated');
+        }
+        embeddingArray = serverEmbedding;
+        console.log('[VECTOR SEARCH] Server-side embedding generated successfully (384-d)');
+      } catch (embedError) {
+        console.error('[VECTOR SEARCH] Failed to generate server-side embedding:', embedError);
+        // Fallback to keyword search when embedding generation fails
+        console.log('[VECTOR SEARCH] Falling back to keyword search');
+        console.log('='.repeat(60));
+        return await keywordSearch(query, maxResults);
+      }
     }
 
-    console.log('[VECTOR SEARCH] Supabase match_embeddings executed');
     console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
     const rpcStartTime = performance.now();
 
@@ -146,24 +160,28 @@ export async function semanticSearchWithFallback(
       match_count: maxResults * 2,
     });
 
-      console.log(`[🔍 VECTOR SEARCH] match_embeddings RPC returned ${Array.isArray(searchResults) ? searchResults.length : 0} rows`);
+    console.log(`[🔍 VECTOR SEARCH] match_embeddings RPC returned ${Array.isArray(searchResults) ? searchResults.length : 0} rows`);
 
     const rpcDuration = performance.now() - rpcStartTime;
 
     if (rpcError) {
       console.error('[🔍 VECTOR SEARCH] ❌ RPC error:', rpcError);
+      // Fallback to keyword search when RPC fails
+      console.log('[VECTOR SEARCH] Falling back to keyword search due to RPC error');
       console.log('='.repeat(60));
-      return [];
+      return await keywordSearch(query, maxResults);
     }
 
     if (!searchResults || searchResults.length === 0) {
-      console.log('⚠️ Vector search returned no matches (client embedding provided)');
+      console.log('⚠️ Vector search returned no matches');
+      // Still try keyword search as additional fallback
+      console.log('[VECTOR SEARCH] Trying keyword search as additional fallback');
+      const keywordResults = await keywordSearch(query, maxResults);
       console.log('='.repeat(60));
-      // Do NOT fallback to keyword search when client embedding is provided
-      return [];
+      return keywordResults;
     }
 
-    // Step 3: Format results
+    // Format results
     const results: VectorSearchResult[] = searchResults
       .slice(0, maxResults)
       .map((item: any) => ({
@@ -187,7 +205,52 @@ export async function semanticSearchWithFallback(
     return results;
   } catch (err) {
     console.error('[🔍 VECTOR SEARCH] ❌ Vector search failed:', err);
+    // Final fallback to keyword search
+    console.log('[VECTOR SEARCH] Final fallback to keyword search');
     console.log('='.repeat(60));
-    return [];
+    return await keywordSearch(query, maxResults);
+  }
+}
+
+/**
+ * Generate embedding server-side using the embedding API
+ * This is a fallback when client-side embedding fails
+ */
+async function generateServerSideEmbedding(text: string): Promise<number[] | null> {
+  try {
+    // Use the embedding API endpoint to generate embedding
+    const embeddingApiUrl = process.env.EMBEDDING_SERVICE_URL || '/api/embedding-384';
+    
+    // If we're on the server and have an external service, use it
+    if (process.env.EMBEDDING_SERVICE_URL) {
+      const res = await fetch(process.env.EMBEDDING_SERVICE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.EMBEDDING_SERVICE_KEY ? { Authorization: `Bearer ${process.env.EMBEDDING_SERVICE_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text }),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Embedding service error: ${res.status}`);
+      }
+      
+      const json = await res.json();
+      const embedding = json.embedding || json.data?.embedding || null;
+      
+      if (Array.isArray(embedding) && embedding.length === 384) {
+        return embedding;
+      } else {
+        throw new Error('Invalid embedding format from service');
+      }
+    } else {
+      // For Vercel deployment, we need to make sure the embedding API is properly configured
+      console.warn('[SERVER EMBEDDING] No EMBEDDING_SERVICE_URL configured - cannot generate server-side embeddings');
+      return null;
+    }
+  } catch (error) {
+    console.error('[SERVER EMBEDDING] Failed to generate embedding:', error);
+    return null;
   }
 }

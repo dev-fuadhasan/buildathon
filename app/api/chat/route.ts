@@ -5,6 +5,7 @@ import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
 import { semanticSearchWithFallback } from "@/lib/vectorSearchServer";
+import { robustVectorSearch } from "@/lib/vectorSearchRobust";
 
 // Format search results for context
 function formatSearchResultsForContext(results: any[]): string {
@@ -160,44 +161,29 @@ export async function POST(req: NextRequest) {
 
       // ✅ VECTOR SEARCH (for guests)
       let semanticContext = "";
-      // If the browser provided an embedding, prefer it (no server-side HF/Xenova)
-      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
-        try {
-          console.log("[💬 CHAT API] ℹ️ Received client embedding (384d) - using for Supabase RPC search");
-          const searchResults = await semanticSearchWithFallback(lastUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          }, clientEmbedding);
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
-        } catch (err) {
-          console.error("[💬 CHAT API] ❌ Vector search (client embedding) failed:", err);
-          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+      // Use robust vector search that works in all environments
+      try {
+        console.log("\n" + "=".repeat(70));
+        console.log("[💬 CHAT API] 🔍 Performing robust vector search for GUEST user");
+        console.log("[💬 CHAT API] Query:", lastUserMessage.substring(0, 100));
+        
+        // Use the robust vector search with multiple fallbacks
+        const searchResults = await robustVectorSearch(lastUserMessage, {
+          minSimilarity: 0.25,
+          maxResults: 3,
+        }, clientEmbedding || undefined);
+        
+        semanticContext = formatSearchResultsForContext(searchResults);
+        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+        if (semanticContext) {
+          console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
         }
-      } else if (!clientContext) {
-        // Only search if client didn't already do it
-        try {
-          console.log("\n" + "=".repeat(70));
-          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for GUEST user");
-          console.log("[💬 CHAT API] Query:", lastUserMessage.substring(0, 100));
-          const searchResults = await semanticSearchWithFallback(lastUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          });
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
-          if (semanticContext) {
-            console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
-          }
-          console.log("=".repeat(70) + "\n");
-        } catch (err) {
-          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
-          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
-          console.log("=".repeat(70) + "\n");
-          // Continue without semantic context - system is resilient
-        }
-      } else {
-        console.log("[💬 CHAT API] ℹ️  Using client-provided semantic context");
+        console.log("=".repeat(70) + "\n");
+      } catch (err) {
+        console.error("[💬 CHAT API] ❌ Robust vector search failed:", err);
+        console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+        console.log("=".repeat(70) + "\n");
+        // Continue without semantic context - system is resilient
       }
       
       // Get AI response (no profile context for guests)
@@ -442,45 +428,29 @@ export async function POST(req: NextRequest) {
 
       // ✅ VECTOR SEARCH (for logged-in users)
       let semanticContext = "";
-      // If client provided embedding prefer that
-      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
-        try {
-          console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
-          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          }, clientEmbedding);
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
-        } catch (err) {
-          console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
-          console.log('[💬 CHAT API] Continuing without semantic context (system is resilient)');
+      // Use robust vector search that works in all environments
+      try {
+        console.log("\n" + "=".repeat(70));
+        console.log("[💬 CHAT API] 🔍 Performing robust vector search for LOGGED-IN user");
+        console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
+        
+        // Use the robust vector search with multiple fallbacks
+        const searchResults = await robustVectorSearch(currentUserMessage, {
+          minSimilarity: 0.25,
+          maxResults: 3,
+        }, clientEmbedding || undefined);
+        
+        semanticContext = formatSearchResultsForContext(searchResults);
+        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+        if (semanticContext) {
+          console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
         }
-      } else if (!clientContext) {
-        // Only search if client didn't already do it
-        try {
-          console.log("\n" + "=".repeat(70));
-          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
-          console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
-          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          });
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
-          if (semanticContext) {
-            console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
-          }
-          console.log("=".repeat(70) + "\n");
-        } catch (err) {
-          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
-          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
-          console.log("=".repeat(70) + "\n");
-          // Continue without semantic context - system is resilient
-        }
-      } else {
-        semanticContext = clientContext;
-        console.log("[Chat API] Using client-provided semantic context");
+        console.log("=".repeat(70) + "\n");
+      } catch (err) {
+        console.error("[💬 CHAT API] ❌ Robust vector search failed:", err);
+        console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+        console.log("=".repeat(70) + "\n");
+        // Continue without semantic context - system is resilient
       }
       
       // ✅ Include semantic context with other contexts
