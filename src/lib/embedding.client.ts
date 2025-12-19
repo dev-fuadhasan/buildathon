@@ -1,348 +1,328 @@
 /**
- * Client-Side Embedding Utility
+ * CLIENT-SIDE BROWSER EMBEDDINGS
  * 
- * Browser-only embeddings using Xenova/multilingual-e5-base
- * - Runs entirely in the browser (no API calls)
- * - Uses WebAssembly (WASM) for performance
+ * Uses Xenova/all-MiniLM-L6-v2 with WebAssembly
+ * - No Hugging Face API calls
+ * - No server-side code needed
  * - Works offline after first load
- * - Safe for healthcare data (no data leaves the browser)
+ * - Safe for healthcare data (everything stays in browser)
  * 
- * Requirements:
- * - DO NOT use in server-side code
- * - DO NOT use Hugging Face Inference API
- * - Embeddings run in browser only
+ * This file MUST only be imported on the client side
+ * Add 'use client' at the top of components that use this
  */
 
 "use client";
 
-// Model configuration
-const MODEL_NAME = 'Xenova/multilingual-e5-base';
-const MODEL_TASK = 'feature-extraction';
-
-// Type for the feature extraction pipeline (use any to avoid early type evaluation)
-type FeatureExtractionPipeline = any;
-
-// Singleton pattern: Load model once, reuse across all calls
-let embeddingPipeline: FeatureExtractionPipeline | null = null;
-let loadingPromise: Promise<FeatureExtractionPipeline> | null = null;
-let loadingState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+// Singleton pattern: load model once, reuse
+let pipelinePromise: Promise<any> | null = null;
+let modelLoaded = false;
+let pipelineProgress: number = 0;
 
 /**
- * Check if code is running in browser environment
+ * Lazy-load the embedding model (only once)
+ * Uses dynamic import to avoid server-side inclusion
  */
-function isBrowser(): boolean {
-  return typeof window !== 'undefined' && typeof window.document !== 'undefined';
-}
+export async function getEmbeddingPipeline() {
+  if (pipelinePromise) return pipelinePromise;
 
-/**
- * Initialize and load the embedding model
- * Uses lazy loading - model is only loaded when first needed
- * 
- * @returns Promise that resolves to the loaded pipeline
- */
-async function loadModel(): Promise<FeatureExtractionPipeline> {
-  // Ensure we're in browser
-  if (!isBrowser()) {
-    throw new Error(
-      'embedding.client.ts can only be used in browser environment. ' +
-      'Do not import this file in server-side code or API routes.'
-    );
-  }
-
-  // If model is already loaded, return it
-  if (embeddingPipeline) {
-    return embeddingPipeline;
-  }
-
-  // If model is currently loading, wait for that promise
-  if (loadingPromise) {
-    return loadingPromise;
-  }
-
-  // Start loading the model
-  loadingState = 'loading';
-  loadingPromise = (async (): Promise<FeatureExtractionPipeline> => {
+  pipelinePromise = (async () => {
     try {
-      console.log('[Embedding Client] Loading model:', MODEL_NAME);
-      // Dynamically import @xenova/transformers only in the browser
+      // Dynamically import only on client. Be defensive: some bundlers/module shapes
+      // expose the library as a default export or as named exports, so handle both.
       const mod = await import('@xenova/transformers');
+
+      // Some bundlers/types expose different shapes; cast to `any` to safely access `.default`
       const m: any = mod as any;
 
-      const pipelineFn = m && (m.pipeline ?? (m.default && m.default.pipeline));
+      // Try multiple locations for the pipeline function
+      const pipelineFn = (m && (m.pipeline ?? (m.default && m.default.pipeline))) as any;
 
       if (!pipelineFn) {
-        console.error('[Embedding Client] @xenova/transformers did not expose `pipeline`');
+        console.error('[Embedding] @xenova/transformers did not expose `pipeline`');
         throw new Error('transformers pipeline not available');
       }
 
-      // Create the pipeline using the library's pipeline factory
-      const loadedPipeline = await pipelineFn(MODEL_TASK, {
-        model: MODEL_NAME,
-        quantized: true,
+      console.log('[Embedding] Loading Xenova/all-MiniLM-L6-v2 model (WASM)...');
+
+      const extractor = await pipelineFn('feature-extraction', {
+        model: 'Xenova/all-MiniLM-L6-v2',
+        progress_callback: (progress: any) => {
+          try {
+            // Log raw progress object for diagnostics
+            console.log('[Embedding] progress callback raw:', progress);
+
+            // Common shapes: { status: 'progress', progress: 0.12 }
+            if (progress && typeof progress === 'object') {
+              let pct: number | null = null;
+
+              if (typeof progress.progress === 'number') {
+                pct = Math.round(progress.progress * 100);
+              } else if (typeof progress.loaded === 'number' && typeof progress.total === 'number' && progress.total > 0) {
+                pct = Math.round((progress.loaded / progress.total) * 100);
+              } else if (typeof progress.percent === 'number') {
+                pct = Math.round(progress.percent);
+              } else if (progress.detail && typeof progress.detail === 'object') {
+                // some runtimes nest progress
+                const d = progress.detail as any;
+                if (typeof d.progress === 'number') pct = Math.round(d.progress * 100);
+                else if (typeof d.loaded === 'number' && typeof d.total === 'number' && d.total > 0) pct = Math.round((d.loaded / d.total) * 100);
+              }
+
+              if (pct !== null) {
+                pipelineProgress = Math.min(100, Math.max(0, pct));
+                console.log(`[Embedding] Loading... ${pipelineProgress}%`);
+              } else {
+                // If we couldn't compute percent, leave pipelineProgress unchanged but log
+                console.log('[Embedding] progress object provided but percent not available yet');
+              }
+            }
+          } catch (err) {
+            console.warn('[Embedding] progress callback error:', err);
+          }
+        },
       });
 
-      embeddingPipeline = loadedPipeline;
-      loadingState = 'ready';
-      console.log('[Embedding Client] Model loaded successfully');
-      
-      return loadedPipeline;
-    } catch (error: any) {
-      loadingState = 'error';
-      loadingPromise = null; // Reset so we can retry
-      console.error('[Embedding Client] Error loading model:', error);
-      throw new Error(
-        `Failed to load embedding model: ${error.message}. ` +
-        'Make sure @xenova/transformers is installed and you have internet connection for first load.'
-      );
+      modelLoaded = true;
+      console.log('[Embedding] Model loaded successfully ✓');
+      return extractor;
+    } catch (error) {
+      console.error('[Embedding] Failed to load model:', error);
+      modelLoaded = false;
+      pipelinePromise = null;
+      throw error;
     }
   })();
 
-  return loadingPromise;
+  return pipelinePromise;
 }
 
 /**
- * Get the current loading state
+ * Calculate cosine similarity between two embeddings
+ * Range: -1 to 1 (1 = identical, 0 = orthogonal, -1 = opposite)
  */
-export function getEmbeddingLoadingState(): 'idle' | 'loading' | 'ready' | 'error' {
-  return loadingState;
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error('Embedding vectors must have same dimension');
+  }
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
+  if (denominator === 0) return 0;
+
+  return dotProduct / denominator;
 }
 
 /**
- * Check if the model is ready to use
+ * Normalize embedding vector to unit length
+ * Improves stability for cosine similarity calculations
  */
-export function isEmbeddingReady(): boolean {
-  return loadingState === 'ready' && embeddingPipeline !== null;
+export function normalizeEmbedding(embedding: number[]): number[] {
+  const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+  if (norm === 0) return embedding;
+  return embedding.map(val => val / norm);
 }
 
 /**
- * Generate embedding for a query text
- * 
- * Uses "query:" prefix as required by E5 models for better search performance
- * 
- * @param text - The query text to embed (e.g., "গর্ভাবস্থায় মাথাব্যথা কি বিপজ্জনক?")
- * @returns Promise that resolves to normalized embedding vector (number[])
- * 
- * @example
- * ```ts
- * const embedding = await embedQuery("গর্ভাবস্থায় মাথাব্যথা কি বিপজ্জনক?");
- * // Returns: [0.123, -0.456, 0.789, ...] (normalized vector)
- * ```
- */
-export async function embedQuery(text: string): Promise<number[]> {
-  if (!isBrowser()) {
-    throw new Error('embedQuery can only be called in browser environment');
-  }
-
-  if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    throw new Error('Text must be a non-empty string');
-  }
-
-  // Ensure model is loaded
-  const modelPipeline = await loadModel();
-
-  try {
-    // Add "query:" prefix for E5 models (required for optimal performance)
-    const prefixedText = text.startsWith('query:') 
-      ? text 
-      : `query: ${text}`;
-
-    console.log('[Embedding Client] Generating query embedding...');
-
-    // Generate embeddings using the pipeline
-    // The pipeline returns token embeddings, we need to pool them
-    const output = await (modelPipeline as any)(prefixedText, {
-      pooling: 'mean', // Mean pooling as specified
-      normalize: true,  // Normalize embeddings as specified
-    });
-
-    // Extract the embedding vector
-    // @xenova/transformers returns a tensor with .data property (Float32Array or similar)
-    let embedding: number[];
-
-    // Handle different output formats
-    if (output && output.data) {
-      // Most common: output.data is a TypedArray (Float32Array, etc.)
-      if (output.data instanceof Float32Array || output.data instanceof Array) {
-        embedding = Array.from(output.data);
-      } else if (typeof output.data === 'object' && 'length' in output.data) {
-        // Handle other TypedArray types
-        embedding = Array.from(output.data as ArrayLike<number>);
-      } else {
-        throw new Error('Unexpected output.data format from embedding pipeline');
-      }
-    } else if (Array.isArray(output)) {
-      // If output is directly an array
-      embedding = output;
-    } else if (output && typeof output === 'object') {
-      // Try to extract from tensor-like structure
-      const data = (output as any)?.data;
-      if (data && (data instanceof Float32Array || Array.isArray(data))) {
-        embedding = Array.from(data);
-      } else {
-        throw new Error('Unexpected output format from embedding pipeline');
-      }
-    } else {
-      throw new Error('Unexpected output format from embedding pipeline');
-    }
-
-    // Ensure normalization (in case the model didn't normalize)
-    // Calculate L2 norm
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    if (magnitude > 0 && Math.abs(magnitude - 1.0) > 0.001) {
-      // Only normalize if not already normalized (with small tolerance)
-      embedding = embedding.map(val => val / magnitude);
-    }
-
-    console.log(`[Embedding Client] Generated embedding: ${embedding.length} dimensions`);
-    
-    return embedding;
-  } catch (error: any) {
-    console.error('[Embedding Client] Error generating query embedding:', error);
-    throw new Error(`Failed to generate embedding: ${error.message}`);
-  }
-}
-
-/**
- * Generate embedding for a passage/document text
- * 
- * Uses "passage:" prefix as required by E5 models for better search performance
- * 
- * @param text - The passage text to embed
- * @returns Promise that resolves to normalized embedding vector (number[])
- * 
- * @example
- * ```ts
- * const embedding = await embedPassage("গর্ভাবস্থায় মাথাব্যথা সাধারণত হরমোন পরিবর্তনের কারণে হয়।");
- * // Returns: [0.234, -0.567, 0.890, ...] (normalized vector)
- * ```
- */
-export async function embedPassage(text: string): Promise<number[]> {
-  if (!isBrowser()) {
-    throw new Error('embedPassage can only be called in browser environment');
-  }
-
-  if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    throw new Error('Text must be a non-empty string');
-  }
-
-  // Ensure model is loaded
-  const modelPipeline = await loadModel();
-
-  try {
-    // Add "passage:" prefix for E5 models (required for optimal performance)
-    const prefixedText = text.startsWith('passage:') 
-      ? text 
-      : `passage: ${text}`;
-
-    console.log('[Embedding Client] Generating passage embedding...');
-
-    // Generate embeddings using the pipeline
-    const output = await (modelPipeline as any)(prefixedText, {
-      pooling: 'mean', // Mean pooling as specified
-      normalize: true,  // Normalize embeddings as specified
-    });
-
-    // Extract the embedding vector (same logic as embedQuery)
-    let embedding: number[];
-
-    // Handle different output formats
-    if (output && output.data) {
-      // Most common: output.data is a TypedArray (Float32Array, etc.)
-      if (output.data instanceof Float32Array || output.data instanceof Array) {
-        embedding = Array.from(output.data);
-      } else if (typeof output.data === 'object' && 'length' in output.data) {
-        // Handle other TypedArray types
-        embedding = Array.from(output.data as ArrayLike<number>);
-      } else {
-        throw new Error('Unexpected output.data format from embedding pipeline');
-      }
-    } else if (Array.isArray(output)) {
-      // If output is directly an array
-      embedding = output;
-    } else if (output && typeof output === 'object') {
-      // Try to extract from tensor-like structure
-      const data = (output as any)?.data;
-      if (data && (data instanceof Float32Array || Array.isArray(data))) {
-        embedding = Array.from(data);
-      } else {
-        throw new Error('Unexpected output format from embedding pipeline');
-      }
-    } else {
-      throw new Error('Unexpected output format from embedding pipeline');
-    }
-
-    // Ensure normalization (in case the model didn't normalize)
-    // Calculate L2 norm
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    if (magnitude > 0 && Math.abs(magnitude - 1.0) > 0.001) {
-      // Only normalize if not already normalized (with small tolerance)
-      embedding = embedding.map(val => val / magnitude);
-    }
-
-    console.log(`[Embedding Client] Generated embedding: ${embedding.length} dimensions`);
-    
-    return embedding;
-  } catch (error: any) {
-    console.error('[Embedding Client] Error generating passage embedding:', error);
-    throw new Error(`Failed to generate embedding: ${error.message}`);
-  }
-}
-
-/**
- * Convenience function: Auto-detect if text should be treated as query or passage
- * Defaults to query if not specified
+ * Generate embedding for a text string
  * 
  * @param text - The text to embed
- * @param type - 'query' or 'passage' (default: 'query')
- * @returns Promise that resolves to normalized embedding vector
+ * @param isQuery - If true, prefix with "query:" (for user questions). If false, prefix with "passage:" (for Q&A pairs)
+ * @returns Embedding vector (expected 384 dimensions)
+ * 
+ * Example:
+ *   const userQueryEmbedding = await embedText("মাথাব্যথা কি বিপজ্জনক?", true)
+ *   const qaEmbedding = await embedText("মাথাব্যথা: গর্ভাবস্থায় এটি সাধারণ", false)
  */
 export async function embedText(
-  text: string, 
-  type: 'query' | 'passage' = 'query'
+  text: string,
+  isQuery: boolean = true
 ): Promise<number[]> {
-  return type === 'passage' ? embedPassage(text) : embedQuery(text);
-}
-
-/**
- * Preload the model (useful for warming up the model before first use)
- * 
- * Call this early in your app lifecycle to start loading the model
- * in the background, so it's ready when needed.
- * 
- * @example
- * ```ts
- * // In your app initialization
- * import { preloadEmbeddingModel } from '@/src/lib/embedding.client';
- * 
- * useEffect(() => {
- *   preloadEmbeddingModel();
- * }, []);
- * ```
- */
-export async function preloadEmbeddingModel(): Promise<void> {
-  if (!isBrowser()) {
-    return; // Silently fail in server environment
-  }
-
-  if (embeddingPipeline || loadingPromise) {
-    return; // Already loading or loaded
+  if (!text || typeof text !== 'string') {
+    throw new Error('Text must be a non-empty string');
   }
 
   try {
-    await loadModel();
+    const pipeline = await getEmbeddingPipeline();
+
+    // Model expects plain text; for consistency we keep a light prefix
+    const prefix = isQuery ? 'query: ' : 'passage: ';
+    const inputText = prefix + text;
+
+    console.log('[Embedding] Generating embedding...');
+
+    // Generate embedding with mean pooling and normalization
+    const embedPromise = pipeline(inputText, {
+      pooling: 'mean',
+      normalize: true,
+    });
+
+    // Enforce 4s timeout for embedding generation
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Embedding generation timed out (4s)')), 4000)
+    );
+
+    const result = await Promise.race([embedPromise, timeoutPromise]);
+
+    // Extract vector from result
+    const embedding = Array.from((result as any).data) as number[];
+
+    console.log(`[Embedding] Generated embedding (${embedding.length} dimensions)`);
+
+    // Verify dimension (expect 384 for all-MiniLM-L6-v2)
+    if (embedding.length !== 384) {
+      console.warn('[Embedding] Unexpected embedding dimension:', embedding.length);
+    }
+
+    return embedding;
   } catch (error) {
-    // Don't throw - preloading is optional
-    console.warn('[Embedding Client] Preload failed (will retry on first use):', error);
+    console.error('[Embedding] Error generating embedding:', error);
+    throw error;
   }
 }
 
 /**
- * Reset the model (useful for testing or memory management)
- * Note: This will force a reload on next use
+ * Batch embed multiple texts (more efficient than individual calls)
+ * 
+ * @param texts - Array of texts to embed
+ * @param isQuery - Whether these are query texts or passage texts
+ * @returns Array of embeddings
  */
-export function resetEmbeddingModel(): void {
-  embeddingPipeline = null;
-  loadingPromise = null;
-  loadingState = 'idle';
+export async function embedTextBatch(
+  texts: string[],
+  isQuery: boolean = false
+): Promise<number[][]> {
+  if (!Array.isArray(texts) || texts.length === 0) {
+    throw new Error('Texts must be a non-empty array');
+  }
+
+  try {
+    const pipeline = await getEmbeddingPipeline();
+
+    const prefix = isQuery ? 'query: ' : 'passage: ';
+    const prefixedTexts = texts.map(text => prefix + text);
+
+    console.log(`[Embedding] Batch generating ${texts.length} embeddings...`);
+
+    // Process all texts at once
+    const results = await pipeline(prefixedTexts, {
+      pooling: 'mean',
+      normalize: true,
+    });
+
+    // Convert results to array of embeddings
+    const embeddings = prefixedTexts.map((_, index) => {
+      const result = (results as any)[index];
+      return Array.from((result as any).data) as number[];
+    });
+
+    console.log(`[Embedding] Generated ${embeddings.length} embeddings`);
+
+    return embeddings;
+  } catch (error) {
+    console.error('[Embedding] Error in batch embedding:', error);
+    throw error;
+  }
+}
+
+/**
+ * Find top K most similar items from a list of reference embeddings
+ * 
+ * @param queryEmbedding - The query embedding vector
+ * @param referenceEmbeddings - Array of reference embeddings to search
+ * @param k - Number of top results to return
+ * @param minSimilarity - Minimum similarity threshold (0-1)
+ * @returns Array of {index, similarity} sorted by similarity (highest first)
+ */
+export function searchSimilar(
+  queryEmbedding: number[],
+  referenceEmbeddings: number[][],
+  k: number = 3,
+  minSimilarity: number = 0.3
+) {
+  const results = referenceEmbeddings
+    .map((refEmbedding, index) => ({
+      index,
+      similarity: cosineSimilarity(queryEmbedding, refEmbedding),
+    }))
+    .filter(result => result.similarity >= minSimilarity)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, k);
+
+  return results;
+}
+
+/**
+ * Get model loading status
+ * Useful for displaying loading UI
+ */
+export function isModelLoaded(): boolean {
+  return modelLoaded;
+}
+
+/**
+ * Get current model loading progress (0-100).
+ * This is a polling-friendly synchronous getter used by `useEmbedding`.
+ */
+export function getModelProgress(): number {
+  return pipelineProgress;
+}
+
+/**
+ * Get pipeline loading promise (for waiting on model load)
+ * Useful in useEffect hooks
+ */
+export function getModelLoadingPromise(): Promise<any> | null {
+  return pipelinePromise;
+}
+
+/**
+ * Reset the model (useful for memory cleanup if needed)
+ * Note: This will require reloading the model on next use
+ */
+export function resetModel(): void {
+  pipelinePromise = null;
+  modelLoaded = false;
+  console.log('[Embedding] Model reset');
+}
+
+/**
+ * Simplified batch search: embed queries and find matches
+ * 
+ * @param queries - Array of query texts
+ * @param qaDatabase - Array of {id, question, answer, embedding} objects
+ * @param k - Top K results per query
+ * @returns Array of search results
+ */
+export async function searchQADatabase(
+  queries: string[],
+  qaDatabase: Array<{ id: string; embedding: number[] }>,
+  k: number = 3
+) {
+  try {
+    const queryEmbeddings = await embedTextBatch(queries, true);
+
+    return queryEmbeddings.map((queryEmbed, queryIndex) => {
+      const topMatches = searchSimilar(queryEmbed, qaDatabase.map(qa => qa.embedding), k);
+      return {
+        query: queries[queryIndex],
+        matches: topMatches.map(match => ({
+          ...qaDatabase[match.index],
+          similarity: match.similarity,
+        })),
+      };
+    });
+  } catch (error) {
+    console.error('[Embedding] Error searching QA database:', error);
+    throw error;
+  }
 }
 
