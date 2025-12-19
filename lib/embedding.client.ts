@@ -27,11 +27,10 @@ async function getEmbeddingPipeline() {
       // Dynamically import only on client
       const { pipeline } = await import('@xenova/transformers');
 
-      console.log('[Embedding] Loading Xenova/all-MiniLM-L6-v2 model...');
+      console.log('[Embedding] Loading Xenova/all-MiniLM-L6-v2 model (WASM)...');
 
       const extractor = await (pipeline as any)('feature-extraction', {
         model: 'Xenova/all-MiniLM-L6-v2',
-        // Optional: customize progress reporting
         progress_callback: (progress: any) => {
           if (progress.status === 'progress') {
             console.log(
@@ -91,11 +90,11 @@ export function normalizeEmbedding(embedding: number[]): number[] {
 }
 
 /**
- * Generate embedding for a text string (with E5 prefix)
+ * Generate embedding for a text string
  * 
  * @param text - The text to embed
  * @param isQuery - If true, prefix with "query:" (for user questions). If false, prefix with "passage:" (for Q&A pairs)
- * @returns Embedding vector (768 dimensions)
+ * @returns Embedding vector (expected 384 dimensions)
  * 
  * Example:
  *   const userQueryEmbedding = await embedText("মাথাব্যথা কি বিপজ্জনক?", true)
@@ -112,36 +111,33 @@ export async function embedText(
   try {
     const pipeline = await getEmbeddingPipeline();
 
-    // Add E5 prefix based on usage type
+    // Model expects plain text; for consistency we keep a light prefix
     const prefix = isQuery ? 'query: ' : 'passage: ';
-    const prefixedText = prefix + text;
+    const inputText = prefix + text;
 
     console.log('[Embedding] Generating embedding...');
 
     // Generate embedding with mean pooling and normalization
-    // Add a 4s timeout guard for embedding generation
-    const generatePromise = (async () => {
-      return await pipeline(prefixedText, {
-        pooling: 'mean',
-        normalize: true,
-      });
-    })();
+    const embedPromise = pipeline(inputText, {
+      pooling: 'mean',
+      normalize: true,
+    });
 
-    const timeout = 4000;
-    const result = await Promise.race([
-      generatePromise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Embedding timeout')), timeout)),
-    ]);
+    // Enforce 4s timeout for embedding generation
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Embedding generation timed out (4s)')), 4000)
+    );
+
+    const result = await Promise.race([embedPromise, timeoutPromise]);
 
     // Extract vector from result
-    // The pipeline returns a Tensor, convert to array
     const embedding = Array.from((result as any).data) as number[];
 
     console.log(`[Embedding] Generated embedding (${embedding.length} dimensions)`);
 
-    // Ensure 384-d output; if model produces other dims, normalize length if possible
+    // Verify dimension (expect 384 for all-MiniLM-L6-v2)
     if (embedding.length !== 384) {
-      console.warn('[Embedding] Warning: embedding dimension is', embedding.length, 'expected 384');
+      console.warn('[Embedding] Unexpected embedding dimension:', embedding.length);
     }
 
     return embedding;
@@ -174,19 +170,11 @@ export async function embedTextBatch(
 
     console.log(`[Embedding] Batch generating ${texts.length} embeddings...`);
 
-    // Process all texts at once with a timeout guard
-    const generatePromise = (async () => {
-      return await pipeline(prefixedTexts, {
-        pooling: 'mean',
-        normalize: true,
-      });
-    })();
-
-    const timeout = 4000;
-    const results = await Promise.race([
-      generatePromise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Embedding batch timeout')), timeout)),
-    ]);
+    // Process all texts at once
+    const results = await pipeline(prefixedTexts, {
+      pooling: 'mean',
+      normalize: true,
+    });
 
     // Convert results to array of embeddings
     const embeddings = prefixedTexts.map((_, index) => {

@@ -129,13 +129,14 @@ export async function semanticSearchWithFallback(
     let embeddingArray: number[] | undefined = undefined;
     if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
       embeddingArray = clientEmbedding.map(v => Number(v));
-      console.log(`[VECTOR SEARCH] Using client-provided embedding (length=${embeddingArray.length})`);
+      console.log('[VECTOR SEARCH] Client embedding received (384-d)');
     } else {
-      console.log('[VECTOR SEARCH] No client embedding provided; falling back to keyword search');
-      const fallback = await keywordSearch(query, maxResults);
-      return fallback;
+      console.log('[VECTOR SEARCH] No client embedding provided; aborting vector search');
+      console.log('='.repeat(60));
+      return [];
     }
 
+    console.log('[VECTOR SEARCH] Supabase match_embeddings executed');
     console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
     const rpcStartTime = performance.now();
 
@@ -156,18 +157,10 @@ export async function semanticSearchWithFallback(
     }
 
     if (!searchResults || searchResults.length === 0) {
-      if (embeddingArray) {
-        // When client provided embedding, DO NOT fall back to keyword search
-        console.log('[VECTOR SEARCH] Supabase returned no results for client embedding; skipping keyword fallback');
-        console.log('='.repeat(60));
-        return [];
-      }
-
-      console.log('⚠️ Vector search empty, using keyword fallback');
+      console.log('⚠️ Vector search returned no matches (client embedding provided)');
       console.log('='.repeat(60));
-      // Fallback to keyword search (per spec)
-      const fallback = await keywordSearch(query, maxResults);
-      return fallback;
+      // Do NOT fallback to keyword search when client embedding is provided
+      return [];
     }
 
     // Step 3: Format results
