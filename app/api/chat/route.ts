@@ -5,7 +5,7 @@ import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
 import { semanticSearchWithFallback } from "@/lib/vectorSearchServer";
-import { robustVectorSearch } from "@/lib/vectorSearchRobust";
+import { vectorSearchWithHuggingFace } from "@/lib/vectorSearchWithHuggingFace";
 
 // Format search results for context
 function formatSearchResultsForContext(results: any[]): string {
@@ -167,11 +167,11 @@ export async function POST(req: NextRequest) {
         console.log("[💬 CHAT API] 🔍 Performing robust vector search for GUEST user");
         console.log("[💬 CHAT API] Query:", lastUserMessage.substring(0, 100));
         
-        // Use the robust vector search with multiple fallbacks
-        const searchResults = await robustVectorSearch(lastUserMessage, {
+        // Use the Hugging Face vector search
+        const searchResults = await vectorSearchWithHuggingFace(lastUserMessage, {
           minSimilarity: 0.25,
           maxResults: 3,
-        }, clientEmbedding || undefined);
+        });
         
         semanticContext = formatSearchResultsForContext(searchResults);
         console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
@@ -434,11 +434,11 @@ export async function POST(req: NextRequest) {
         console.log("[💬 CHAT API] 🔍 Performing robust vector search for LOGGED-IN user");
         console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
         
-        // Use the robust vector search with multiple fallbacks
-        const searchResults = await robustVectorSearch(currentUserMessage, {
+        // Use the Hugging Face vector search
+        const searchResults = await vectorSearchWithHuggingFace(currentUserMessage, {
           minSimilarity: 0.25,
           maxResults: 3,
-        }, clientEmbedding || undefined);
+        });
         
         semanticContext = formatSearchResultsForContext(searchResults);
         console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
