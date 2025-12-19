@@ -64,6 +64,8 @@ export function useEmbedding() {
         getEmbeddingPipelineRef.current = mod.getEmbeddingPipeline;
         getModelProgressRef.current = mod.getModelProgress;
 
+        console.log('[useEmbedding] Embedding module imported successfully');
+
         // Check if already loaded
         if (isModelLoadedRef.current && isModelLoadedRef.current()) {
           setState(prev => ({ ...prev, isModelReady: true }));
@@ -76,9 +78,11 @@ export function useEmbedding() {
         let promise = getModelLoadingPromiseRef.current && getModelLoadingPromiseRef.current();
         if (!promise && getEmbeddingPipelineRef.current) {
           try {
+            console.log('[useEmbedding] Starting embedding pipeline...');
             promise = getEmbeddingPipelineRef.current();
           } catch (e) {
-            // ignore
+            console.error('[useEmbedding] Error starting pipeline:', e);
+            throw e;
           }
         }
 
@@ -117,6 +121,7 @@ export function useEmbedding() {
             isLoading: false,
           }));
           console.error('[useEmbedding] Model loading failed:', error);
+          console.error('[useEmbedding] Stack trace:', error.stack);
         }
       }
     };
