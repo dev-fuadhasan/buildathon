@@ -17,15 +17,16 @@ let supabaseClient: any = null;
 
 function initializeSupabase(): boolean {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Prefer service role key on server; fall back to public anon key
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseKey) {
       console.error('[Vector Search] Supabase credentials missing');
       return false;
     }
 
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseClient = createClient(supabaseUrl, supabaseKey);
     console.log('[Vector Search] ✓ Supabase initialized');
     return true;
   } catch (err) {
@@ -116,60 +117,54 @@ export async function semanticSearchWithFallback(
     }
   }
   try {
-    // Step 1: Lightweight keyword search in Supabase to find a representative row with an embedding
-    console.log('[🔍 VECTOR SEARCH] Performing lightweight keyword search to select reference embedding');
-      const q = query.trim();
-      if (q.length === 0) {
-        console.log('[🔍 VECTOR SEARCH] Empty query; returning empty results');
-        console.log('='.repeat(60));
-        return [];
-      }
+    // Step 1: Generate query embedding via Edge WASM embedding endpoint
+    console.log('[🔍 VECTOR SEARCH] Requesting WASM embedding from /api/embedding-384');
+    const q = query.trim();
+    if (q.length === 0) {
+      console.log('[🔍 VECTOR SEARCH] Empty query; returning empty results');
+      console.log('='.repeat(60));
+      return [];
+    }
 
-      const { data: reprRows, error: reprError } = await supabaseClient
-        .from('qa_embeddings')
-        .select('qa_id, question, answer, language, category, embedding')
-        .or(`question.ilike.%${q}%,answer.ilike.%${q}%`)
-        .limit(1);
-
-      if (reprError) {
-        console.error('[🔍 VECTOR SEARCH] ❌ Supabase keyword select error:', reprError);
-        console.log('='.repeat(60));
-        return [];
-      }
-
-      if (!reprRows || reprRows.length === 0) {
-        console.log('[🔍 VECTOR SEARCH] No representative row found via keyword search; falling back to keywordSearch');
-        const fallback = await keywordSearch(query, maxResults);
-        return fallback;
-      }
-
-      const reference = reprRows[0];
-      const referenceEmbedding = reference.embedding;
-
-      if (!referenceEmbedding || !Array.isArray(referenceEmbedding) || referenceEmbedding.length === 0) {
-        console.log('[🔍 VECTOR SEARCH] Representative row has no embedding; falling back to keywordSearch');
-        const fallback = await keywordSearch(query, maxResults);
-        return fallback;
-      }
-
-      // Step 1b: If a representative row was found, use its embedding
-      console.log('Using reference embedding from Supabase');
-
-      // Ensure embedding is a plain number[] and normalized
-      const embeddingArray = referenceEmbedding.map((v: any) => Number(v));
-      const norm = Math.sqrt(embeddingArray.reduce((s: number, v: number) => s + v * v, 0));
-      const normalizedEmbedding = norm > 0 ? embeddingArray.map((v: number) => v / norm) : embeddingArray;
-
-      console.log('[VECTOR SEARCH] Query embedding generated (384-dim)');
-      console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
-      const rpcStartTime = performance.now();
-
-      // Step 2: Call Supabase RPC for vector similarity
-      const { data: searchResults, error: rpcError } = await supabaseClient.rpc('match_embeddings', {
-        query_embedding: normalizedEmbedding,
-        similarity_threshold: minSimilarity,
-        match_count: maxResults * 2,
+    // Resolve base URL for internal request. Prefer VERCEL_URL for deployed environment.
+    const baseHost = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || `http://localhost:${process.env.PORT || 3000}`);
+    let embedRes: Response;
+    try {
+      embedRes = await fetch(new URL('/api/embedding-384', baseHost).toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: q }),
       });
+    } catch (err) {
+      console.error('[🔍 VECTOR SEARCH] ❌ Failed to call embedding endpoint:', err);
+      const fallback = await keywordSearch(query, maxResults);
+      return fallback;
+    }
+
+    if (!embedRes.ok) {
+      console.error('[🔍 VECTOR SEARCH] ❌ Embedding endpoint returned non-ok status:', embedRes.status);
+      const fallback = await keywordSearch(query, maxResults);
+      return fallback;
+    }
+
+    const embedJson = await embedRes.json();
+    const embeddingArray = embedJson?.embedding;
+
+    if (!embeddingArray || !Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
+      console.log('[🔍 VECTOR SEARCH] Embedding endpoint returned invalid embedding; falling back to keywordSearch');
+      const fallback = await keywordSearch(query, maxResults);
+      return fallback;
+    }
+
+    console.log('[VECTOR SEARCH] Query embedding generated (384-dim)');
+    console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
+    const rpcStartTime = performance.now();
+
+    const { data: searchResults, error: rpcError } = await supabaseClient.rpc('match_embeddings', {
+      query_embedding: embeddingArray,
+      similarity_threshold: minSimilarity,
+      match_count: maxResults * 2,
+    });
 
       console.log(`[🔍 VECTOR SEARCH] match_embeddings RPC returned ${Array.isArray(searchResults) ? searchResults.length : 0} rows`);
 
