@@ -538,6 +538,18 @@ export default function ChatPage() {
 
             {/* Input Section */}
             <div className="border-t border-slate-200 bg-white p-2 sm:p-3 flex-shrink-0">
+              {/* Model download progress (visible to all users) */}
+              {modelLoading && (
+                <div className="mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-gray-600">Model downloading (WASM)</p>
+                    <p className="text-xs text-gray-600">{modelProgress}%</p>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
+                    <div className="h-2 bg-blue-500" style={{ width: `${modelProgress}%` }} />
+                  </div>
+                </div>
+              )}
               {/* Combined Chat Input with Image Attachment */}
               <ChatInput 
                 onSend={sendMessage} 
