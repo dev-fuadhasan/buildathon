@@ -152,6 +152,7 @@ export async function semanticSearchWithFallback(
         return fallback;
       }
 
+      // Step 1b: If a representative row was found, use its embedding
       console.log('Using reference embedding from Supabase');
 
       // Ensure embedding is a plain number[] and normalized
@@ -159,7 +160,8 @@ export async function semanticSearchWithFallback(
       const norm = Math.sqrt(embeddingArray.reduce((s: number, v: number) => s + v * v, 0));
       const normalizedEmbedding = norm > 0 ? embeddingArray.map((v: number) => v / norm) : embeddingArray;
 
-      console.log('match_embeddings RPC called');
+      console.log('[VECTOR SEARCH] Query embedding generated (384-dim)');
+      console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
       const rpcStartTime = performance.now();
 
       // Step 2: Call Supabase RPC for vector similarity

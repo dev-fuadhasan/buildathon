@@ -7,9 +7,10 @@
  * `scripts/query_embed.py` which uses the same model as the dataset.
  */
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import * as fs from 'fs';
+import { embedQueryWasm } from '@/lib/queryEmbeddingWasm';
 
 interface EmbeddingRequest {
   text: string;
@@ -38,44 +39,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<Embedding
       return NextResponse.json({ error: 'Invalid input: text must be a non-empty string' }, { status: 400 });
     }
 
-    // Netlify-friendly: return a reference embedding from embeddings.json (precomputed)
     try {
-      const p = path.join(process.cwd(), 'embeddings.json');
-      const raw = fs.readFileSync(p, 'utf-8');
-      const arr = JSON.parse(raw) as any[];
-
-      const qWords = body.text.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
-      let best: any = null;
-      let bestScore = -1;
-      for (const rec of arr) {
-        const text = ((rec.question || '') + ' ' + (rec.answer || '') + ' ' + (rec.content || '')).toLowerCase();
-        let score = 0;
-        for (const w of qWords) if (text.includes(w)) score++;
-        if (score > bestScore) {
-          bestScore = score;
-          best = rec;
-        }
-      }
-
-      if (!best && arr.length > 0) best = arr[0];
-      if (!best) {
-        return NextResponse.json({ error: 'No reference embeddings available' }, { status: 500 });
-      }
-
-      const embedding = best.embedding || best.questionEmbedding_en || best.questionEmbedding;
-      if (!validateEmbedding(embedding)) {
-        return NextResponse.json({ error: 'Invalid reference embedding' }, { status: 500 });
-      }
-
-      // Normalize L2
-      const norm = Math.sqrt(embedding.reduce((s: number, v: number) => s + v * v, 0));
-      const normalized = norm > 0 ? embedding.map((v: number) => v / norm) : embedding;
-
-      console.log('[Embedding-384] Using LOCAL query embedding (384-dim)');
-      return NextResponse.json({ embedding: normalized });
+      // Generate query embedding using WASM-backed Xenova transformer
+      const embedding = await embedQueryWasm(body.text);
+      console.log('[VECTOR SEARCH] Query embedding generated (384-dim)');
+      return NextResponse.json({ embedding });
     } catch (err: any) {
-      console.error('[Embedding-384] Error computing reference embedding:', err && err.message ? err.message : err);
-      return NextResponse.json({ error: 'Reference embedding error' }, { status: 500 });
+      console.error('[Embedding-384] WASM embedding error:', err && err.message ? err.message : err);
+      return NextResponse.json({ error: 'WASM embedding error' }, { status: 500 });
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
