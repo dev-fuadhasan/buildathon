@@ -38,7 +38,7 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
   const [dbReady, setDbReady] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Embedding hook for client-side WASM
-  const { embed, isModelReady } = useEmbedding();
+  const { embed, isModelReady, isLoading: modelLoading } = useEmbedding();
 
   // Initialize vector DB on mount
   useEffect(() => {
@@ -261,7 +261,17 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
               {dbReady ? '✓ AI-powered with semantic search' : '◉ Using fallback mode'}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right flex items-center space-x-2">
+            {modelLoading ? (
+              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                Downloading model
+              </span>
+            ) : isModelReady ? (
+              <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                Model ready
+              </span>
+            ) : null}
+
             {dbReady && (
               <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                 Vector DB Ready
