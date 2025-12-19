@@ -9,6 +9,7 @@ import Icon from "@/components/Icon";
 import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
+import { useEmbedding } from '@/hooks/useEmbedding';
 
 type Message = { role: "user" | "assistant"; content: string; imageUrl?: string };
 
@@ -36,6 +37,9 @@ export default function ChatPage() {
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Embedding hook for browser WASM
+  const { embed, isModelReady, isLoading: modelLoading, progress: modelProgress } = useEmbedding();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -243,6 +247,30 @@ export default function ChatPage() {
     setAttachedImage(null);
     
     try {
+      // Ensure client embedding is available (no server-side embedding)
+      if (!isModelReady) {
+        const waitingMsg = lang === "bn" ? 'মডেল ডাউনলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...' : 'Model downloading — please wait...';
+        setMessages(prev => [...prev, { role: 'assistant', content: waitingMsg }]);
+        setLoading(false);
+        return;
+      }
+
+      // Generate client embedding (browser WASM)
+      let clientEmbedding: number[] | null = null;
+      try {
+        const e = await embed(text, true);
+        if (Array.isArray(e) && e.length === 384) {
+          clientEmbedding = e;
+        } else {
+          throw new Error('Embedding dimension mismatch or null');
+        }
+      } catch (err) {
+        console.error('Embedding generation failed:', err);
+        const errMsg = lang === 'bn' ? 'এম্বেডিং তৈরি করা যায়নি, অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Failed to generate embedding, please try again.';
+        setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${errMsg}` }]);
+        setLoading(false);
+        return;
+      }
       // If this is first message in new conversation for logged-in mother, create conversation
       let conversationId = currentConversationId;
       
@@ -276,6 +304,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           messages: newMessages,
           imageUrl: uploadedImageUrl, // Send image URL with message
+          embedding: clientEmbedding, // include required 384-d embedding
         }),
       });
 
