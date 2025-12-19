@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { hybridSearch, initializeSupabaseSearch } from '@/lib/supabaseSemanticSearch';
+import { useEmbedding } from '@/hooks/useEmbedding';
 import { assessSafety, getFallbackResponse } from '@/lib/safetyGuardrails2';
 
 interface ChatMessage {
@@ -42,6 +43,9 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
       console.warn('[Chat] Supabase not initialized');
     }
   }, []);
+
+  // Embedding hook (client-side WASM)
+  const { embed, isModelReady } = useEmbedding();
 
   // Auto-scroll
   useEffect(() => {
@@ -103,6 +107,22 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
       }
 
       // STEP 3: Call AI API
+      // If client-side embedding model is ready, compute embedding and send it so server can call Supabase RPC directly
+      let embeddingToSend: number[] | undefined = undefined;
+      if (isModelReady) {
+        try {
+          const e = await embed(userText, true);
+          if (Array.isArray(e) && e.length === 384) {
+            embeddingToSend = e;
+          } else if (Array.isArray(e)) {
+            // If model returns different dim, still allow server fallback via context
+            console.warn('[Chat] Generated embedding had unexpected dimension:', e.length);
+          }
+        } catch (err) {
+          console.warn('[Chat] Failed to generate client embedding:', err);
+        }
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,6 +135,7 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
             { role: 'user', content: userText },
           ],
           context: semanticContext || undefined,
+          embedding: embeddingToSend || undefined,
         }),
       });
 

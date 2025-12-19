@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { semanticSearch, initializeVectorDB, SearchOptions } from '@/lib/vectorDB';
 import { assessSafety, getFallbackResponse, handleSystemError } from '@/lib/safetyGuardrails2';
+import { useEmbedding } from '@/hooks/useEmbedding';
 
 interface ChatMessage {
   id: string;
@@ -36,6 +37,8 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
   const [error, setError] = useState<string | null>(null);
   const [dbReady, setDbReady] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Embedding hook for client-side WASM
+  const { embed, isModelReady } = useEmbedding();
 
   // Initialize vector DB on mount
   useEffect(() => {
@@ -145,6 +148,17 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
       console.log('[ProductionChat] Calling AI...');
       const apiStartTime = performance.now();
 
+      // Compute client embedding if model is available (client-side WASM)
+      let embeddingToSend: number[] | undefined = undefined;
+      if (isModelReady && embed) {
+        try {
+          const e = await embed(userMessageText, true);
+          if (Array.isArray(e) && e.length === 384) embeddingToSend = e;
+        } catch (err) {
+          console.warn('[ProductionChat] Client embedding generation failed:', err);
+        }
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -157,6 +171,7 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
             { role: 'user', content: userMessageText },
           ],
           context: semanticContext || undefined,
+          embedding: embeddingToSend || undefined,
           riskLevel: safety.riskLevel,
           emergencyContext: safety.riskLevel !== 'normal' ? safety.recommendations : undefined,
         }),

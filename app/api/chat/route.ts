@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
     let messages = body.messages || [];
     const imageUrl = body.imageUrl || null; // Optional image URL
     const clientContext = body.context || null; // ✅ NEW: Context from client-side semantic search
+    const clientEmbedding: number[] | null = Array.isArray(body.embedding) ? body.embedding : null; // ✅ NEW: Optional client-provided 384-d embedding
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -146,7 +147,21 @@ export async function POST(req: NextRequest) {
 
       // ✅ VECTOR SEARCH (for guests)
       let semanticContext = "";
-      if (!clientContext) {
+      // If the browser provided an embedding, prefer it (no server-side HF/Xenova)
+      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+        try {
+          console.log("[💬 CHAT API] ℹ️ Received client embedding (384d) - using for Supabase RPC search");
+          const searchResults = await semanticSearchWithFallback(lastUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          }, clientEmbedding);
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
+        } catch (err) {
+          console.error("[💬 CHAT API] ❌ Vector search (client embedding) failed:", err);
+          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+        }
+      } else if (!clientContext) {
         // Only search if client didn't already do it
         try {
           console.log("\n" + "=".repeat(70));
@@ -414,7 +429,21 @@ export async function POST(req: NextRequest) {
 
       // ✅ VECTOR SEARCH (for logged-in users)
       let semanticContext = "";
-      if (!clientContext) {
+      // If client provided embedding prefer that
+      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+        try {
+          console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
+          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          }, clientEmbedding);
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
+        } catch (err) {
+          console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
+          console.log('[💬 CHAT API] Continuing without semantic context (system is resilient)');
+        }
+      } else if (!clientContext) {
         // Only search if client didn't already do it
         try {
           console.log("\n" + "=".repeat(70));

@@ -98,7 +98,8 @@ async function keywordSearch(query: string, maxResults: number = 5): Promise<Vec
  */
 export async function semanticSearchWithFallback(
   query: string,
-  options: SearchOptions = {}
+  options: SearchOptions = {},
+  clientEmbedding?: number[]
 ): Promise<VectorSearchResult[]> {
   const { minSimilarity = 0.25, maxResults = 5 } = options;
   const startTime = performance.now();
@@ -117,8 +118,6 @@ export async function semanticSearchWithFallback(
     }
   }
   try {
-    // Step 1: Generate query embedding via Edge WASM embedding endpoint
-    console.log('[🔍 VECTOR SEARCH] Requesting WASM embedding from /api/embedding-384');
     const q = query.trim();
     if (q.length === 0) {
       console.log('[🔍 VECTOR SEARCH] Empty query; returning empty results');
@@ -126,37 +125,17 @@ export async function semanticSearchWithFallback(
       return [];
     }
 
-    // Resolve base URL for internal request. Prefer VERCEL_URL for deployed environment.
-    const baseHost = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || `http://localhost:${process.env.PORT || 3000}`);
-    let embedRes: Response;
-    try {
-      embedRes = await fetch(new URL('/api/embedding-384', baseHost).toString(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: q }),
-      });
-    } catch (err) {
-      console.error('[🔍 VECTOR SEARCH] ❌ Failed to call embedding endpoint:', err);
+    // Use client-provided embedding if available
+    let embeddingArray: number[] | undefined = undefined;
+    if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+      embeddingArray = clientEmbedding.map(v => Number(v));
+      console.log(`[VECTOR SEARCH] Using client-provided embedding (length=${embeddingArray.length})`);
+    } else {
+      console.log('[VECTOR SEARCH] No client embedding provided; falling back to keyword search');
       const fallback = await keywordSearch(query, maxResults);
       return fallback;
     }
 
-    if (!embedRes.ok) {
-      console.error('[🔍 VECTOR SEARCH] ❌ Embedding endpoint returned non-ok status:', embedRes.status);
-      const fallback = await keywordSearch(query, maxResults);
-      return fallback;
-    }
-
-    const embedJson = await embedRes.json();
-    const embeddingArray = embedJson?.embedding;
-
-    if (!embeddingArray || !Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
-      console.log('[🔍 VECTOR SEARCH] Embedding endpoint returned invalid embedding; falling back to keywordSearch');
-      const fallback = await keywordSearch(query, maxResults);
-      return fallback;
-    }
-
-    console.log('[VECTOR SEARCH] Query embedding generated (384-dim)');
     console.log('[VECTOR SEARCH] Calling match_embeddings RPC');
     const rpcStartTime = performance.now();
 

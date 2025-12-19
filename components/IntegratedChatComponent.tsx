@@ -117,13 +117,27 @@ export function IntegratedChatComponent({ userId, disabled = false, onMessageSen
         },
       ];
 
-      // ✅ Send to API with context
+      // ✅ Compute client embedding (if model ready) and send to API with context
+      let embeddingToSend: number[] | undefined = undefined;
+      if (isModelReady) {
+        try {
+          // useEmbedding provides `embed` via hook; import it at top if needed
+          // The hook in this component doesn't expose embed directly, so dynamic import to avoid changing hook signature
+          const { embedText } = await import('@/lib/embedding.client');
+          const e = await embedText(userMessage.content, true);
+          if (Array.isArray(e) && e.length === 384) embeddingToSend = e;
+        } catch (err) {
+          console.warn('[Integrated Chat] Failed to compute client embedding:', err);
+        }
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: apiMessages,
           context: context || undefined, // ✅ Include semantic search context
+          embedding: embeddingToSend || undefined,
         }),
       });
 
