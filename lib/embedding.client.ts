@@ -33,10 +33,37 @@ async function getEmbeddingPipeline() {
       const extractor = await (pipeline as any)('feature-extraction', {
         model: 'Xenova/all-MiniLM-L6-v2',
         progress_callback: (progress: any) => {
-          if (progress && progress.status === 'progress') {
-            const pct = Math.round((progress.progress || 0) * 100);
-            pipelineProgress = pct;
-            console.log(`[Embedding] Loading... ${pct}%`);
+          try {
+            // Log raw progress object for diagnostics
+            console.log('[Embedding] progress callback raw:', progress);
+
+            // Common shapes: { status: 'progress', progress: 0.12 }
+            if (progress && typeof progress === 'object') {
+              let pct: number | null = null;
+
+              if (typeof progress.progress === 'number') {
+                pct = Math.round(progress.progress * 100);
+              } else if (typeof progress.loaded === 'number' && typeof progress.total === 'number' && progress.total > 0) {
+                pct = Math.round((progress.loaded / progress.total) * 100);
+              } else if (typeof progress.percent === 'number') {
+                pct = Math.round(progress.percent);
+              } else if (progress.detail && typeof progress.detail === 'object') {
+                // some runtimes nest progress
+                const d = progress.detail as any;
+                if (typeof d.progress === 'number') pct = Math.round(d.progress * 100);
+                else if (typeof d.loaded === 'number' && typeof d.total === 'number' && d.total > 0) pct = Math.round((d.loaded / d.total) * 100);
+              }
+
+              if (pct !== null) {
+                pipelineProgress = Math.min(100, Math.max(0, pct));
+                console.log(`[Embedding] Loading... ${pipelineProgress}%`);
+              } else {
+                // If we couldn't compute percent, leave pipelineProgress unchanged but log
+                console.log('[Embedding] progress object provided but percent not available yet');
+              }
+            }
+          } catch (err) {
+            console.warn('[Embedding] progress callback error:', err);
           }
         },
       });
