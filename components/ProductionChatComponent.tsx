@@ -38,7 +38,7 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
   const [dbReady, setDbReady] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Embedding hook for client-side WASM
-  const { embed, isModelReady, isLoading: modelLoading } = useEmbedding();
+  const { embed, isModelReady, isLoading: modelLoading, progress: modelProgress } = useEmbedding();
 
   // Initialize vector DB on mount
   useEffect(() => {
@@ -263,9 +263,13 @@ export function ProductionChatComponent({ userId, disabled = false, onMessageSen
           </div>
           <div className="text-right flex items-center space-x-2">
             {modelLoading ? (
-              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                Downloading model
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">Downloading model</span>
+                <div className="w-36 h-2 bg-gray-200 rounded overflow-hidden">
+                  <div className="h-2 bg-blue-500" style={{ width: `${modelProgress}%` }} />
+                </div>
+                <span className="text-xs text-gray-600">{modelProgress}%</span>
+              </div>
             ) : isModelReady ? (
               <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                 Model ready

@@ -22,6 +22,7 @@ import {
   isModelLoaded,
   getModelLoadingPromise,
 } from '../lib/embedding.client';
+import { getModelProgress } from '../lib/embedding.client';
 
 export interface EmbeddingState {
   isLoading: boolean;
@@ -43,6 +44,7 @@ export function useEmbedding() {
     isModelReady: isModelLoaded(),
     error: null,
   });
+  const [progress, setProgress] = useState<number>(0);
 
   const isMountedRef = useRef(true);
 
@@ -59,7 +61,20 @@ export function useEmbedding() {
       try {
         const promise = getModelLoadingPromise();
         if (promise) {
+          // Poll progress while loading to surface a progress bar in UI
+          const pollInterval = 200;
+          const intervalId = setInterval(() => {
+            try {
+              const p = getModelProgress();
+              setProgress(p);
+            } catch (e) {
+              // ignore
+            }
+          }, pollInterval);
+
           await promise;
+          clearInterval(intervalId);
+          setProgress(100);
           if (isMountedRef.current) {
             setState(prev => ({
               ...prev,
@@ -186,6 +201,7 @@ export function useEmbedding() {
     isLoading: state.isLoading,
     isModelReady: state.isModelReady,
     error: state.error,
+    progress,
 
     // Methods
     embed,

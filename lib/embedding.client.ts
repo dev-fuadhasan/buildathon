@@ -14,6 +14,7 @@
 // Singleton pattern: load model once, reuse
 let pipelinePromise: Promise<any> | null = null;
 let modelLoaded = false;
+let pipelineProgress: number = 0;
 
 /**
  * Lazy-load the embedding model (only once)
@@ -32,10 +33,10 @@ async function getEmbeddingPipeline() {
       const extractor = await (pipeline as any)('feature-extraction', {
         model: 'Xenova/all-MiniLM-L6-v2',
         progress_callback: (progress: any) => {
-          if (progress.status === 'progress') {
-            console.log(
-              `[Embedding] Loading... ${Math.round((progress.progress || 0) * 100)}%`
-            );
+          if (progress && progress.status === 'progress') {
+            const pct = Math.round((progress.progress || 0) * 100);
+            pipelineProgress = pct;
+            console.log(`[Embedding] Loading... ${pct}%`);
           }
         },
       });
@@ -224,6 +225,14 @@ export function searchSimilar(
  */
 export function isModelLoaded(): boolean {
   return modelLoaded;
+}
+
+/**
+ * Get current model loading progress (0-100).
+ * This is a polling-friendly synchronous getter used by `useEmbedding`.
+ */
+export function getModelProgress(): number {
+  return pipelineProgress;
 }
 
 /**

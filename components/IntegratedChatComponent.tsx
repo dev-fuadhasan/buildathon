@@ -35,7 +35,7 @@ export function IntegratedChatComponent({ userId, disabled = false, onMessageSen
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // ✅ Initialize embeddings
-  const { isModelReady, isLoading: modelLoading } = useEmbedding();
+  const { isModelReady, isLoading: modelLoading, progress: modelProgress } = useEmbedding();
   const [qaDB, setQaDB] = useState<any[]>([]);
   const [dbLoaded, setDbLoaded] = useState(false);
 
@@ -191,9 +191,15 @@ export function IntegratedChatComponent({ userId, disabled = false, onMessageSen
         <h2 className="text-xl font-bold text-gray-800">MomsCare Chat</h2>
         <div className="flex items-center mt-2 space-x-4">
           {modelLoading ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <p className="text-sm text-blue-600 font-semibold">Loading WASM model... {dbLoaded ? '(embeddings ready)' : '(also loading DB)'}</p>
+              <div>
+                <p className="text-sm text-blue-600 font-semibold">Loading WASM model... {dbLoaded ? '(embeddings ready)' : '(also loading DB)'}</p>
+                <div className="w-40 h-2 bg-gray-200 rounded overflow-hidden mt-1">
+                  <div className="h-2 bg-blue-500" style={{ width: `${modelProgress}%` }} />
+                </div>
+                <p className="text-xs text-gray-600 mt-1">{modelProgress}%</p>
+              </div>
             </div>
           ) : isModelReady ? (
             <p className="text-sm text-green-600 font-semibold">✅ AI model ready</p>

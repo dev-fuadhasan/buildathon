@@ -45,7 +45,7 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
   }, []);
 
   // Embedding hook (client-side WASM)
-  const { embed, isModelReady, isLoading: modelLoading } = useEmbedding();
+  const { embed, isModelReady, isLoading: modelLoading, progress: modelProgress } = useEmbedding();
 
   // Auto-scroll
   useEffect(() => {
@@ -186,7 +186,13 @@ export function SupabaseSemanticChatComponent({ userId, disabled = false }: Chat
             {supabaseReady ? '✓ Semantic search enabled' : '◉ Initializing search...'}
           </p>
           {modelLoading ? (
-            <p className="text-sm text-blue-600 font-semibold">Downloading model (WASM)...</p>
+            <div className="flex items-center space-x-2">
+              <p className="text-sm text-blue-600 font-semibold">Downloading model (WASM)...</p>
+              <div className="w-40 h-2 bg-gray-200 rounded overflow-hidden">
+                <div className="h-2 bg-blue-500" style={{ width: `${modelProgress}%` }} />
+              </div>
+              <p className="text-xs text-gray-600">{modelProgress}%</p>
+            </div>
           ) : isModelReady ? (
             <p className="text-sm text-green-600 font-semibold">Model ready</p>
           ) : null}
