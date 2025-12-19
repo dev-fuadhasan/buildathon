@@ -18,7 +18,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { generateEmbedding, initializeEmbeddingModel, getEmbeddingDimensions } from '../lib/embeddings';
+import { generateEmbedding, getEmbeddingDimensions } from '../lib/embeddings';
 import { DatasetItem } from '../lib/dualDatasetLoader';
 import { EmbeddingItem } from '../lib/vectorSearch';
 
@@ -86,12 +86,7 @@ function loadDatasets(): DatasetItem[] {
  * Generate embeddings for all Q&A pairs
  */
 async function generateAllEmbeddings(dataset: DatasetItem[]): Promise<EmbeddingItem[]> {
-  console.log('🚀 [Generate Embeddings] Initializing embedding model...');
-  console.log('⏳ This may take a few minutes on first run (downloading model)...');
-  
-  // Initialize model (downloads if needed)
-  await initializeEmbeddingModel();
-  
+  console.log('🚀 [Generate Embeddings] Using configured embedding service or local generator');
   const dimensions = await getEmbeddingDimensions();
   console.log(`✅ [Generate Embeddings] Model ready (${dimensions} dimensions)`);
   console.log(`📊 [Generate Embeddings] Generating embeddings for ${dataset.length} Q&A pairs...`);
