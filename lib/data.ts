@@ -1010,6 +1010,7 @@ export type AdminSettings = {
   questionHour: number; // Default: 21 (9 PM)
   questionMinute: number; // Default: 0
   questionsPerDay: number; // Default: 10
+  dailyQuestionsEnabled: boolean; // Default: true - Toggle to enable/disable daily questions
   updatedAt: string;
   updatedBy: string; // Admin email
 };
@@ -1029,6 +1030,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
       questionHour: 21,
       questionMinute: 0,
       questionsPerDay: 10,
+      dailyQuestionsEnabled: true, // Default: enabled
       updatedAt: new Date().toISOString(),
       updatedBy: "system",
     };
@@ -1043,6 +1045,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
       questionHour: 21,
       questionMinute: 0,
       questionsPerDay: 10,
+      dailyQuestionsEnabled: true, // Default: enabled
       updatedAt: new Date().toISOString(),
       updatedBy: "system",
     };

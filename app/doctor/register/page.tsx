@@ -136,7 +136,7 @@ export default function DoctorRegister() {
             <div>
               <p className="font-semibold mb-1">For doctor:</p>
               <p className="ml-2"><span className="font-medium">Email:</span> demo@doctor.com</p>
-              <p className="ml-2"><span className="font-medium">Password:</span> doctor</p>
+              <p className="ml-2"><span className="font-medium">Password:</span> 123456</p>
             </div>
             <div>
               <p className="font-semibold mb-1">For nurse:</p>

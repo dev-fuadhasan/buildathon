@@ -111,6 +111,7 @@ export default function AdminDashboard() {
     questionHour: number;
     questionMinute: number;
     questionsPerDay: number;
+    dailyQuestionsEnabled: boolean;
   } | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [activities, setActivities] = useState<AdminActivity[]>([]);
@@ -130,6 +131,7 @@ export default function AdminDashboard() {
     endDate?: string;
   }>({});
   const [analytics, setAnalytics] = useState<any>(null);
+  const [vectorAnalytics, setVectorAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
   const [actionModal, setActionModal] = useState<{
@@ -234,6 +236,7 @@ export default function AdminDashboard() {
       // Less frequent updates (every 5 minutes) - for analytics
       const slowInterval = setInterval(() => {
         loadAnalytics(t);
+        loadVectorAnalytics(t);
       }, 5 * 60 * 1000); // Every 5 minutes
       
       return () => {
@@ -290,6 +293,15 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setAnalytics(data.analytics);
+    }
+  };
+
+  const loadVectorAnalytics = async (t = token) => {
+    if (adminType !== "super_admin") return;
+    const res = await fetch("/api/admin/vector-analytics", { headers: headers(t) });
+    if (res.ok) {
+      const data = await res.json();
+      setVectorAnalytics(data.analytics);
     }
   };
 
@@ -1172,6 +1184,250 @@ export default function AdminDashboard() {
               <DashboardCard title="Analytics">
                 <p className="text-slate-500 text-center py-8">Loading analytics...</p>
               </DashboardCard>
+            )}
+
+            {/* Vector Search Analytics Section - Only for Super Admin */}
+            {adminType === "super_admin" && (
+              <div className="mt-8 space-y-6">
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
+                  <h2 className="text-2xl font-bold mb-2">🔍 Vector Search Analytics</h2>
+                  <p className="text-purple-100">Real-time statistics showing how your own dataset (677 Q&A pairs) is being used with vector embeddings</p>
+                </div>
+
+                {vectorAnalytics ? (
+                  <div className="space-y-6">
+                    {/* Key Metrics */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                      <DashboardCard title="Total Searches">
+                        <div className="text-4xl font-bold text-purple-600">
+                          {vectorAnalytics.totalSearches}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-2">All time searches</p>
+                      </DashboardCard>
+                      <DashboardCard title="Vector Search Usage">
+                        <div className="text-4xl font-bold text-green-600">
+                          {vectorAnalytics.vectorSearchPercentage.toFixed(1)}%
+                        </div>
+                        <p className="text-sm text-slate-500 mt-2">
+                          {vectorAnalytics.vectorSearches} vector / {vectorAnalytics.keywordSearches} keyword
+                        </p>
+                      </DashboardCard>
+                      <DashboardCard title="Avg Similarity Score">
+                        <div className="text-4xl font-bold text-blue-600">
+                          {vectorAnalytics.averageSimilarity.toFixed(3)}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-2">Out of 1.0 (higher is better)</p>
+                      </DashboardCard>
+                      <DashboardCard title="Dataset Size">
+                        <div className="text-4xl font-bold text-pink-600">
+                          {vectorAnalytics.totalEmbeddings}
+                        </div>
+                        <p className="text-sm text-slate-500 mt-2">Q&A pairs in dataset</p>
+                      </DashboardCard>
+                    </div>
+
+                    {/* Search Method Comparison */}
+                    <DashboardCard title="Search Method Distribution">
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-medium text-slate-700">Vector Search</span>
+                            <span className="text-sm text-slate-600">
+                              {vectorAnalytics.vectorSearches} ({vectorAnalytics.vectorSearches > 0 && vectorAnalytics.totalSearches > 0 ? ((vectorAnalytics.vectorSearches / vectorAnalytics.totalSearches) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-green-500 h-4 rounded-full transition-all"
+                              style={{
+                                width: `${vectorAnalytics.totalSearches > 0 ? (vectorAnalytics.vectorSearches / vectorAnalytics.totalSearches) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-medium text-slate-700">Hybrid Search</span>
+                            <span className="text-sm text-slate-600">
+                              {vectorAnalytics.hybridSearches} ({vectorAnalytics.hybridSearches > 0 && vectorAnalytics.totalSearches > 0 ? ((vectorAnalytics.hybridSearches / vectorAnalytics.totalSearches) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-purple-500 h-4 rounded-full transition-all"
+                              style={{
+                                width: `${vectorAnalytics.totalSearches > 0 ? (vectorAnalytics.hybridSearches / vectorAnalytics.totalSearches) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-medium text-slate-700">Keyword Search (Fallback)</span>
+                            <span className="text-sm text-slate-600">
+                              {vectorAnalytics.keywordSearches} ({vectorAnalytics.keywordSearches > 0 && vectorAnalytics.totalSearches > 0 ? ((vectorAnalytics.keywordSearches / vectorAnalytics.totalSearches) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-4">
+                            <div
+                              className="bg-orange-500 h-4 rounded-full transition-all"
+                              style={{
+                                width: `${vectorAnalytics.totalSearches > 0 ? (vectorAnalytics.keywordSearches / vectorAnalytics.totalSearches) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </DashboardCard>
+
+                    {/* Similarity Distribution */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <DashboardCard title="Similarity Score Distribution">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium text-green-700">High Similarity (&gt; 0.7)</span>
+                              <span className="text-sm text-slate-600">{vectorAnalytics.similarityDistribution.high}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3">
+                              <div
+                                className="bg-green-500 h-3 rounded-full"
+                                style={{
+                                  width: `${vectorAnalytics.vectorSearches > 0 ? (vectorAnalytics.similarityDistribution.high / vectorAnalytics.vectorSearches) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium text-yellow-700">Medium Similarity (0.4 - 0.7)</span>
+                              <span className="text-sm text-slate-600">{vectorAnalytics.similarityDistribution.medium}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3">
+                              <div
+                                className="bg-yellow-500 h-3 rounded-full"
+                                style={{
+                                  width: `${vectorAnalytics.vectorSearches > 0 ? (vectorAnalytics.similarityDistribution.medium / vectorAnalytics.vectorSearches) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium text-red-700">Low Similarity (&lt; 0.4)</span>
+                              <span className="text-sm text-slate-600">{vectorAnalytics.similarityDistribution.low}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3">
+                              <div
+                                className="bg-red-500 h-3 rounded-full"
+                                style={{
+                                  width: `${vectorAnalytics.vectorSearches > 0 ? (vectorAnalytics.similarityDistribution.low / vectorAnalytics.vectorSearches) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </DashboardCard>
+
+                      <DashboardCard title="Language Distribution">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium text-slate-700">English</span>
+                              <span className="text-sm text-slate-600">{vectorAnalytics.searchesByLanguage.en}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3">
+                              <div
+                                className="bg-blue-500 h-3 rounded-full"
+                                style={{
+                                  width: `${vectorAnalytics.totalSearches > 0 ? (vectorAnalytics.searchesByLanguage.en / vectorAnalytics.totalSearches) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium text-slate-700">Bangla</span>
+                              <span className="text-sm text-slate-600">{vectorAnalytics.searchesByLanguage.bn}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-3">
+                              <div
+                                className="bg-green-500 h-3 rounded-full"
+                                style={{
+                                  width: `${vectorAnalytics.totalSearches > 0 ? (vectorAnalytics.searchesByLanguage.bn / vectorAnalytics.totalSearches) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </DashboardCard>
+                    </div>
+
+                    {/* Performance Metrics */}
+                    <DashboardCard title="Performance Metrics">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-slate-600">Average Search Time</p>
+                          <p className="text-2xl font-bold text-purple-600">{vectorAnalytics.averageSearchTime.toFixed(0)}ms</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Embeddings Status</p>
+                          <p className={`text-2xl font-bold ${vectorAnalytics.embeddingsLoaded ? 'text-green-600' : 'text-red-600'}`}>
+                            {vectorAnalytics.embeddingsLoaded ? '✅ Loaded' : '❌ Not Loaded'}
+                          </p>
+                        </div>
+                      </div>
+                    </DashboardCard>
+
+                    {/* Top Queries */}
+                    {vectorAnalytics.topQueries && vectorAnalytics.topQueries.length > 0 && (
+                      <DashboardCard title="Most Searched Questions">
+                        <div className="space-y-2">
+                          {vectorAnalytics.topQueries.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <span className="text-sm text-slate-700 flex-1">{item.query}</span>
+                              <span className="text-sm font-bold text-purple-600 ml-4">{item.count}x</span>
+                            </div>
+                          ))}
+                        </div>
+                      </DashboardCard>
+                    )}
+
+                    {/* Recent Searches */}
+                    {vectorAnalytics.recentSearches && vectorAnalytics.recentSearches.length > 0 && (
+                      <DashboardCard title="Recent Searches (Last 10)">
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {vectorAnalytics.recentSearches.slice(0, 10).map((search: any, index: number) => (
+                            <div key={index} className="p-3 bg-slate-50 rounded-lg text-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium text-slate-700">{search.query.substring(0, 50)}...</span>
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  search.method === 'vector' ? 'bg-green-100 text-green-700' :
+                                  search.method === 'hybrid' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {search.method}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-slate-500">
+                                <span>Results: {search.resultsCount}</span>
+                                {search.bestSimilarity && (
+                                  <span>Similarity: {search.bestSimilarity.toFixed(3)}</span>
+                                )}
+                                <span>{new Date(search.timestamp).toLocaleTimeString()}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </DashboardCard>
+                    )}
+                  </div>
+                ) : (
+                  <DashboardCard title="Vector Search Analytics">
+                    <p className="text-slate-500 text-center py-8">Loading vector search analytics...</p>
+                  </DashboardCard>
+                )}
+              </div>
             )}
           </>
         )}
@@ -2858,6 +3114,44 @@ export default function AdminDashboard() {
                   />
                   <p className="text-xs text-slate-500 mt-1">
                     Current: {adminSettings.questionsPerDay} questions per day (Default: 10)
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <div>
+                      <span className="block text-sm font-medium text-slate-700">
+                        Enable Daily Questions
+                      </span>
+                      <p className="text-xs text-slate-500 mt-1">
+                        When enabled, daily 10 questions will show on mother dashboard. When disabled, questions will not appear.
+                      </p>
+                    </div>
+                    <div className="ml-4">
+                      <button
+                        type="button"
+                        onClick={() => setAdminSettings({
+                          ...adminSettings,
+                          dailyQuestionsEnabled: !adminSettings.dailyQuestionsEnabled,
+                        })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 ${
+                          adminSettings.dailyQuestionsEnabled ? 'bg-pink-600' : 'bg-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            adminSettings.dailyQuestionsEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Status: {adminSettings.dailyQuestionsEnabled ? (
+                      <span className="text-green-600 font-medium">Enabled - Questions will show</span>
+                    ) : (
+                      <span className="text-red-600 font-medium">Disabled - Questions will not show</span>
+                    )}
                   </p>
                 </div>
 

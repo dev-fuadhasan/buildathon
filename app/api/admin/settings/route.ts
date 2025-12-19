@@ -55,6 +55,7 @@ export async function PUT(req: NextRequest) {
       questionHour,
       questionMinute,
       questionsPerDay,
+      dailyQuestionsEnabled,
     } = body;
 
     // Validate inputs
@@ -120,6 +121,7 @@ export async function PUT(req: NextRequest) {
       questionHour: questionHour ?? currentSettings.questionHour,
       questionMinute: questionMinute ?? (currentSettings.questionMinute ?? 0),
       questionsPerDay: questionsPerDay ?? currentSettings.questionsPerDay,
+      dailyQuestionsEnabled: dailyQuestionsEnabled !== undefined ? dailyQuestionsEnabled : (currentSettings.dailyQuestionsEnabled ?? true),
       updatedAt: new Date().toISOString(),
       updatedBy: user.email,
     };
@@ -157,6 +159,9 @@ export async function PUT(req: NextRequest) {
             : undefined,
           questionsPerDay: updatedSettings.questionsPerDay !== currentSettings.questionsPerDay
             ? { from: currentSettings.questionsPerDay, to: updatedSettings.questionsPerDay }
+            : undefined,
+          dailyQuestionsEnabled: updatedSettings.dailyQuestionsEnabled !== (currentSettings.dailyQuestionsEnabled ?? true)
+            ? { from: currentSettings.dailyQuestionsEnabled ?? true, to: updatedSettings.dailyQuestionsEnabled }
             : undefined,
         },
       },

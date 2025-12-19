@@ -31,6 +31,19 @@ export async function GET(req: NextRequest) {
     // Get admin settings
     const settings = await getAdminSettings();
 
+    // Check if daily questions are enabled
+    const dailyQuestionsEnabled = settings.dailyQuestionsEnabled ?? true;
+    
+    if (!dailyQuestionsEnabled) {
+      console.log(`[Daily Questions] Daily questions are disabled by admin settings`);
+      return NextResponse.json({
+        session: null,
+        questions: [],
+        shouldShow: false,
+        enabled: false,
+      });
+    }
+
     // Check if questions should be shown today
     // Show if: it's after the configured question time (hour:minute) AND questions haven't been completed today
     const questionMinute = settings.questionMinute ?? 0;
@@ -49,6 +62,7 @@ export async function GET(req: NextRequest) {
         session: null,
         questions: [],
         shouldShow: false,
+        enabled: true,
       });
     }
 

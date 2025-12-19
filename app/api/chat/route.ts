@@ -4,6 +4,15 @@ import { getUserFromRequest } from "@/lib/auth";
 import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 import { checkSafety } from "@/lib/safetyGuardrails";
 import { detectLanguage, translateToEnglish, translateToBangla } from "@/lib/translation";
+import { semanticSearchWithFallback } from "@/lib/vectorSearchServer";
+
+// Format search results for context
+function formatSearchResultsForContext(results: any[]): string {
+  if (results.length === 0) return '';
+  return results
+    .map(r => `Q: ${r.question}\nA: ${r.answer}`)
+    .join('\n---\n');
+}
 
 // Increase timeout for chat API (60 seconds)
 export const maxDuration = 60;
@@ -67,12 +76,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     let messages = body.messages || [];
     const imageUrl = body.imageUrl || null; // Optional image URL
+    const clientContext = body.context || null; // ✅ NEW: Context from client-side semantic search
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: "Messages array is required" },
         { status: 400 }
       );
+    }
+    
+    // ✅ NEW: Log client-side context for debugging
+    if (clientContext) {
+      console.log("[Client-Side Embeddings] Received semantic search context from browser");
     }
 
     // Check if user is logged in
@@ -128,6 +143,34 @@ export async function POST(req: NextRequest) {
           riskLevel: safetyCheck.riskLevel,
         });
       }
+
+      // ✅ VECTOR SEARCH (for guests)
+      let semanticContext = "";
+      if (!clientContext) {
+        // Only search if client didn't already do it
+        try {
+          console.log("\n" + "=".repeat(70));
+          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for GUEST user");
+          console.log("[💬 CHAT API] Query:", lastUserMessage.substring(0, 100));
+          const searchResults = await semanticSearchWithFallback(lastUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          });
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+          if (semanticContext) {
+            console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
+          }
+          console.log("=".repeat(70) + "\n");
+        } catch (err) {
+          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
+          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+          console.log("=".repeat(70) + "\n");
+          // Continue without semantic context - system is resilient
+        }
+      } else {
+        console.log("[💬 CHAT API] ℹ️  Using client-provided semantic context");
+      }
       
       // Get AI response (no profile context for guests)
       let reply: string;
@@ -140,9 +183,15 @@ export async function POST(req: NextRequest) {
         const imageUrls = imageUrl ? [imageUrl] : [];
         
         // Pass translated message to avoid duplicate translation in askMomsCare
-        const extraContexts = userLanguage === "bn" && translatedUserMessage !== lastUserMessage
+        let extraContexts: any = userLanguage === "bn" && translatedUserMessage !== lastUserMessage
           ? { translatedQuery: translatedUserMessage }
-          : undefined;
+          : {};
+        
+        // Include semantic search context (from Supabase or client)
+        if (semanticContext) {
+          extraContexts.semanticContext = semanticContext;
+          console.log("[Chat API] Included Supabase semantic context");
+        }
         
         // Send messages directly to AI in original language
         reply = await Promise.race([
@@ -362,13 +411,50 @@ export async function POST(req: NextRequest) {
       const timeoutPromise = new Promise<string>((_, reject) => {
         setTimeout(() => reject(new Error("Request timeout")), 30000);
       });
+
+      // ✅ VECTOR SEARCH (for logged-in users)
+      let semanticContext = "";
+      if (!clientContext) {
+        // Only search if client didn't already do it
+        try {
+          console.log("\n" + "=".repeat(70));
+          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
+          console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
+          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          });
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+          if (semanticContext) {
+            console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
+          }
+          console.log("=".repeat(70) + "\n");
+        } catch (err) {
+          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
+          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
+          console.log("=".repeat(70) + "\n");
+          // Continue without semantic context - system is resilient
+        }
+      } else {
+        semanticContext = clientContext;
+        console.log("[Chat API] Using client-provided semantic context");
+      }
+      
+      // ✅ Include semantic context with other contexts
+      const extraContext = {
+        dailyContext,
+        doctorQAContext,
+        motherId: user!.id,
+      };
+      
+      if (semanticContext) {
+        (extraContext as any).semanticContext = semanticContext;
+        console.log("[Chat API] Included Supabase semantic context for logged-in user");
+      }
       
       reply = await Promise.race([
-        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, {
-          dailyContext,
-          doctorQAContext,
-          motherId: user!.id,
-        }),
+        askMomsCare(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, extraContext),
         timeoutPromise
       ]) as string;
       

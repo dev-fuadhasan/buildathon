@@ -304,10 +304,18 @@ export default function ChatPage() {
       }
     } catch (err: any) {
       console.error("Chat error:", err);
-      const errorMessage = err.message || "Sorry, something went wrong. Please try again.";
+      let errorMessage = err.message || "Sorry, something went wrong. Please try again.";
+      
+      // Better error messages for network issues
+      if (err.message === "Failed to fetch" || err.message?.includes("fetch")) {
+        errorMessage = lang === "bn" 
+          ? "নেটওয়ার্ক ত্রুটি: অনুগ্রহ করে আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন। চ্যাটবটের জন্য ইন্টারনেট প্রয়োজন।"
+          : "Network Error: Please check your internet connection. The chatbot needs internet to generate AI responses.";
+      }
+      
       const errorMessages = [
         ...newMessages,
-        { role: "assistant" as const, content: `❌ Error: ${errorMessage}` },
+        { role: "assistant" as const, content: `❌ ${errorMessage}` },
       ];
       setMessages(errorMessages);
       setLoading(false); // Also stop loading on error

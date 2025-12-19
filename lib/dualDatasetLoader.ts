@@ -105,7 +105,97 @@ export function getUnifiedDataset(): DatasetItem[] {
 }
 
 /**
- * Search dataset based on language
+ * Semantic search using vector embeddings (async)
+ * @param query - User query
+ * @param language - Language to search ("en" or "bn")
+ * @param limit - Number of results to return
+ * @returns Promise of array of matching dataset items
+ */
+export async function searchDatasetSemantic(
+  query: string,
+  language: Language,
+  limit: number = 3
+): Promise<DatasetItem[]> {
+  try {
+    // Dynamic import to avoid loading if not needed
+    const { semanticSearch } = await import('./vectorSearch');
+    const results = await semanticSearch(query, language, limit);
+    
+    if (results.length > 0) {
+      console.log(`[Dataset] ✅ Semantic search: ${results.length} results (best similarity: ${results[0].similarity.toFixed(3)})`);
+      return results.map(r => r.item);
+    }
+  } catch (error) {
+    console.warn('[Dataset] ⚠️ Semantic search failed:', error);
+  }
+  
+  // Fallback to keyword search
+  return searchDatasetByLanguage(query, language, limit);
+}
+
+/**
+ * Hybrid search: Try semantic search first, fallback to keyword search
+ * @param query - User query
+ * @param language - Language to search ("en" or "bn")
+ * @param limit - Number of results to return
+ * @returns Promise of array of matching dataset items
+ */
+export async function searchDatasetHybrid(
+  query: string,
+  language: Language,
+  limit: number = 3
+): Promise<DatasetItem[]> {
+  const startTime = Date.now();
+  // Try semantic search first
+  try {
+    const { semanticSearch } = await import('./vectorSearch');
+    const { hasEmbeddings } = await import('./vectorSearch');
+    const { logVectorSearch } = await import('./vectorSearchAnalytics');
+    
+    // Only use semantic search if embeddings are available
+    if (hasEmbeddings()) {
+      const results = await semanticSearch(query, language, limit);
+      
+      // If we have good results (similarity > 0.4), use them
+      if (results.length > 0 && results[0].similarity > 0.4) {
+        console.log(`[Dataset] ✅ Semantic search: ${results.length} results (best: ${results[0].similarity.toFixed(3)})`);
+        // Already logged in semanticSearch, but log as hybrid success
+        logVectorSearch({
+          query,
+          language,
+          method: 'hybrid',
+          resultsCount: results.length,
+          bestSimilarity: results[0].similarity,
+          searchTimeMs: Date.now() - startTime,
+          embeddingsLoaded: true,
+        });
+        return results.map(r => r.item);
+      }
+    }
+  } catch (error) {
+    console.warn('[Dataset] ⚠️ Semantic search failed:', error);
+  }
+  
+  // Fallback to keyword search
+  console.log('[Dataset] 📝 Using keyword search fallback');
+  const keywordResults = searchDatasetByLanguage(query, language, limit);
+  
+  // Log keyword search
+  const { logVectorSearch } = await import('./vectorSearchAnalytics');
+  logVectorSearch({
+    query,
+    language,
+    method: 'keyword',
+    resultsCount: keywordResults.length,
+    searchTimeMs: Date.now() - startTime,
+    embeddingsLoaded: false,
+  });
+  
+  return keywordResults;
+}
+
+/**
+ * Search dataset based on language (keyword-based, synchronous)
  * @param query - User query
  * @param language - Language to search ("en" or "bn")
  * @param limit - Number of results to return

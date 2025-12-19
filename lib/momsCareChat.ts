@@ -1,7 +1,7 @@
 import { groq, isGroqConfigured } from "./groqClient";
 import { getSafetyPrompt } from "./safetyGuardrails";
 import { retrieveRelevantGuidelines, formatGuidelinesForContext } from "./medicalKnowledge";
-import { searchDatasetByLanguage, searchDatasetDual, formatDatasetContext, type Language } from "./dualDatasetLoader";
+import { searchDatasetByLanguage, searchDatasetDual, searchDatasetHybrid, formatDatasetContext, type Language } from "./dualDatasetLoader";
 import { detectLanguage, translateToEnglish } from "./translation";
 import { getForcedLanguage } from "./datasetConfig";
 import { shouldUseProfileData, needsFollowUpQuestions } from "./chatHelper";
@@ -181,8 +181,8 @@ export async function askMomsCare(
           console.log(`[Dual Search] Translated to English for search: "${translatedQuery}"`);
         } catch (error) {
           console.error(`[Dual Search] Translation failed, using original Banglish:`, error);
-          // Fallback: search with original Banglish
-          relevantDatasetItems = searchDatasetDual(lastUserMessage, 3);
+          // Fallback: use semantic search with English (works well for Banglish)
+          relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "en", 3);
         }
       } else {
         console.log(`[Dual Search] Using pre-translated query: "${translatedQuery}"`);
@@ -190,15 +190,15 @@ export async function askMomsCare(
       
       if (translatedQuery) {
         searchQuery = translatedQuery; // Use translated query for search
-        // Search with translated English query for better results
-        relevantDatasetItems = searchDatasetByLanguage(translatedQuery, "en", 3);
+        // Use semantic search (with keyword fallback) for better results
+        relevantDatasetItems = await searchDatasetHybrid(translatedQuery, "en", 3);
       }
     } else if (userLanguage === "en") {
-      // English query: Search English dataset
-      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "en", 3);
+      // English query: Use semantic search (with keyword fallback)
+      relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "en", 3);
     } else {
-      // Bangla with script: Search Bangla dataset
-      relevantDatasetItems = searchDatasetByLanguage(lastUserMessage, "bn", 3);
+      // Bangla with script: Use semantic search (with keyword fallback)
+      relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "bn", 3);
     }
     
     const datasetContext = relevantDatasetItems.length > 0 

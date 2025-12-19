@@ -76,4 +76,11 @@ Qn_DS.xlsx
 DoctorCard.tsx
 Doctor Card Icons/
 icons_and_illustrations/
-scripts/
+
+# Embeddings (generated files)
+embeddings.json
+embeddings.json.backup
+*.embeddings.json
+
+# Vector search analytics
+vector-search-analytics.json
