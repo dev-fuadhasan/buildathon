@@ -13,14 +13,14 @@
  * - Embeddings run in browser only
  */
 
-import { pipeline } from '@xenova/transformers';
+"use client";
 
 // Model configuration
 const MODEL_NAME = 'Xenova/multilingual-e5-base';
 const MODEL_TASK = 'feature-extraction';
 
-// Type for the feature extraction pipeline
-type FeatureExtractionPipeline = Awaited<ReturnType<typeof pipeline>>;
+// Type for the feature extraction pipeline (use any to avoid early type evaluation)
+type FeatureExtractionPipeline = any;
 
 // Singleton pattern: Load model once, reuse across all calls
 let embeddingPipeline: FeatureExtractionPipeline | null = null;
@@ -64,13 +64,21 @@ async function loadModel(): Promise<FeatureExtractionPipeline> {
   loadingPromise = (async (): Promise<FeatureExtractionPipeline> => {
     try {
       console.log('[Embedding Client] Loading model:', MODEL_NAME);
-      
-      // Use dynamic import to ensure this only runs in browser
-      // pipeline() automatically uses WebAssembly when available
-      const loadedPipeline = await pipeline(MODEL_TASK, MODEL_NAME, {
-        // Use local files if available, otherwise download from HuggingFace
-        // This enables offline usage after first load
-        quantized: true, // Use quantized model for smaller size and faster loading
+      // Dynamically import @xenova/transformers only in the browser
+      const mod = await import('@xenova/transformers');
+      const m: any = mod as any;
+
+      const pipelineFn = m && (m.pipeline ?? (m.default && m.default.pipeline));
+
+      if (!pipelineFn) {
+        console.error('[Embedding Client] @xenova/transformers did not expose `pipeline`');
+        throw new Error('transformers pipeline not available');
+      }
+
+      // Create the pipeline using the library's pipeline factory
+      const loadedPipeline = await pipelineFn(MODEL_TASK, {
+        model: MODEL_NAME,
+        quantized: true,
       });
 
       embeddingPipeline = loadedPipeline;
