@@ -14,16 +14,6 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  embedText,
-  embedTextBatch,
-  cosineSimilarity,
-  searchSimilar as searchSimilarUtil,
-  isModelLoaded,
-  getModelLoadingPromise,
-  getEmbeddingPipeline,
-} from '../lib/embedding.client';
-import { getModelProgress } from '../lib/embedding.client';
 
 export interface EmbeddingState {
   isLoading: boolean;
@@ -42,42 +32,65 @@ export interface SearchResult {
 export function useEmbedding() {
   const [state, setState] = useState<EmbeddingState>({
     isLoading: false,
-    isModelReady: isModelLoaded(),
+    isModelReady: false,
     error: null,
   });
   const [progress, setProgress] = useState<number>(0);
-
   const isMountedRef = useRef(true);
+
+  // Dynamic imports to avoid static bundling of xenova
+  const embedTextRef = useRef<any>(null);
+  const embedTextBatchRef = useRef<any>(null);
+  const cosineSimilarityRef = useRef<any>(null);
+  const searchSimilarUtilRef = useRef<any>(null);
+  const isModelLoadedRef = useRef<any>(null);
+  const getModelLoadingPromiseRef = useRef<any>(null);
+  const getEmbeddingPipelineRef = useRef<any>(null);
+  const getModelProgressRef = useRef<any>(null);
 
   // Pre-load model on mount
   useEffect(() => {
     const loadModel = async () => {
-      if (isModelLoaded()) {
-        setState(prev => ({ ...prev, isModelReady: true }));
-        return;
-      }
-
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-
       try {
-        // If pipeline not started, start it proactively so progress is reported
-        let promise = getModelLoadingPromise();
-        if (!promise) {
+        // Dynamically import embedding functions only when needed
+        const mod = await import('../lib/embedding.client');
+        
+        embedTextRef.current = mod.embedText;
+        embedTextBatchRef.current = mod.embedTextBatch;
+        cosineSimilarityRef.current = mod.cosineSimilarity;
+        searchSimilarUtilRef.current = mod.searchSimilar;
+        isModelLoadedRef.current = mod.isModelLoaded;
+        getModelLoadingPromiseRef.current = mod.getModelLoadingPromise;
+        getEmbeddingPipelineRef.current = mod.getEmbeddingPipeline;
+        getModelProgressRef.current = mod.getModelProgress;
+
+        // Check if already loaded
+        if (isModelLoadedRef.current && isModelLoadedRef.current()) {
+          setState(prev => ({ ...prev, isModelReady: true }));
+          return;
+        }
+
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        // Get or start the pipeline
+        let promise = getModelLoadingPromiseRef.current && getModelLoadingPromiseRef.current();
+        if (!promise && getEmbeddingPipelineRef.current) {
           try {
-            // Kick off pipeline load
-            promise = getEmbeddingPipeline();
+            promise = getEmbeddingPipelineRef.current();
           } catch (e) {
-            // ignore - getEmbeddingPipeline may throw if not client, will be caught below
+            // ignore
           }
         }
 
         if (promise) {
-          // Poll progress while loading to surface a progress bar in UI
+          // Poll progress while loading
           const pollInterval = 200;
           const intervalId = setInterval(() => {
             try {
-              const p = getModelProgress();
-              setProgress(p);
+              if (getModelProgressRef.current) {
+                const p = getModelProgressRef.current();
+                setProgress(p);
+              }
             } catch (e) {
               // ignore
             }
@@ -86,6 +99,7 @@ export function useEmbedding() {
           await promise;
           clearInterval(intervalId);
           setProgress(100);
+          
           if (isMountedRef.current) {
             setState(prev => ({
               ...prev,
@@ -117,7 +131,7 @@ export function useEmbedding() {
   // Embed single text
   const embed = useCallback(
     async (text: string, isQuery: boolean = true): Promise<number[] | null> => {
-      if (!state.isModelReady) {
+      if (!state.isModelReady || !embedTextRef.current) {
         console.warn('[useEmbedding] Model not ready yet');
         return null;
       }
@@ -125,7 +139,7 @@ export function useEmbedding() {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const embedding = await embedText(text, isQuery);
+        const embedding = await embedTextRef.current(text, isQuery);
         return embedding;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -146,7 +160,7 @@ export function useEmbedding() {
   // Embed multiple texts
   const embedBatch = useCallback(
     async (texts: string[], isQuery: boolean = false): Promise<number[][] | null> => {
-      if (!state.isModelReady) {
+      if (!state.isModelReady || !embedTextBatchRef.current) {
         console.warn('[useEmbedding] Model not ready yet');
         return null;
       }
@@ -154,7 +168,7 @@ export function useEmbedding() {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const embeddings = await embedTextBatch(texts, isQuery);
+        const embeddings = await embedTextBatchRef.current(texts, isQuery);
         return embeddings;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -180,8 +194,11 @@ export function useEmbedding() {
       k: number = 3,
       minSimilarity: number = 0.3
     ): SearchResult[] => {
+      if (!searchSimilarUtilRef.current) {
+        return [];
+      }
       try {
-        return searchSimilarUtil(queryEmbedding, referenceEmbeddings, k, minSimilarity);
+        return searchSimilarUtilRef.current(queryEmbedding, referenceEmbeddings, k, minSimilarity);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setState(prev => ({ ...prev, error }));
@@ -195,8 +212,11 @@ export function useEmbedding() {
   // Calculate similarity between two embeddings
   const calculateSimilarity = useCallback(
     (embedding1: number[], embedding2: number[]): number => {
+      if (!cosineSimilarityRef.current) {
+        return 0;
+      }
       try {
-        return cosineSimilarity(embedding1, embedding2);
+        return cosineSimilarityRef.current(embedding1, embedding2);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setState(prev => ({ ...prev, error }));

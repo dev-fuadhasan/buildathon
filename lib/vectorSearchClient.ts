@@ -5,8 +5,6 @@
  * No API keys, no server calls, works offline after first model load
  */
 
-import { embedText, searchSimilar } from './embedding.client';
-
 export interface QAPair {
   id: string;
   question: string;
@@ -78,6 +76,9 @@ export async function semanticSearch(
 
   try {
     console.log(`[Vector Search] Searching for: "${query.substring(0, 50)}..."`);
+
+    // Dynamically import embedding functions to avoid static bundling
+    const { embedText, searchSimilar } = await import('./embedding.client');
 
     // Step 1: Generate embedding for user query
     console.log('[Vector Search] Generating query embedding...');
