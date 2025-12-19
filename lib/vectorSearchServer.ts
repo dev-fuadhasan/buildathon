@@ -11,8 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import * as fs from 'fs';
-import path from 'path';
+import { embedQuery } from './queryEmbeddingServer';
 
 let supabaseClient: any = null;
 
@@ -118,61 +117,32 @@ export async function semanticSearchWithFallback(
   }
 
     try {
-    // Step 1: Find reference embedding from precomputed embeddings.json (Netlify-friendly)
-    console.log('[🔍 VECTOR SEARCH] Finding reference embedding from embeddings.json...');
-    const embedPath = path.join(process.cwd(), 'embeddings.json');
-    let allEmbeddings: any[] = [];
-    try {
-      const raw = fs.readFileSync(embedPath, 'utf-8');
-      allEmbeddings = JSON.parse(raw);
-      console.log(`[📦 Embeddings] Loaded ${allEmbeddings.length} records`);
-    } catch (e) {
-      console.error('[📦 Embeddings] Failed to read embeddings.json:', e);
+    // Step 1: Generate query embedding using server-side Xenova model
+    console.log('🔢 Generating query embedding (384-dim)');
+    const embedding = await embedQuery(query);
+
+    if (!embedding || embedding.length === 0) {
+      console.error('[🔍 VECTOR SEARCH] ❌ Failed to generate query embedding');
       console.log('='.repeat(60));
-      return [];
+      // Fallback to keyword search
+      const fallback = await keywordSearch(query, maxResults);
+      return fallback;
     }
 
-    const qWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    let best: any = null;
-    let bestScore = -1;
-    for (const rec of allEmbeddings) {
-      const text = ((rec.question || '') + ' ' + (rec.answer || '') + ' ' + (rec.content || '')).toLowerCase();
-      let score = 0;
-      for (const w of qWords) if (text.includes(w)) score++;
-      if (score > bestScore) {
-        bestScore = score;
-        best = rec;
-      }
+    if (embedding.length !== 384) {
+      console.warn('[🔍 VECTOR SEARCH] ⚠️ Generated embedding length != 384:', embedding.length);
     }
 
-    if (!best) {
-      console.log('[🔍 VECTOR SEARCH] No reference record matched; using first record as fallback');
-      if (allEmbeddings.length === 0) {
-        console.log('='.repeat(60));
-        return [];
-      }
-      best = allEmbeddings[0];
-    }
-
-    let embedding: number[] | null = best.embedding || best.questionEmbedding_en || best.questionEmbedding || null;
-    if (!embedding || embedding.length !== 384) {
-      console.error('[🔍 VECTOR SEARCH] Reference embedding missing or invalid');
-      console.log('='.repeat(60));
-      return [];
-    }
-
-    // Normalize L2
+    // Normalize again (embedQuery already normalizes, but ensure safety)
     const norm = Math.sqrt(embedding.reduce((s, v) => s + v * v, 0));
-    if (norm > 0) embedding = embedding.map((v: number) => v / norm);
+    const normalizedEmbedding = norm > 0 ? embedding.map((v: number) => v / norm) : embedding;
 
-    console.log('[🔍 VECTOR SEARCH] Using LOCAL query embedding (384-dim)');
-    console.log('[🔍 VECTOR SEARCH] Supabase vector search executed');
-
+    console.log('🔍 Calling Supabase vector RPC');
     const rpcStartTime = performance.now();
 
     // Step 2: Call Supabase RPC for vector similarity
     const { data: searchResults, error: rpcError } = await supabaseClient.rpc('match_embeddings', {
-      query_embedding: embedding,
+      query_embedding: normalizedEmbedding,
       similarity_threshold: minSimilarity,
       match_count: maxResults * 2,
     });
@@ -186,7 +156,7 @@ export async function semanticSearchWithFallback(
     }
 
     if (!searchResults || searchResults.length === 0) {
-      console.log('[🔍 VECTOR SEARCH] ℹ️  No vector matches found');
+      console.log('⚠️ Vector search empty, using keyword fallback');
       console.log('='.repeat(60));
       // Fallback to keyword search (per spec)
       const fallback = await keywordSearch(query, maxResults);
@@ -205,7 +175,7 @@ export async function semanticSearchWithFallback(
         category: item.category,
       }));
 
-    console.log(`[🔍 VECTOR SEARCH] ✅ Found ${results.length} vector results`);
+    console.log(`✅ Vector search returned ${results.length} results`);
     results.forEach((r: VectorSearchResult, i: number) => {
       console.log(`  [${i + 1}] "${r.question.substring(0, 50)}..." (similarity: ${(r.similarity * 100).toFixed(0)}%)`);
     });
