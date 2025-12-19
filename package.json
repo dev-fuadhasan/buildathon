@@ -10,6 +10,7 @@
     "generate-embeddings": "tsx scripts/generateEmbeddings.ts"
   },
   "dependencies": {
+    "@xenova/transformers": "^2.0.0",
     "@aws-sdk/client-s3": "^3.740.0",
     "@aws-sdk/s3-request-presigner": "^3.740.0",
     "@google/genai": "^1.0.0",

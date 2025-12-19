@@ -78,6 +78,13 @@ export async function POST(req: NextRequest) {
     const imageUrl = body.imageUrl || null; // Optional image URL
     const clientContext = body.context || null; // ✅ NEW: Context from client-side semantic search
     const clientEmbedding: number[] | null = Array.isArray(body.embedding) ? body.embedding : null; // ✅ NEW: Optional client-provided 384-d embedding
+
+    // Enforce client-provided embedding (browser-generated WASM) per constraints
+    if (!clientEmbedding || !Array.isArray(clientEmbedding) || clientEmbedding.length !== 384) {
+      return NextResponse.json({ error: 'Client embedding (384-d) is required in request body under `embedding`.' }, { status: 400 });
+    }
+
+    console.log('[VECTOR SEARCH] Client embedding received (384-d)');
     
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(

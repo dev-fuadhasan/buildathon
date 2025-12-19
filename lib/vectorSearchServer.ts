@@ -156,6 +156,13 @@ export async function semanticSearchWithFallback(
     }
 
     if (!searchResults || searchResults.length === 0) {
+      if (embeddingArray) {
+        // When client provided embedding, DO NOT fall back to keyword search
+        console.log('[VECTOR SEARCH] Supabase returned no results for client embedding; skipping keyword fallback');
+        console.log('='.repeat(60));
+        return [];
+      }
+
       console.log('⚠️ Vector search empty, using keyword fallback');
       console.log('='.repeat(60));
       // Fallback to keyword search (per spec)
