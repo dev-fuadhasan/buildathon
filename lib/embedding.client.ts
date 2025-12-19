@@ -11,6 +11,8 @@
  * Add 'use client' at the top of components that use this
  */
 
+"use client";
+
 // Singleton pattern: load model once, reuse
 let pipelinePromise: Promise<any> | null = null;
 let modelLoaded = false;
@@ -25,12 +27,24 @@ export async function getEmbeddingPipeline() {
 
   pipelinePromise = (async () => {
     try {
-      // Dynamically import only on client
-      const { pipeline } = await import('@xenova/transformers');
+      // Dynamically import only on client. Be defensive: some bundlers/module shapes
+      // expose the library as a default export or as named exports, so handle both.
+      const mod = await import('@xenova/transformers');
+
+      // Some bundlers/types expose different shapes; cast to `any` to safely access `.default`
+      const m: any = mod as any;
+
+      // Try multiple locations for the pipeline function
+      const pipelineFn = (m && (m.pipeline ?? (m.default && m.default.pipeline))) as any;
+
+      if (!pipelineFn) {
+        console.error('[Embedding] @xenova/transformers did not expose `pipeline`');
+        throw new Error('transformers pipeline not available');
+      }
 
       console.log('[Embedding] Loading Xenova/all-MiniLM-L6-v2 model (WASM)...');
 
-      const extractor = await (pipeline as any)('feature-extraction', {
+      const extractor = await pipelineFn('feature-extraction', {
         model: 'Xenova/all-MiniLM-L6-v2',
         progress_callback: (progress: any) => {
           try {
