@@ -34,15 +34,31 @@ export async function getEmbeddingPipeline() {
         throw new Error('Xenova requires browser environment');
       }
 
-      // Dynamically import only on client. Be defensive: some bundlers/module shapes
-      // expose the library as a default export or as named exports, so handle both.
-      let mod;
+      // CRITICAL FIX: Wrap import in try-catch with isolation
+      // @xenova/transformers may have top-level code that crashes in Vercel
+      // This ensures the error doesn't cascade to the entire app
+      let mod: any;
+      
       try {
-        mod = await import('@xenova/transformers');
+        // Use a self-executing async wrapper to isolate any module evaluation errors
+        const loadModule = async () => {
+          const m = await import('@xenova/transformers');
+          return m;
+        };
+        
+        mod = await loadModule();
         console.log('[Embedding] @xenova/transformers imported successfully');
       } catch (importErr: any) {
-        console.error('[Embedding] Failed to import @xenova/transformers:', importErr?.message);
-        throw importErr;
+        const errMsg = importErr?.message || String(importErr);
+        const errStack = importErr?.stack || '';
+        
+        console.error('[Embedding] ❌ CRITICAL: Failed to import @xenova/transformers');
+        console.error('[Embedding] Error message:', errMsg);
+        console.error('[Embedding] Error stack:', errStack);
+        console.error('[Embedding] Xenova is required for client-side embeddings.');
+        console.error('[Embedding] This library may have incompatibilities with the current runtime environment.');
+        
+        throw new Error(`Xenova import failed: ${errMsg}. This prevents client-side embeddings. Consider using server-side embeddings instead.`);
       }
 
       // Some bundlers/types expose different shapes; cast to `any` to safely access `.default`
@@ -106,8 +122,11 @@ export async function getEmbeddingPipeline() {
       modelLoaded = true;
       console.log('[Embedding] Model loaded successfully ✓');
       return extractor;
-    } catch (error) {
-      console.error('[Embedding] Failed to load model:', error);
+    } catch (error: any) {
+      const errMsg = error?.message || String(error);
+      console.error('[Embedding] ❌ FAILED to load model:', errMsg);
+      console.error('[Embedding] Full error:', error);
+      
       modelLoaded = false;
       pipelinePromise = null;
       throw error;

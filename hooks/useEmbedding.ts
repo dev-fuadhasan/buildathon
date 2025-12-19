@@ -81,7 +81,7 @@ export function useEmbedding() {
             console.log('[useEmbedding] Starting embedding pipeline...');
             promise = getEmbeddingPipelineRef.current();
           } catch (e) {
-            console.error('[useEmbedding] Error starting pipeline:', e);
+            console.error('[useEmbedding] ❌ Error starting pipeline:', e);
             throw e;
           }
         }
@@ -115,13 +115,19 @@ export function useEmbedding() {
       } catch (err) {
         if (isMountedRef.current) {
           const error = err instanceof Error ? err : new Error(String(err));
+          
+          // Detailed error context for debugging
+          console.error('[useEmbedding] ❌ CRITICAL: Model loading failed');
+          console.error('[useEmbedding] Error message:', error.message);
+          console.error('[useEmbedding] Full error:', error);
+          
           setState(prev => ({
             ...prev,
             error,
             isLoading: false,
+            // Important: set isModelReady to false so UI knows embeddings are unavailable
+            isModelReady: false,
           }));
-          console.error('[useEmbedding] Model loading failed:', error);
-          console.error('[useEmbedding] Stack trace:', error.stack);
         }
       }
     };

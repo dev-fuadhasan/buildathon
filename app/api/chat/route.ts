@@ -79,9 +79,10 @@ export async function POST(req: NextRequest) {
     const clientContext = body.context || null; // ✅ NEW: Context from client-side semantic search
     const clientEmbedding: number[] | null = Array.isArray(body.embedding) ? body.embedding : null; // ✅ NEW: Optional client-provided 384-d embedding
 
-    // ENFORCE: client embedding must be present (browser-only WASM embeddings required)
-    if (!clientEmbedding || !Array.isArray(clientEmbedding) || clientEmbedding.length !== 384) {
-      return NextResponse.json({ error: 'Client embedding (384-d array) is required' }, { status: 400 });
+    // ⚠️  OPTIONAL: client embedding is now optional (soft requirement)
+    // If Xenova fails on client, chat still works but without semantic search
+    if (clientEmbedding && (!Array.isArray(clientEmbedding) || clientEmbedding.length !== 384)) {
+      console.warn('[Chat API] ⚠️ Invalid embedding format provided (expected 384-d array), ignoring');
     }
     
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -94,6 +95,13 @@ export async function POST(req: NextRequest) {
     // ✅ NEW: Log client-side context for debugging
     if (clientContext) {
       console.log("[Client-Side Embeddings] Received semantic search context from browser");
+    }
+    
+    // ⚠️ LOG: Check if embedding was provided
+    if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+      console.log('[Chat API] ✅ Client embedding available (384-d) - will use semantic search');
+    } else {
+      console.log('[Chat API] ⚠️ Client embedding unavailable - using keyword-only search as fallback');
     }
 
     // Check if user is logged in

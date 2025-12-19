@@ -247,29 +247,38 @@ export default function ChatPage() {
     setAttachedImage(null);
     
     try {
-      // Ensure client embedding is available (no server-side embedding)
-      if (!isModelReady) {
-        const waitingMsg = lang === "bn" ? 'মডেল ডাউনলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...' : 'Model downloading — please wait...';
-        setMessages(prev => [...prev, { role: 'assistant', content: waitingMsg }]);
-        setLoading(false);
-        return;
-      }
-
-      // Generate client embedding (browser WASM)
+      // Try to generate client embedding (browser WASM), but don't block if unavailable
       let clientEmbedding: number[] | null = null;
-      try {
-        const e = await embed(text, true);
-        if (Array.isArray(e) && e.length === 384) {
-          clientEmbedding = e;
-        } else {
-          throw new Error('Embedding dimension mismatch or null');
+      let embeddingAvailable = true;
+      
+      if (!isModelReady && modelLoading) {
+        // Model is still loading - wait briefly for it
+        const waitingMsg = lang === "bn" ? 'মডেল ডাউনলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...' : 'Model downloading — please wait...';
+        console.log('[Chat] Model not ready yet, skipping embedding generation');
+        embeddingAvailable = false;
+      } else if (isModelReady) {
+        // Model is ready, try to generate embedding
+        try {
+          const e = await embed(text, true);
+          if (Array.isArray(e) && e.length === 384) {
+            clientEmbedding = e;
+            console.log('[Chat] Generated 384-d embedding successfully');
+          } else {
+            console.warn('[Chat] Embedding dimension mismatch, received:', e?.length);
+            embeddingAvailable = false;
+          }
+        } catch (err) {
+          console.error('[Chat] Embedding generation failed:', err);
+          embeddingAvailable = false;
         }
-      } catch (err) {
-        console.error('Embedding generation failed:', err);
-        const errMsg = lang === 'bn' ? 'এম্বেডিং তৈরি করা যায়নি, অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Failed to generate embedding, please try again.';
-        setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${errMsg}` }]);
-        setLoading(false);
-        return;
+      } else {
+        // Model failed to load
+        console.warn('[Chat] Embedding model unavailable, proceeding without semantic search');
+        embeddingAvailable = false;
+      }
+      
+      if (!embeddingAvailable) {
+        console.warn('[Chat] ⚠️ Proceeding with chat without client embeddings (semantic search disabled)');
       }
       // If this is first message in new conversation for logged-in mother, create conversation
       let conversationId = currentConversationId;
@@ -304,7 +313,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           messages: newMessages,
           imageUrl: uploadedImageUrl, // Send image URL with message
-          embedding: clientEmbedding, // include required 384-d embedding
+          embedding: clientEmbedding || undefined, // Include embedding if available, otherwise undefined
         }),
       });
 
