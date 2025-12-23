@@ -451,31 +451,6 @@ The system uses AI to intelligently decide which context sources to include:
 - Bangla questions → Bangla responses
 - Banglish questions → Bangla responses (in Bengali script)
 
-### Vector Search and Embeddings
-
-MomsCare uses vector search to find the most relevant information for user queries. This system converts text into numerical vectors (embeddings) and compares them to find semantically similar content.
-
-#### Embedding System Architecture:
-1. **Client-Side Embeddings**: Uses WebAssembly in the browser for fastest performance
-2. **Server-Side Fallback**: When client-side fails, uses Hugging Face API
-3. **Keyword Search**: Final fallback when embeddings aren't available
-
-#### Setting Up Free Embedding Service:
-
-To enable vector search, you need to configure a free embedding service:
-
-1. **Hugging Face (Recommended)**:
-   - Sign up at [huggingface.co](https://huggingface.co)
-   - Get your API token from Settings → Access Tokens
-   - Add `HF_TOKEN=your_token_here` to your environment variables
-
-2. **Alternative Services**:
-   - Cohere Embed API
-   - OpenAI Ada Embeddings
-   - Custom embedding services
-
-For detailed setup instructions, see [docs/embedding-setup.md](docs/embedding-setup.md)
-
 ---
 
 ## Data Retrieval & Knowledge Base System

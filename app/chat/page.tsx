@@ -249,40 +249,32 @@ export default function ChatPage() {
     try {
       // Try to generate client embedding (browser WASM), but don't block if unavailable
       let clientEmbedding: number[] | null = null;
-      let embeddingAvailable = false; // Default to false
+      let embeddingAvailable = true;
       
       if (!isModelReady && modelLoading) {
         // Model is still loading - wait briefly for it
         const waitingMsg = lang === "bn" ? 'মডেল ডাউনলোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...' : 'Model downloading — please wait...';
         console.log('[Chat] Model not ready yet, skipping embedding generation');
+        embeddingAvailable = false;
       } else if (isModelReady) {
         // Model is ready, try to generate embedding
         try {
           const e = await embed(text, true);
-          // Check if embedding was successfully generated
-          if (e && Array.isArray(e) && e.length === 384) {
+          if (Array.isArray(e) && e.length === 384) {
             clientEmbedding = e;
-            embeddingAvailable = true;
             console.log('[Chat] Generated 384-d embedding successfully');
-          } else if (e === null) {
-            // This means the embedding failed gracefully
-            console.warn('[Chat] Embedding generation returned null, proceeding without client embeddings');
           } else {
             console.warn('[Chat] Embedding dimension mismatch, received:', e?.length);
+            embeddingAvailable = false;
           }
         } catch (err) {
           console.error('[Chat] Embedding generation failed:', err);
+          embeddingAvailable = false;
         }
       } else {
         // Model failed to load
         console.warn('[Chat] Embedding model unavailable, proceeding without semantic search');
-      }
-      
-      // Always log the embedding status for debugging
-      if (embeddingAvailable) {
-        console.log('[Chat] ✅ Client embedding available for API request');
-      } else {
-        console.log('[Chat] ⚠️ Client embedding not available, API will use server-side fallback');
+        embeddingAvailable = false;
       }
       
       if (!embeddingAvailable) {

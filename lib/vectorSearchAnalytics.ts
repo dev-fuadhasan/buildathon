@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { hasEmbeddings } from './vectorSearch';
 
 export interface VectorSearchLog {
   timestamp: string;
@@ -173,7 +174,6 @@ export function getVectorSearchAnalytics(): {
   const embeddingsLoaded = logs.length > 0 ? logs[logs.length - 1].embeddingsLoaded : false;
 
   // Get total embeddings count
-  const { hasEmbeddings } = require('./vectorSearch');
   const totalEmbeddings = hasEmbeddings() ? 677 : 0; // Hardcoded for now, can be dynamic
 
   // Recent searches (last 50)

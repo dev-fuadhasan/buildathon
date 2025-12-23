@@ -17,6 +17,8 @@ MODEL_NAME = "intfloat/multilingual-e5-small"  # 384-dim
 CSV_FILES = [
     r"D:\Buildathon\moms_care_dataset.csv",
     r"D:\Buildathon\moms_care_dataset_bangla.csv",
+    r"D:\Buildathon\new_dataset.csv",
+    r"D:\Buildathon\new_dataset_bn.csv",
 ]
 
 OUTPUT_FILE = "embeddings_output.json"
@@ -61,7 +63,7 @@ for path in CSV_FILES:
         rows.append({
             "question": str(q).strip(),
             "answer": str(a).strip(),
-            "language": "bn" if "bangla" in path.lower() else "en",
+            "language": "bn" if "bangla" in path.lower() or "_bn." in path.lower() else "en",
             "severity": r.get("severity", "normal"),
             "trimester": r.get("trimester"),
             "category": r.get("category", "general"),

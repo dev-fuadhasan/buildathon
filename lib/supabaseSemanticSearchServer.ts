@@ -8,7 +8,36 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+// Simple in-memory cache for embeddings
+const embeddingCache = new Map<string, number[]>();
+const CACHE_MAX_SIZE = 1000;
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
 let supabaseClient: any = null;
+
+// Function to get cached embedding
+function getCachedEmbedding(query: string): number[] | null {
+  const cached = embeddingCache.get(query);
+  if (cached) {
+    console.log(`[🔍 SEMANTIC SEARCH] Found cached embedding for query: "${query.substring(0, 30)}..."`);
+    return cached;
+  }
+  return null;
+}
+
+// Function to cache embedding
+function cacheEmbedding(query: string, embedding: number[]): void {
+  // Clean up old entries if cache is full
+  if (embeddingCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = embeddingCache.keys().next().value;
+    if (firstKey) {
+      embeddingCache.delete(firstKey);
+    }
+  }
+  
+  embeddingCache.set(query, embedding);
+  console.log(`[🔍 SEMANTIC SEARCH] Cached embedding for query: "${query.substring(0, 30)}..."`);
+}
 
 function initializeSupabaseSearch(): boolean {
   try {
@@ -56,7 +85,8 @@ export function formatSearchResultsForContext(results: SearchResult[]): string {
  */
 export async function semanticSearchServer(
   query: string,
-  options: SearchOptions = {}
+  options: SearchOptions = {},
+  clientEmbedding?: number[] | null
 ): Promise<SearchResult[]> {
   const { minSimilarity = 0.25, maxResults = 5 } = options;
   const startTime = performance.now();
@@ -75,8 +105,105 @@ export async function semanticSearchServer(
     }
   }
 
-  // Use keyword search (no query embedding needed)
-  console.log('[🔍 SEMANTIC SEARCH] Query embedding disabled, using KEYWORD SEARCH');
+  // Try to generate embedding if not provided
+  if (!clientEmbedding || !Array.isArray(clientEmbedding) || clientEmbedding.length !== 384) {
+    // Check if we have a cached embedding for this query
+    const cachedEmbedding = getCachedEmbedding(query);
+    if (cachedEmbedding) {
+      clientEmbedding = cachedEmbedding;
+      console.log('[🔍 SEMANTIC SEARCH] Using cached embedding');
+    } else {
+      // Try to generate embedding server-side using Hugging Face inference library
+      try {
+        console.log('[🔍 SEMANTIC SEARCH] Generating embedding server-side using Hugging Face...');
+        console.log(`[🔍 SEMANTIC SEARCH] Query for embedding: "${query}"`);
+        
+        // Dynamically import the Hugging Face inference library
+        const { HfInference } = await import('@huggingface/inference');
+        
+        // Use the HF_TOKEN environment variable
+        const hfToken = process.env.HF_TOKEN;
+        if (!hfToken) {
+          throw new Error('HF_TOKEN environment variable not set');
+        }
+        
+        const hf = new HfInference(hfToken);
+        
+        // Use feature extraction with the intfloat/multilingual-e5-small model
+        const result = await hf.featureExtraction({
+          model: 'intfloat/multilingual-e5-small',
+          inputs: `query: ${query}`
+        });
+        
+        // The result should be an array with the embedding
+        if (!Array.isArray(result) || result.length === 0) {
+          throw new Error('Invalid response from Hugging Face API');
+        }
+        
+        // Extract the embedding vector and ensure it's a flat array of numbers
+        let embedding: any = Array.isArray(result[0]) ? result[0] : result;
+        
+        // If it's still not a flat array of numbers, flatten it
+        if (Array.isArray(embedding) && embedding.length > 0 && Array.isArray(embedding[0])) {
+          embedding = embedding.flat();
+        }
+        
+        // Cast to number array
+        const embeddingArray: number[] = embedding as number[];
+        
+        // Validate embedding dimensions (should be 384 for intfloat/multilingual-e5-small)
+        if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
+          throw new Error(`Invalid embedding dimensions: ${embeddingArray.length}`);
+        }
+        
+        clientEmbedding = embeddingArray;
+        console.log('[🔍 SEMANTIC SEARCH] ✅ Generated 384-d embedding server-side using Hugging Face');
+        
+        // Cache the embedding for future use
+        cacheEmbedding(query, embeddingArray);
+      } catch (embeddingErr) {
+        console.warn('[🔍 SEMANTIC SEARCH] ⚠️ Failed to generate embedding server-side:', embeddingErr);
+      }
+    }
+  }
+  
+  // If we have an embedding (either from client or generated server-side), use vector search
+  if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+    console.log('[🔍 SEMANTIC SEARCH] Using embedding for vector search');
+    
+    try {
+      // Use RPC function for vector search
+      const { data, error } = await supabaseClient
+        .rpc('semantic_search_384', {
+          query_embedding: clientEmbedding,
+          similarity_threshold: minSimilarity,
+          limit_results: maxResults
+        });
+      
+      if (error) throw error;
+      
+      const results: SearchResult[] = (data || []).map((item: any) => ({
+        qa_id: item.qa_id,
+        question: item.question,
+        answer: item.answer,
+        similarity: item.similarity,
+        language: item.language,
+        category: item.category,
+      }));
+      
+      const duration = performance.now() - startTime;
+      console.log(`[🔍 SEMANTIC SEARCH] ✅ Found ${results.length} results in ${duration.toFixed(2)}ms`);
+      console.log('='.repeat(60));
+      return results;
+      
+    } catch (err) {
+      console.error('[🔍 SEMANTIC SEARCH] ❌ Vector search failed:', err);
+      // Fall back to keyword search
+    }
+  }
+  
+  // Use keyword search as fallback
+  console.log('[🔍 SEMANTIC SEARCH] Using KEYWORD SEARCH as fallback');
 
   try {
     console.log(`[🔑 KEYWORD SEARCH] Starting keyword search for: "${query.substring(0, 50)}..."`);

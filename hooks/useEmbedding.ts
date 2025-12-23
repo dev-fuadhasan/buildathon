@@ -100,41 +100,15 @@ export function useEmbedding() {
             }
           }, pollInterval);
 
-          try {
-            await promise;
-            clearInterval(intervalId);
-            setProgress(100);
-            
-            if (isMountedRef.current) {
-              setState(prev => ({
-                ...prev,
-                isModelReady: true,
-                isLoading: false,
-              }));
-            }
-          } catch (err) {
-            // Handle promise rejection gracefully
-            clearInterval(intervalId);
-            if (isMountedRef.current) {
-              const error = err instanceof Error ? err : new Error(String(err));
-              
-              console.error('[useEmbedding] Model loading promise failed:', error.message);
-              
-              setState(prev => ({
-                ...prev,
-                error,
-                isLoading: false,
-                isModelReady: false,
-              }));
-            }
-          }
-        } else {
-          // No promise means model failed to load
+          await promise;
+          clearInterval(intervalId);
+          setProgress(100);
+          
           if (isMountedRef.current) {
             setState(prev => ({
               ...prev,
+              isModelReady: true,
               isLoading: false,
-              isModelReady: false,
             }));
           }
         }
