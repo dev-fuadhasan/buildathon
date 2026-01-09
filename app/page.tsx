@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getTranslations } from "@/lib/i18n";
+import { useTranslation } from "@/hooks/useTranslation";
 import Icon from "@/components/Icon";
 import { Illustration } from "@/components/Icon";
 
 export default function Home() {
-  const [t] = useState(getTranslations("en"));
+  const t = useTranslation();
   const router = useRouter();
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
@@ -92,7 +92,7 @@ export default function Home() {
             <div className="flex-1 space-y-6 sm:space-y-7 md:space-y-8">
               <div className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2.5 shadow-lg border-2 border-pink-300">
                 <p className="text-[10px] xs:text-xs sm:text-sm font-bold uppercase tracking-wider text-pink-600 leading-tight">
-                  Trusted Pregnancy Support Platform
+                  {t.home.trustedPlatform}
                 </p>
               </div>
               
@@ -103,7 +103,7 @@ export default function Home() {
                   className="group relative inline-flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 hover:from-orange-600 hover:to-pink-600"
                 >
                   <span className="text-base sm:text-lg">🩺</span>
-                  <span className="whitespace-nowrap">Risk Detection Tool (Works Offline)</span>
+                  <span className="whitespace-nowrap">{t.home.riskDetectionTool}</span>
                   <span className="text-xs font-normal opacity-90 ml-1">→</span>
                 </Link>
               </div>
@@ -133,19 +133,19 @@ export default function Home() {
                     className="inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-semibold px-6 py-3.5 sm:px-8 sm:py-4 md:px-8 md:py-5 bg-white text-pink-600 rounded-xl sm:rounded-2xl border-2 border-pink-300 shadow-lg hover:shadow-xl hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"
                   >
                     <Icon name="mom" size={20} className="sm:w-6 sm:h-6 text-pink-600" />
-                    <span className="whitespace-nowrap text-sm sm:text-base md:text-lg">{isMother ? "Go to Dashboard" : "Get Started as a Mother"}</span>
+                    <span className="whitespace-nowrap text-sm sm:text-base md:text-lg">{isMother ? t.home.goToDashboard : t.home.getStartedAsMother}</span>
                   </button>
                 </div>
                 <button
                   onClick={() => scrollToSection("get-started")}
                   className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium underline underline-offset-2 hover:underline-offset-4 transition-all text-left"
                 >
-                  I am a health worker →
+                  {t.home.iAmHealthWorker} →
                 </button>
               </div>
               
               <p className="text-xs sm:text-sm text-neutral-600 pt-1 sm:pt-2 leading-relaxed">
-                ✨ Free AI support 24/7 • No credit card required • Instant answers anytime
+                ✨ {t.home.freeAISupport}
               </p>
             </div>
             
@@ -166,10 +166,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 sm:mb-12 md:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-3 sm:mb-4">
-              Why Choose MomsCare AI?
+              {t.home.whyChoose}
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto font-medium px-2">
-              24/7 AI-powered support for every step of your pregnancy journey
+              {t.home.supportDescription}
             </p>
           </div>
           
@@ -218,10 +218,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-10 md:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-3 sm:mb-4">
-              Start Your AI Journey Today
+              {t.home.getStartedTitle}
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto font-medium px-2">
-              Get instant AI support now, or register for personalized features
+              {t.home.getStartedDesc}
             </p>
           </div>
           
@@ -242,14 +242,14 @@ export default function Home() {
                         href="/mother/login"
                         className="inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
                       >
-                        <span className="whitespace-nowrap">Get Started as a Mother</span>
+                        <span className="whitespace-nowrap">{t.home.getStartedAsMother}</span>
                         <span className="text-base sm:text-lg">→</span>
                       </Link>
                       <Link
                         href="/mother/register"
                         className="inline-flex items-center justify-center text-sm sm:text-base font-semibold px-6 py-3 sm:px-8 sm:py-4 bg-white text-pink-600 rounded-lg sm:rounded-xl border-2 border-pink-300 shadow-md hover:shadow-lg hover:bg-pink-50 transform hover:scale-105 transition-all duration-300"
                       >
-                        <span className="whitespace-nowrap">Create Account</span>
+                        <span className="whitespace-nowrap">{t.common.register}</span>
                       </Link>
                     </>
                   )}
@@ -258,13 +258,13 @@ export default function Home() {
                       onClick={handleMotherClick}
                       className="inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                     >
-                      <span className="whitespace-nowrap">Go to Dashboard</span>
+                      <span className="whitespace-nowrap">{t.home.goToDashboard}</span>
                       <span className="text-base sm:text-lg">→</span>
                     </button>
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-neutral-600 mt-3 sm:mt-4">
-                  ✓ Free AI support 24/7 • ✓ Track your pregnancy • ✓ Upload prescriptions
+                  ✓ {t.home.freeFeatures}
                 </p>
                 <div className="mt-4 pt-4 border-t border-pink-200">
                   <Link
