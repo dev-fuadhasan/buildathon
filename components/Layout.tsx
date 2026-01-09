@@ -53,39 +53,7 @@ export default function Layout({ children }: Props) {
       checkNurseRole();
     }
 
-    // Redirect logged-in users to their dashboards if on home page
-    if (isHome) {
-      if (motherToken) {
-        router.push("/mother/dashboard");
-        return;
-      } else if (doctorToken) {
-        // Check role from token to route correctly
-        const checkRoleAndRoute = async () => {
-          try {
-            const res = await fetch("/api/doctor/profile", {
-              headers: { Authorization: `Bearer ${doctorToken}` }
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.profile?.role === "nurse" || data.profile?.role === "others") {
-                router.push("/nurse/dashboard");
-              } else {
-                router.push("/doctor/dashboard");
-              }
-            } else {
-              router.push("/doctor/dashboard");
-            }
-          } catch {
-            router.push("/doctor/dashboard");
-          }
-        };
-        checkRoleAndRoute();
-        return;
-      } else if (adminToken) {
-        router.push("/admin/dashboard");
-        return;
-      }
-    }
+    // Removed auto-redirect - users can now visit landing page even when logged in
   }, [isHome, router]);
 
   const scrollToSection = (id: string) => {
