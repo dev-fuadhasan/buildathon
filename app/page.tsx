@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import Icon from "@/components/Icon";
 import { Illustration } from "@/components/Icon";
+import Layout from "@/components/Layout";
 
 export default function Home() {
   const t = useTranslation();
@@ -77,6 +78,7 @@ export default function Home() {
   };
 
   return (
+    <Layout>
     <main className="min-h-screen">
       {/* Hero Section - Enhanced Visual Hierarchy */}
       <section className="relative overflow-hidden bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 pt-16 pb-12 sm:pt-20 sm:pb-16 md:pt-28 md:pb-24 lg:pt-32 lg:pb-28">
@@ -395,6 +397,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      </main>
+    </main>
+    </Layout>
   );
 }

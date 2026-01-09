@@ -2649,12 +2649,13 @@ export default function MotherDashboard() {
 
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
-          <DashboardCard title={
-            <span className="flex items-center gap-2">
-              <Icon name="notifications" size={20} />
-              Notifications
-            </span>
-          }>
+          <div id="notifications-section">
+            <DashboardCard title={
+              <span className="flex items-center gap-2">
+                <Icon name="notifications" size={20} />
+                Notifications
+              </span>
+            }>
             {notifications.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <p>No notifications yet. You'll receive recommendations and daily task reminders here!</p>
@@ -2702,6 +2703,7 @@ export default function MotherDashboard() {
               </div>
             )}
           </DashboardCard>
+          </div>
         )}
         </div>
       </Layout>

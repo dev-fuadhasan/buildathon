@@ -408,34 +408,34 @@ export default function Layout({ children }: Props) {
                 {getNavItems()}
               </nav>
               
-              {/* Language Toggle - Always visible in top right */}
-              <div className="ml-2 flex-shrink-0">
+              {/* Language Toggle - Always visible in top right, outside nav */}
+              <div className="flex-shrink-0 z-10">
                 <LanguageSelector />
               </div>
               
               {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
-            {pathname.startsWith("/mother/dashboard") || 
-             pathname.startsWith("/doctor/dashboard") || 
-             pathname.startsWith("/nurse/dashboard") ||
-             pathname.startsWith("/admin/dashboard") ? (
-              <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden"></div>
-            ) : (
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
-              </button>
-            )}
+              {pathname.startsWith("/mother/dashboard") || 
+               pathname.startsWith("/doctor/dashboard") || 
+               pathname.startsWith("/nurse/dashboard") ||
+               pathname.startsWith("/admin/dashboard") ? (
+                <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden"></div>
+              ) : (
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors flex-shrink-0"
+                  aria-label="Toggle menu"
+                >
+                  {mobileMenuOpen ? (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
           </div>
           
