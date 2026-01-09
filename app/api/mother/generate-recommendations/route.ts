@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, getAdminSettings } from "@/lib/data";
+import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, getAdminSettings, getFoodRecommendation } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
@@ -127,6 +127,30 @@ export async function POST(req: NextRequest) {
       .map(n => n.message || n.content || "")
       .filter(Boolean);
     
+    // Get today's food tracking stats
+    let foodTrackingStats = "";
+    try {
+      const todayFood = await getFoodRecommendation(user.id, today);
+      if (todayFood) {
+        const eatenCount = [
+          todayFood.breakfastEaten,
+          todayFood.lunchEaten,
+          todayFood.dinnerEaten,
+        ].filter(Boolean).length;
+        
+        if (eatenCount > 0) {
+          foodTrackingStats = `Food Tracking: The mother has marked ${eatenCount} out of 3 recommended meals as eaten today. `;
+          if (eatenCount === 3) {
+            foodTrackingStats += "All meals have been tracked. ";
+          } else {
+            foodTrackingStats += `Still ${3 - eatenCount} meal(s) remaining to track. `;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch food tracking stats:", err);
+    }
+    
     // Generate recommendation
     const recommendation = await generateJournalRecommendation(
       mother,
@@ -134,7 +158,8 @@ export async function POST(req: NextRequest) {
       timeOfDay,
       prescriptionUrls,
       questionsAndAnswers,
-      pastRecommendations
+      pastRecommendations,
+      foodTrackingStats
     );
 
     // Create notification

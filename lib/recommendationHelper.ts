@@ -3,7 +3,7 @@
  * Can be called from cron jobs or authenticated endpoints
  */
 
-import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, saveMother } from "./data";
+import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, saveMother, getFoodRecommendation } from "./data";
 import { generateJournalRecommendation } from "./journalAI";
 import { getCurrentDateInTimezone } from "./pregnancyTracker";
 import { v4 as uuid } from "uuid";
@@ -71,14 +71,39 @@ export async function generateRecommendationForMother(
       .map(n => n.message || n.content || "")
       .filter(Boolean);
 
-    // Generate recommendation with past recommendations context
+    // Get today's food tracking stats
+    let foodTrackingStats = "";
+    try {
+      const todayFood = await getFoodRecommendation(motherId, today);
+      if (todayFood) {
+        const eatenCount = [
+          todayFood.breakfastEaten,
+          todayFood.lunchEaten,
+          todayFood.dinnerEaten,
+        ].filter(Boolean).length;
+        
+        if (eatenCount > 0) {
+          foodTrackingStats = `Food Tracking: The mother has marked ${eatenCount} out of 3 recommended meals as eaten today. `;
+          if (eatenCount === 3) {
+            foodTrackingStats += "All meals have been tracked. ";
+          } else {
+            foodTrackingStats += `Still ${3 - eatenCount} meal(s) remaining to track. `;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch food tracking stats:", err);
+    }
+
+    // Generate recommendation with past recommendations context and food tracking
     const recommendation = await generateJournalRecommendation(
       mother,
       dailyEntries,
       timeOfDay,
       prescriptionUrls,
       questionsAndAnswers,
-      pastRecommendations
+      pastRecommendations,
+      foodTrackingStats
     );
 
     // Create notification

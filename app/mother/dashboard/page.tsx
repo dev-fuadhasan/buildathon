@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
 import DailyQuestionPopup from "@/components/DailyQuestionPopup";
+import FoodRecommendations from "@/components/FoodRecommendations";
 import Icon from "@/components/Icon";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -124,7 +125,7 @@ export default function MotherDashboard() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | "food" | null>(null);
   const [showCards, setShowCards] = useState(true);
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
@@ -176,7 +177,7 @@ export default function MotherDashboard() {
       // Will be set when profile loads
     }
 
-    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor"];
+    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor", "food"];
 
     const updateFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
@@ -982,7 +983,7 @@ export default function MotherDashboard() {
     );
   }
 
-  const navigateToTab = (tab: "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "profile" | "find-doctor") => {
+  const navigateToTab = (tab: "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "profile" | "find-doctor" | "food") => {
     setActiveTab(tab);
     setShowCards(false);
     const params = new URLSearchParams(window.location.search);
@@ -1030,6 +1031,14 @@ export default function MotherDashboard() {
       icon: "daily-entry",
       action: () => navigateToTab("journal"),
       accent: "from-amber-500 to-orange-500",
+    },
+    {
+      id: "food",
+      title: "Food Recommendations",
+      description: "Get personalized daily meal suggestions and track your nutrition.",
+      icon: "health",
+      action: () => navigateToTab("food"),
+      accent: "from-orange-500 to-pink-500",
     },
     {
       id: "progress",
@@ -2150,6 +2159,13 @@ export default function MotherDashboard() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Food Recommendations Tab */}
+        {activeTab === "food" && (
+          <div className="space-y-6">
+            <FoodRecommendations token={token} motherId={motherId} />
           </div>
         )}
 

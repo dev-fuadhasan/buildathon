@@ -16,7 +16,8 @@ export async function generateJournalRecommendation(
   timeOfDay: "morning" | "evening",
   prescriptionUrls?: string[],
   questionsAndAnswers?: Array<{ question: string; answer?: string }>,
-  pastRecommendations?: string[]
+  pastRecommendations?: string[],
+  foodTrackingStats?: string
 ): Promise<string> {
   try {
     // Get recent daily entries (last 7 days, sorted by date and creation time)
@@ -91,6 +92,14 @@ Allergies: ${mother.allergies || "None"}
     
     if (prescriptionUrls && prescriptionUrls.length > 0) {
       fullContext += `\n\nNote: The mother has ${prescriptionUrls.length} prescription(s) on file. Consider medication compliance and any prescription-related advice.`;
+    }
+    
+    // Add food tracking stats if available
+    if (foodTrackingStats) {
+      fullContext += `\n\n${foodTrackingStats}`;
+      if (timeOfDay === "evening") {
+        fullContext += "In your evening recommendation, acknowledge their food tracking progress and encourage them to continue tracking meals for better nutrition monitoring.";
+      }
     }
     
     // Add past recommendations context to avoid duplicates

@@ -241,6 +241,23 @@ export type DailyQuestionSession = {
   updatedAt: string;
 };
 
+export type FoodRecommendation = {
+  id: string;
+  motherId: string;
+  date: string; // YYYY-MM-DD format
+  breakfast: string; // Food recommendation for breakfast
+  lunch: string; // Food recommendation for lunch
+  dinner: string; // Food recommendation for dinner
+  breakfastEaten?: boolean; // Whether breakfast was eaten
+  lunchEaten?: boolean; // Whether lunch was eaten
+  dinnerEaten?: boolean; // Whether dinner was eaten
+  breakfastEatenAt?: string; // ISO timestamp when marked as eaten
+  lunchEatenAt?: string; // ISO timestamp when marked as eaten
+  dinnerEatenAt?: string; // ISO timestamp when marked as eaten
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Notification = {
   id: string;
   motherId: string;
@@ -275,6 +292,7 @@ const chatHistoryKey = (motherId: string) => `chat-history/${motherId}.json`;
 const dailyEntryKey = (motherId: string, entryId: string) => `daily-entries/${motherId}/${entryId}.json`;
 const dailyQuestionKey = (motherId: string, questionId: string) => `daily-questions/${motherId}/${questionId}.json`;
 const dailyQuestionSessionKey = (motherId: string, date: string) => `daily-question-sessions/${motherId}/${date}.json`;
+const foodRecommendationKey = (motherId: string, date: string) => `food-recommendations/${motherId}/${date}.json`;
 const patientKey = (hospitalClinicName: string, patientId: string) => `patients/${encodeURIComponent(hospitalClinicName)}/${patientId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
 const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
@@ -723,6 +741,35 @@ export async function deleteDailyEntry(motherId: string, entryId: string): Promi
     await deleteObject(dailyEntryKey(motherId, entryId));
   } catch (err) {
     console.error("Error deleting daily entry:", err);
+  }
+}
+
+// Food Recommendation Functions
+export async function getFoodRecommendation(motherId: string, date: string): Promise<FoodRecommendation | null> {
+  try {
+    return await getJson<FoodRecommendation>(foodRecommendationKey(motherId, date));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveFoodRecommendation(recommendation: FoodRecommendation) {
+  return putJson(foodRecommendationKey(recommendation.motherId, recommendation.date), recommendation);
+}
+
+export async function listFoodRecommendations(motherId: string): Promise<FoodRecommendation[]> {
+  try {
+    return await listJson<FoodRecommendation>(`food-recommendations/${motherId}/`);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function getFoodRecommendationByDate(motherId: string, date: string): Promise<FoodRecommendation | null> {
+  try {
+    return await getFoodRecommendation(motherId, date);
+  } catch (err) {
+    return null;
   }
 }
 
