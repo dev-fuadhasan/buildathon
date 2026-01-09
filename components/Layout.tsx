@@ -403,14 +403,17 @@ export default function Layout({ children }: Props) {
               <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
             
-            <nav className="hidden lg:flex items-center gap-1">
-              {getNavItems()}
+            <div className="flex items-center gap-2">
+              <nav className="hidden lg:flex items-center gap-1">
+                {getNavItems()}
+              </nav>
+              
+              {/* Language Toggle - Always visible in top right */}
               <div className="ml-2">
                 <LanguageSelector />
               </div>
-            </nav>
-            
-            {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
+              
+              {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
             {pathname.startsWith("/mother/dashboard") || 
              pathname.startsWith("/doctor/dashboard") || 
              pathname.startsWith("/nurse/dashboard") ||
@@ -433,6 +436,7 @@ export default function Layout({ children }: Props) {
                 )}
               </button>
             )}
+            </div>
           </div>
           
           {/* Mobile menu - Hide on dashboards (handled by MobileDashboardMenu) */}
