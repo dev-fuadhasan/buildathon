@@ -1,0 +1,4021 @@
+{
+    "questions": [
+    {
+    "id": 1,
+    "text": {
+    "en": "Are you younger than 18 years old and currently pregnant?",
+    "bn": "আপনার বয়স কি ১৮ বছরের কম এবং আপনি কি বর্তমানে গর্ভবতী?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 2,
+    "text": {
+    "en": "Are you 35 years old or older in this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় আপনার বয়স কি ৩৫ বছর বা তার বেশি?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 4,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 3,
+    "text": {
+    "en": "Have you ever had high blood pressure diagnosed by a doctor before this pregnancy?",
+    "bn": "এই গর্ভাবস্থার আগে কি কখনও ডাক্তার আপনাকে উচ্চ রক্তচাপের রোগী হিসেবে বলেছেন?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 4,
+    "text": {
+    "en": "Do you currently have high blood pressure in this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় কি আপনার বর্তমানে উচ্চ রক্তচাপ রয়েছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "complications",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 5,
+    "text": {
+    "en": "Have you ever been diagnosed with diabetes before this pregnancy?",
+    "bn": "এই গর্ভাবস্থার আগে কি কখনও আপনার ডায়াবেটিস ধরা পড়েছিল?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 6,
+    "text": {
+    "en": "Have you been told in this pregnancy that you have gestational diabetes or high blood sugar?",
+    "bn": "এই গর্ভাবস্থায় কি আপনাকে বলা হয়েছে যে আপনার গর্ভকালীন ডায়াবেটিস বা রক্তে চিনি বেশি আছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "complications",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 7,
+    "text": {
+    "en": "Have you ever had a seizure or epilepsy before or during this pregnancy?",
+    "bn": "এই গর্ভাবস্থার আগে বা চলাকালে কি কখনও আপনার খিঁচুনি বা এপিলেপসি হয়েছিল?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 4,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 8,
+    "text": {
+    "en": "Do you have any known heart disease diagnosed by a doctor?",
+    "bn": "ডাক্তার দ্বারা নির্ণীত কোনো হৃদরোগ কি আপনার আছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 9,
+    "text": {
+    "en": "Do you have any long-term kidney disease diagnosed by a doctor?",
+    "bn": "ডাক্তার দ্বারা নির্ণীত কোনো দীর্ঘমেয়াদি কিডনি রোগ কি আপনার আছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 10,
+    "text": {
+    "en": "Have you ever been diagnosed with thyroid disease (such as hypothyroidism or hyperthyroidism)?",
+    "bn": "আপনার কি কখনও থাইরয়েডের রোগ (যেমন হাইপোথাইরয়েডিজম বা হাইপারথাইরয়েডিজম) ধরা পড়েছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 11,
+    "text": {
+    "en": "Have you ever had asthma or chronic breathing problems diagnosed by a doctor?",
+    "bn": "ডাক্তার কি কখনও বলেছেন যে আপনার হাঁপানি বা দীর্ঘমেয়াদি শ্বাসকষ্টের সমস্যা আছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 12,
+    "text": {
+    "en": "Have you ever been diagnosed with any bleeding or clotting disorder?",
+    "bn": "আপনার কি কখনও রক্তক্ষরণ বা রক্ত জমাট বাঁধার কোনো রোগ ধরা পড়েছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "medical_history",
+    "weight": 4,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 13,
+    "text": {
+    "en": "Have you ever been told that you are anaemic or have low blood haemoglobin?",
+    "bn": "আপনাকে কি কখনও বলা হয়েছে যে আপনার রক্তশূন্যতা বা হিমোগ্লোবিন কম আছে?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "nutrition",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 14,
+    "text": {
+    "en": "Before this pregnancy, was your weight very low (very thin) according to a doctor or family?",
+    "bn": "এই গর্ভাবস্থার আগে কি ডাক্তার বা পরিবার অনুযায়ী আপনার ওজন অনেক কম (একদম রোগা) ছিল?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "nutrition",
+    "weight": 2,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 15,
+    "text": {
+    "en": "Before this pregnancy, were you overweight or obese according to a doctor?",
+    "bn": "এই গর্ভাবস্থার আগে কি ডাক্তার বলেছেন যে আপনার ওজন স্বাভাবিকের চেয়ে বেশি বা আপনি মোটা (ওবিস) ছিলেন?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "nutrition",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 16,
+    "text": {
+    "en": "Do you currently smoke cigarettes or biri during this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় কি আপনি বর্তমানে সিগারেট বা বিড়ি খান?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "lifestyle",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 17,
+    "text": {
+    "en": "Are you regularly exposed to someone else’s cigarette or biri smoke at home or work?",
+    "bn": "বাড়িতে বা কাজে কি আপনি নিয়মিত অন্যের সিগারেট বা বিড়ির ধোঁয়ার মধ্যে থাকেন?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "lifestyle",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 18,
+    "text": {
+    "en": "Do you drink alcohol (any amount) during this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় কি আপনি কোনো ধরনের মদ্যপ পানীয় গ্রহণ করেন?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "lifestyle",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 19,
+    "text": {
+    "en": "Do you use any illicit or recreational drugs (such as yaba, heroin, ganja) during this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় কি আপনি কোনো অবৈধ বা নেশাজাতীয় মাদক (যেমন ইয়াবা, হেরোইন, গাঁজা) ব্যবহার করেন?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "lifestyle",
+    "weight": 5,
+    "yesIncreasesRisk": true
+    },
+    {
+    "id": 20,
+    "text": {
+    "en": "Do you often have to carry very heavy loads or do very hard physical work during this pregnancy?",
+    "bn": "এই গর্ভাবস্থায় কি আপনাকে প্রায়ই খুব ভারী জিনিস তুলতে হয় বা খুব কষ্টের শারীরিক কাজ করতে হয়?"
+    },
+    "answers": {
+    "yes": {
+    "en": "Yes",
+    "bn": "হ্যাঁ"
+    },
+    "no": {
+    "en": "No",
+    "bn": "না"
+    }
+    },
+    "category": "lifestyle",
+    "weight": 3,
+    "yesIncreasesRisk": true
+    },
+    {
+        "id": 21,
+        "text": {
+          "en": "In this pregnancy, do you frequently skip meals or eat less because of nausea, vomiting, or lack of food?",
+          "bn": "এই গর্ভাবস্থায় বমি, বমিভাব বা খাবারের অভাবে কি আপনি প্রায়ই খাবার বাদ দেন বা খুব কম খান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 22,
+        "text": {
+          "en": "Do you take iron–folic acid or prenatal vitamins at least 4 days a week in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনি সপ্তাহে অন্তত ৪ দিন আয়রন–ফলিক এসিড বা গর্ভকালীন ভিটামিন খাচ্ছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 23,
+        "text": {
+          "en": "Do you eat fish, meat, egg or pulses (dal) at least once a day?",
+          "bn": "আপনি কি প্রতিদিন অন্তত একবার মাছ, মাংস, ডিম বা ডাল জাতীয় খাবার খান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 24,
+        "text": {
+          "en": "Do you add extra salt to your food regularly even if it is already salty?",
+          "bn": "খাবার যথেষ্ট নোনতা হওয়ার পরও কি আপনি নিয়মিত আলাদা করে লবণ যোগ করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 25,
+        "text": {
+          "en": "Do you often feel very tired or dizzy when standing up during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় দাঁড়ালে কি আপনাকে প্রায়ই খুব ক্লান্ত বা মাথা ঘোরা মনে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 26,
+        "text": {
+          "en": "Have you had severe vomiting that prevents you from keeping food or water down for more than one day?",
+          "bn": "গত একদিনের বেশি সময় ধরে কি এমন তীব্র বমি হয়েছে যে আপনি খাবার বা পানি পেটে রাখতে পারেননি?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 27,
+        "text": {
+          "en": "In the first three months, did you miss your period and have breast tenderness or nausea?",
+          "bn": "প্রথম তিন মাসে কি মাসিক বন্ধের সাথে স্তন টনটন করা বা বমিভাব হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 28,
+        "text": {
+          "en": "Have you experienced any vaginal bleeding in this pregnancy after you knew you were pregnant?",
+          "bn": "গর্ভবতী জানার পর এই গর্ভাবস্থায় কি কোনো যোনিপথে রক্তপাত হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 29,
+        "text": {
+          "en": "Have you had heavy bleeding with clots from the vagina during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি যোনিপথ দিয়ে জমাটসহ অনেক বেশি রক্তপাত হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 30,
+        "text": {
+          "en": "Have you had any fresh bleeding with lower abdominal pain like period cramps?",
+          "bn": "যোনিপথে টাটকা রক্তপাতের সাথে কি তলপেটে মাসিকের ব্যথার মতো ব্যথা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 31,
+        "text": {
+          "en": "Do you have any persistent lower abdominal pain that comes and goes like contractions?",
+          "bn": "তলপেটে কি এমন ব্যথা হয় যা আসা–যাওয়া করে, সংকোচনের মতো লাগে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 32,
+        "text": {
+          "en": "Do you feel severe one-sided lower abdominal pain in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি তলপেটের এক পাশে তীব্র ব্যথা অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 33,
+        "text": {
+          "en": "Do you have any constant severe headache that does not get better with rest or simple medicine?",
+          "bn": "বিশ্রাম বা সাধারণ ওষুধ খাওয়ার পরও কি আপনার তীব্র মাথাব্যথা কমে না এবং তা স্থায়ী থাকে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 34,
+        "text": {
+          "en": "Do you see blurry vision, flashing lights, or have difficulty seeing clearly?",
+          "bn": "আপনার কি দৃষ্টি ঝাপসা লাগে, চোখের সামনে ঝিলমিল দেখে, বা পরিষ্কার দেখতে সমস্যা হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 35,
+        "text": {
+          "en": "Have you noticed sudden swelling of your face, hands, or feet in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি হঠাৎ করে আপনার মুখ, হাত বা পা ফুলে গেছে বলে মনে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 36,
+        "text": {
+          "en": "Do you have pain in the upper right side of your abdomen, under the ribs?",
+          "bn": "পেটের ডান পাশের উপরের দিকে, পাঁজরের নিচে কি ব্যথা অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 37,
+        "text": {
+          "en": "Have you had any fits or convulsions (shaking of body) in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার কখনও খিঁচুনি বা সারা শরীর কাঁপার মতো অবস্থা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 38,
+        "text": {
+          "en": "Do you have burning pain while passing urine during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি প্রস্রাব করার সময় জ্বালাপোড়া বা ব্যথা অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 39,
+        "text": {
+          "en": "Have you had fever for more than two days in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি দুই দিনের বেশি সময় ধরে জ্বর ছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 40,
+        "text": {
+          "en": "Do you have a long-term cough lasting more than two weeks?",
+          "bn": "আপনার কি দুই সপ্তাহের বেশি সময় ধরে কাশি আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 41,
+        "text": {
+          "en": "Do you feel your baby’s movements have decreased or stopped compared to before?",
+          "bn": "আগের তুলনায় কি আপনি মনে করছেন বাচ্চার নড়াচড়া কমে গেছে বা বন্ধ হয়ে গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 42,
+        "text": {
+          "en": "Have you noticed any watery fluid leaking from your vagina that you cannot control?",
+          "bn": "যোনিপথ দিয়ে কি এমন পানির মতো তরল বের হয় যা আপনি নিয়ন্ত্রণ করতে পারেন না?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 43,
+        "text": {
+          "en": "Has your water broken (membrane rupture) before you started regular labour pains?",
+          "bn": "নিয়মিত প্রসব ব্যথা শুরুর আগে কি আপনার পানির থলি ফেটে গেছে (ওয়াটার ব্রেক হয়েছে)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 44,
+        "text": {
+          "en": "Are you carrying more than one baby (twins or more) in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার পেটে একের বেশি বাচ্চা (যমজ বা আরও বেশি) আছে বলে জানা গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 45,
+        "text": {
+          "en": "Did any doctor tell you that your placenta is low-lying or placenta previa?",
+          "bn": "কোনো ডাক্তার কি আপনাকে বলেছেন যে আপনার প্লাসেন্টা নিচে নেমে গেছে বা প্লাসেন্টা প্রেভিয়া আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 46,
+        "text": {
+          "en": "Have you been told that your baby is not growing well or is too small for gestational age?",
+          "bn": "কোনো ডাক্তার কি বলেছেন যে আপনার বাচ্চার বৃদ্ধি ঠিকমতো হচ্ছে না বা গর্ভকালের হিসাব অনুযায়ী খুব ছোট আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 47,
+        "text": {
+          "en": "Have you been told that you have too much or too little amniotic fluid?",
+          "bn": "আপনাকে কি বলা হয়েছে যে আপনার বাচ্চার চারপাশে পানির পরিমাণ খুব বেশি বা খুব কম (অ্যামনিওটিক ফ্লুইডের সমস্যা) রয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 48,
+        "text": {
+          "en": "Have you ever had a caesarean (C-section) delivery in a previous pregnancy?",
+          "bn": "আগের কোনো গর্ভধারণে কি আপনার সিজারিয়ান অপারেশন (সি-সেকশন) হয়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 49,
+        "text": {
+          "en": "Have you ever had more than one caesarean (C-section) delivery?",
+          "bn": "আপনার কি একাধিকবার সিজারিয়ান অপারেশন (সি-সেকশন) হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 50,
+        "text": {
+          "en": "Have you ever had severe bleeding after a previous delivery or miscarriage?",
+          "bn": "আগের কোনো ডেলিভারি বা গর্ভপাতের পর কি আপনার প্রচুর রক্তক্ষরণ হয়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 51,
+        "text": {
+          "en": "Have you ever had a baby who died during pregnancy, during birth, or soon after birth?",
+          "bn": "আপনার কি কখনও এমন বাচ্চা হয়েছে যে গর্ভে, প্রসবের সময় বা জন্মের কিছুদিনের মধ্যে মারা গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 52,
+        "text": {
+          "en": "Have you ever had a miscarriage (spontaneous abortion) before this pregnancy?",
+          "bn": "এই গর্ভের আগে কি আপনার কখনও গর্ভপাত (নিজে নিজে বাচ্চা নষ্ট হয়ে যাওয়া) হয়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 53,
+        "text": {
+          "en": "Have you had two or more miscarriages in the past?",
+          "bn": "আগে কি আপনার দুইবার বা তার বেশি গর্ভপাত হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 54,
+        "text": {
+          "en": "Have you ever had a baby born too early (before 37 weeks of pregnancy)?",
+          "bn": "আপনার কি কখনও ৩৭ সপ্তাহের আগেই বাচ্চা জন্ম হয়েছে (প্রি-টার্ম বেবি)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 55,
+        "text": {
+          "en": "Have you ever had a baby with very low birth weight (less than 2.5 kg)?",
+          "bn": "আপনার কি কখনও এমন বাচ্চা হয়েছে যার জন্মের সময় ওজন ২.৫ কেজির কম ছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 56,
+        "text": {
+          "en": "In any previous pregnancy, were you diagnosed with preeclampsia or high blood pressure with swelling and protein in urine?",
+          "bn": "আগের কোনো গর্ভাবস্থায় কি আপনার প্রি-এক্লাম্পসিয়া (উচ্চ রক্তচাপ, ফোলা ও প্রস্রাবে প্রোটিন) ধরা পড়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 57,
+        "text": {
+          "en": "In any previous pregnancy, did you have eclampsia with fits or convulsions?",
+          "bn": "আগের কোনো গর্ভে কি আপনার এক্লাম্পসিয়া হয়ে খিঁচুনি বা ফিটের সমস্যা হয়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 58,
+        "text": {
+          "en": "Have you ever had a retained placenta or needed manual removal of placenta after delivery?",
+          "bn": "ডেলিভারির পর কি কখনও প্লাসেন্টা নিজে নিজে বের হয়নি এবং সেটি হাতে বের করতে হয়েছে (রিটেইনড প্লাসেন্টা)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 59,
+        "text": {
+          "en": "Have you ever had an infection in the uterus after delivery or miscarriage?",
+          "bn": "ডেলিভারি বা গর্ভপাতের পর কি কখনও জরায়ুতে ইনফেকশন হয়েছিল বলে ডাক্তার বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 60,
+        "text": {
+          "en": "Has any doctor told you that your uterus or cervix has any structural problem (such as fibroid, uterine anomaly, or cervical incompetence)?",
+          "bn": "কোনো ডাক্তার কি বলেছেন যে আপনার জরায়ু বা সার্ভিক্সে গাঠনিক কোনো সমস্যা আছে (যেমন ফাইব্রয়েড, জরায়ুর গঠনগত ত্রুটি বা সার্ভিক্যাল ইনকাম্পিটেন্স)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 61,
+        "text": {
+          "en": "Do you have any vaginal discharge that is foul-smelling, greenish, or associated with itching?",
+          "bn": "আপনার কি এমন যোনিপথ স্রাব আছে যা দুর্গন্ধযুক্ত, সবুজাভ বা সাথে প্রচণ্ড চুলকানি হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 62,
+        "text": {
+          "en": "Have you ever been diagnosed with a sexually transmitted infection (such as syphilis, gonorrhoea, chlamydia)?",
+          "bn": "আপনার কি কখনও যৌন সংক্রমিত রোগ (যেমন সিফিলিস, গনোরিয়া, ক্ল্যামাইডিয়া) ধরা পড়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 63,
+        "text": {
+          "en": "Have you ever tested positive for HIV?",
+          "bn": "আপনার কি কখনও এইচআইভি পজিটিভ রিপোর্ট এসেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 64,
+        "text": {
+          "en": "Have you ever had hepatitis B or hepatitis C infection?",
+          "bn": "আপনার কি কখনও হেপাটাইটিস বি বা হেপাটাইটিস সি সংক্রমণ হয়েছে বলে জানা গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 65,
+        "text": {
+          "en": "Have you ever been treated for tuberculosis (TB)?",
+          "bn": "আপনার কি কখনও যক্ষ্মা (টিবি) রোগ নির্ণয় হয়ে চিকিৎসা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 66,
+        "text": {
+          "en": "Do you currently have diabetes, hypertension, kidney disease, or heart disease and take regular medicines?",
+          "bn": "আপনি কি বর্তমানে ডায়াবেটিস, উচ্চ রক্তচাপ, কিডনির অসুখ বা হৃদরোগের জন্য নিয়মিত ওষুধ খাচ্ছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 67,
+        "text": {
+          "en": "Do you take any medicines daily that were not prescribed specifically for pregnancy?",
+          "bn": "আপনি কি প্রতিদিন এমন কোনো ওষুধ খান যা গর্ভাবস্থার জন্য বিশেষভাবে ডাক্তার লিখে দেননি?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 68,
+        "text": {
+          "en": "During this pregnancy, have you taken any medicine from a pharmacy or kabiraj without consulting a doctor?",
+          "bn": "এই গর্ভাবস্থায় কি কখনও ডাক্তার না দেখে ফার্মেসি থেকে বা কবিরাজের কাছ থেকে নিজের ইচ্ছায় ওষুধ নিয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 69,
+        "text": {
+          "en": "Have you been exposed to pesticides, factory chemicals, or heavy metals (such as lead) at work or home?",
+          "bn": "বাড়ি বা কর্মস্থলে কি আপনি নিয়মিত কীটনাশক, ফ্যাক্টরির রাসায়নিক বা সীসা জাতীয় ভারী ধাতুর সংস্পর্শে থাকেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 70,
+        "text": {
+          "en": "Do you regularly ride a motorcycle or travel on very rough roads for long periods during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনি নিয়মিত মোটরসাইকেলে চড়েন বা খুব খারাপ রাস্তা দিয়ে দীর্ঘ সময় যাতায়াত করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 71,
+        "text": {
+          "en": "Have you had less than four antenatal check-ups so far in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় এখন পর্যন্ত কি আপনার চারবারের কম ANC (গর্ভকালীন চেকআপ) হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 72,
+        "text": {
+          "en": "Have you not registered your pregnancy at any government or private health facility?",
+          "bn": "আপনি কি এখনো কোনো সরকারি বা বেসরকারি স্বাস্থ্যকেন্দ্রে গর্ভাবস্থা রেজিস্ট্রেশন করেননি?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 73,
+        "text": {
+          "en": "Do you live more than one hour away from the nearest hospital with delivery services?",
+          "bn": "নিকটতম ডেলিভারি সুবিধাযুক্ত হাসপাতাল থেকে কি আপনার বাড়ি এক ঘন্টার বেশি দূরে অবস্থিত?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 74,
+        "text": {
+          "en": "Is it difficult for you to arrange transport to a hospital at any time of the day or night?",
+          "bn": "দিন বা রাতের যে কোনো সময় কি আপনার পক্ষে হাসপাতালে যাওয়ার জন্য গাড়ি বা যানবাহন জোগাড় করা কঠিন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 75,
+        "text": {
+          "en": "Do you feel afraid to go to a health facility because of cost or family restrictions?",
+          "bn": "খরচের ভয় বা পরিবারের বাধার কারণে কি আপনি স্বাস্থ্যকেন্দ্রে যেতে ভয় পান বা দ্বিধা করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 76,
+        "text": {
+          "en": "In the last two weeks, have you felt sad, depressed, or hopeless most of the time?",
+          "bn": "গত দুই সপ্তাহ ধরে কি আপনি বেশিরভাগ সময় মন খারাপ, হতাশা বা আশাহীন বোধ করছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 77,
+        "text": {
+          "en": "In the last two weeks, have you lost interest or pleasure in things you usually enjoy?",
+          "bn": "গত দুই সপ্তাহে কি আপনি এমন সব কাজেও আনন্দ পাচ্ছেন না যেগুলো সাধারণত করতে ভালো লাগে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 78,
+        "text": {
+          "en": "Do you often feel very anxious, nervous, or unable to relax during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনি প্রায়ই খুব অস্থির, চিন্তায় ভরা বা একদম স্বস্তি পান না এমন অনুভব করছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 79,
+        "text": {
+          "en": "Have you ever thought about harming yourself during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি কখনও আপনার নিজের ক্ষতি করার বা আত্মহত্যার কথা মনে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 80,
+        "text": {
+          "en": "Do you feel you do not have enough emotional or practical support from family members?",
+          "bn": "আপনি কি মনে করেন পরিবারের সদস্যদের কাছ থেকে আপনি যথেষ্ট মানসিক বা বাস্তব সহায়তা পাচ্ছেন না?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 81,
+        "text": {
+          "en": "Has your husband or any family member ever physically hurt you during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার স্বামী বা পরিবারের কেউ আপনাকে শারীরিকভাবে আঘাত করেছে বা মারধর করেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 82,
+        "text": {
+          "en": "Has your husband or any family member forced you to have sex against your will during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার স্বামী বা অন্য কেউ আপনার ইচ্ছার বিরুদ্ধে জোর করে সহবাস করেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 83,
+        "text": {
+          "en": "Do you feel unsafe in your home environment?",
+          "bn": "আপনি কি নিজের বাড়িতে নিজেকে নিরাপদ মনে করেন না বা ভয় পান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 84,
+        "text": {
+          "en": "Do you have difficulty sleeping most nights in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি বেশিরভাগ রাতে আপনার ভালোভাবে ঘুম হয় না বা ঘুমাতে অনেক কষ্ট হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 85,
+        "text": {
+          "en": "Have you ever been diagnosed with any mental health condition such as depression or anxiety before this pregnancy?",
+          "bn": "এই গর্ভের আগে কি আপনার কখনও ডিপ্রেশন, অ্যানজাইটি বা অন্য কোনো মানসিক রোগ নির্ণয় হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 86,
+        "text": {
+          "en": "Have you ever been admitted to a hospital for any mental health problem?",
+          "bn": "কোনো মানসিক স্বাস্থ্য সমস্যার জন্য কি আপনাকে কখনও হাসপাতালে ভর্তি হতে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 87,
+        "text": {
+          "en": "Have you ever attempted self-harm or suicide before this pregnancy?",
+          "bn": "এই গর্ভের আগে কি আপনি কখনও নিজের ক্ষতি করার বা আত্মহত্যার চেষ্টা করেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 88,
+        "text": {
+          "en": "Are you worried that your family does not want this pregnancy or baby?",
+          "bn": "আপনি কি চিন্তিত যে আপনার পরিবার এই গর্ভধারণ বা বাচ্চাটিকে চায় না বা গ্রহণ করছে না?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 89,
+        "text": {
+          "en": "Do you face serious financial difficulties in buying food, medicines, or paying for health care?",
+          "bn": "খাবার, ওষুধ বা চিকিৎসার খরচ জোগাতে কি আপনি গুরুতর আর্থিক সমস্যার মুখোমুখি হচ্ছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 90,
+        "text": {
+          "en": "Do you feel overworked with household chores and childcare without enough rest?",
+          "bn": "বাড়ির কাজ আর বাচ্চা সামলাতে গিয়ে কি আপনি খুবই ক্লান্ত ও অতিরিক্ত পরিশ্রমী মনে করেন এবং যথেষ্ট বিশ্রাম পান না?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 91,
+        "text": {
+          "en": "Is this pregnancy unwanted or unplanned for you?",
+          "bn": "এই গর্ভধারণ কি আপনার জন্য অনাকাঙ্ক্ষিত বা পরিকল্পনার বাইরে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 92,
+        "text": {
+          "en": "Is there pressure from anyone to end this pregnancy against your wish?",
+          "bn": "আপনার ইচ্ছার বিরুদ্ধে কি কেউ আপনাকে এই গর্ভপাত করাতে চাপ দিচ্ছে বা প্রভাবিত করছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 93,
+        "text": {
+          "en": "Do you or your husband have any blood relationship (such as being cousins)?",
+          "bn": "আপনি ও আপনার স্বামীর মধ্যে কি আত্মীয়তার সম্পর্ক আছে (যেমন আপনাতো বা মামাতো ফুফাতো কাজিন)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 94,
+        "text": {
+          "en": "Does anyone in your close family have a birth defect, disability, or inherited disease?",
+          "bn": "আপনার কাছের আত্মীয়দের মধ্যে কি কারও জন্মগত ত্রুটি, প্রতিবন্ধিতা বা বংশগত কোনো রোগ আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 95,
+        "text": {
+          "en": "Have you or your husband ever been tested for thalassemia or sickle cell disease?",
+          "bn": "আপনি বা আপনার স্বামী কি কখনও থ্যালাসেমিয়া বা সিকেল সেল রোগের পরীক্ষা করিয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 96,
+        "text": {
+          "en": "Have you been told that your blood group is Rh negative?",
+          "bn": "আপনাকে কি বলা হয়েছে যে আপনার রক্তের গ্রুপ Rh নেগেটিভ?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 97,
+        "text": {
+          "en": "In any previous pregnancy, was there a problem due to Rh incompatibility or jaundice in the newborn?",
+          "bn": "আগের কোনো গর্ভধারণে কি Rh অসঙ্গতি বা নবজাতকের প্রচণ্ড জন্ডিসের সমস্যা হয়েছে বলে ডাক্তার বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 98,
+        "text": {
+          "en": "Have you had any vaginal bleeding or spotting after sexual intercourse in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় সহবাসের পর কি কখনও যোনিপথে রক্তপাত বা দাগ দেখা গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 99,
+        "text": {
+          "en": "Do you experience severe back pain that interferes with your daily activities?",
+          "bn": "আপনার কি এমন তীব্র কোমর ব্যথা আছে যা দৈনন্দিন কাজ করতে বাধা সৃষ্টি করে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 100,
+        "text": {
+          "en": "Do you have numbness, weakness, or swelling in one leg more than the other?",
+          "bn": "দুই পায়ের মধ্যে কি কোনো এক পায়ে বেশি ফোলাভাব, অবশভাব বা দুর্বলতা অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 101,
+        "text": {
+          "en": "During this pregnancy, have you fainted or lost consciousness at any time?",
+          "bn": "এই গর্ভাবস্থায় কি কোনো সময় আপনার অজ্ঞান হয়ে যাওয়া বা জ্ঞান হারানোর ঘটনা ঘটেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 102,
+        "text": {
+          "en": "Do you have chest pain, shortness of breath, or palpitations with mild activity?",
+          "bn": "সীমিত কাজ করলেও কি আপনার বুক ধড়ফড় করা, বুক ব্যথা বা শ্বাসকষ্ট হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 103,
+        "text": {
+          "en": "Do you feel extremely itchy on your hands and feet, especially at night?",
+          "bn": "রাতে বিশেষ করে হাত ও পায়ে কি অতি মাত্রায় চুলকায়, যা আপনাকে অস্থির করে তোলে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 104,
+        "text": {
+          "en": "Have your eyes or skin turned yellow (jaundice) during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার চোখ বা চামড়া হলদেটে হয়ে গেছে (জন্ডিস)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 105,
+        "text": {
+          "en": "Do you often have severe heartburn, vomiting blood, or black stools?",
+          "bn": "আপনার কি প্রায়ই অতি তীব্র এসিডিটি, রক্ত বমি বা কালো মল হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 106,
+        "text": {
+          "en": "Do you have persistent diarrhoea or loose stool for more than three days?",
+          "bn": "তিন দিনের বেশি সময় ধরে কি আপনার ডায়রিয়া বা পাতলা পায়খানা চলছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 107,
+        "text": {
+          "en": "Do you feel extremely thirsty and pass urine more frequently than usual?",
+          "bn": "আপনি কি অস্বাভাবিকভাবে বেশি তৃষ্ণার্ত থাকেন এবং স্বাভাবিকের চেয়ে অনেক বেশি প্রস্রাব হয় বলে মনে করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 108,
+        "text": {
+          "en": "Do you have difficulty chewing or swallowing food due to dental or mouth problems?",
+          "bn": "দাঁতের বা মুখের সমস্যার কারণে কি আপনার খাবার চিবাতে বা গিলতে কষ্ট হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 109,
+        "text": {
+          "en": "Do you eat very little fruits and vegetables (less than three days per week)?",
+          "bn": "আপনি কি সপ্তাহে তিন দিনের কম ফল ও শাকসবজি খান (অর্থাৎ খুব কম পরিমাণে ফল/সবজি খান)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 110,
+        "text": {
+          "en": "Do you often skip breakfast or the first meal of the day?",
+          "bn": "আপনি কি প্রায়ই সকালের নাশতা বা দিনের প্রথম খাবার বাদ দেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 111,
+        "text": {
+          "en": "Has any doctor advised you to be on complete or partial bed rest in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি কোনো ডাক্তার আপনাকে সম্পূর্ণ বা আংশিক বেড রেস্টে থাকতে বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 112,
+        "text": {
+          "en": "Have you had any hospital admission during this pregnancy for bleeding, pain, or high blood pressure?",
+          "bn": "এই গর্ভাবস্থায় রক্তপাত, ব্যথা বা উচ্চ রক্তচাপের জন্য কি আপনাকে কখনও হাসপাতালে ভর্তি হতে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 113,
+        "text": {
+          "en": "Were you ever admitted to an intensive care unit (ICU) in a previous pregnancy or after delivery?",
+          "bn": "আগের কোনো গর্ভাবস্থা বা ডেলিভারির পর কি আপনাকে কখনও আইসিইউতে ভর্তি হতে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 114,
+        "text": {
+          "en": "Did you need a blood transfusion in any previous pregnancy, delivery, or miscarriage?",
+          "bn": "আগের কোনো গর্ভাবস্থা, ডেলিভারি বা গর্ভপাতের সময় কি আপনাকে রক্ত দিতে (ব্লাড ট্রান্সফিউশন) হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 115,
+        "text": {
+          "en": "Have you been told that your baby is in breech or abnormal position close to term?",
+          "bn": "প্রসবের সময় ঘনিয়ে এলে কি ডাক্তার বলেছেন যে বাচ্চাটি উল্টো (ব্রিচ) বা অস্বাভাবিক অবস্থায় আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 116,
+        "text": {
+          "en": "Have you had contractions or labour pains before 37 weeks of pregnancy in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় ৩৭ সপ্তাহের আগেই কি আপনার প্রসব ব্যথা বা জরায়ু সংকোচন শুরু হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 117,
+        "text": {
+          "en": "Are you having severe continuous abdominal pain between contractions?",
+          "bn": "প্রসব ব্যথার মাঝখানের সময়েও কি পেটে তীব্র ও অবিরাম ব্যথা থাকে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 118,
+        "text": {
+          "en": "Have you had any trauma to your abdomen, such as a fall, beating, or road accident, during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার পেটে কোনো আঘাত লেগেছে, যেমন পড়ে যাওয়া, মারধর বা সড়ক দুর্ঘটনা?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 119,
+        "text": {
+          "en": "Do you have any chronic skin disease like severe eczema or psoriasis?",
+          "bn": "আপনার কি তীব্র একজিমা, সোরিয়াসিসের মতো কোনো দীর্ঘস্থায়ী চর্মরোগ আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 120,
+        "text": {
+          "en": "Do you have any long-term catheter, feeding tube, or other medical device in your body?",
+          "bn": "আপনার শরীরে কি কোনো দীর্ঘমেয়াদি ক্যাথেটার, ফিডিং টিউব বা অন্য কোনো চিকিৎসাজনিত ডিভাইস লাগানো আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 121,
+        "text": {
+          "en": "Have you had surgery on your uterus, ovaries, or abdomen (other than caesarean) before this pregnancy?",
+          "bn": "এই গর্ভের আগে কি আপনার জরায়ু, ডিম্বাশয় বা পেটে কোনো অস্ত্রোপচার হয়েছে (সিজারিয়ান ছাড়া)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 122,
+        "text": {
+          "en": "Do you have any autoimmune disease such as lupus or rheumatoid arthritis?",
+          "bn": "আপনার কি লুপাস, রিউমাটয়েড আর্থ্রাইটিসের মতো কোনো অটোইমিউন রোগ আছে বলে জানা গেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 123,
+        "text": {
+          "en": "Do you have any cancer or are you currently on cancer treatment?",
+          "bn": "আপনার কি কোনো ক্যান্সার আছে বা আপনি কি বর্তমানে ক্যান্সারের চিকিৎসা নিচ্ছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 124,
+        "text": {
+          "en": "Do you have any neurological disorder such as stroke, paralysis, or muscle disease?",
+          "bn": "আপনার কি স্ট্রোক, পক্ষাঘাত বা পেশীর রোগের মতো কোনো স্নায়ুরোগ আছে বলে ডাক্তার বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 125,
+        "text": {
+          "en": "Do you have any chronic liver disease such as cirrhosis or fatty liver disease diagnosed by a doctor?",
+          "bn": "ডাক্তার কি বলেছেন যে আপনার সিরোসিস, ফ্যাটি লিভারের মতো কোনো দীর্ঘস্থায়ী লিভারের রোগ আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 126,
+        "text": {
+          "en": "Are you currently under treatment with blood thinners or anticoagulant medicines?",
+          "bn": "আপনি কি বর্তমানে রক্ত পাতলা করার ওষুধ (অ্যান্টিকোয়াগুল্যান্ট) সেবন করছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 127,
+        "text": {
+          "en": "Have you ever had a deep vein thrombosis (clot in leg veins) or pulmonary embolism?",
+          "bn": "আপনার কি কখনও পায়ের শিরায় রক্ত জমাট (ডিপ ভেইন থ্রম্বোসিস) বা ফুসফুসে রক্ত জমাট (পালমোনারি এম্বোলিজম) হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 128,
+        "text": {
+          "en": "Have you ever had gestational diabetes in a previous pregnancy?",
+          "bn": "আগের কোনো গর্ভধারণে কি আপনার গর্ভকালীন ডায়াবেটিস ধরা পড়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 129,
+        "text": {
+          "en": "Have you ever given birth to a baby weighing more than 4 kg?",
+          "bn": "আপনি কি কখনও এমন বাচ্চা জন্ম দিয়েছেন যার ওজন ৪ কেজির বেশি ছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 130,
+        "text": {
+          "en": "Have you ever had shoulder dystocia or difficulty delivering the baby’s shoulders in a previous delivery?",
+          "bn": "আগের কোনো ডেলিভারিতে কি বাচ্চার কাঁধ বের করতে অনেক সমস্যা হয়েছে (শোল্ডার ডিস্টোসিয়া)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 131,
+        "text": {
+          "en": "Have you ever had a forceps or vacuum-assisted delivery?",
+          "bn": "আপনার কি কখনও ফোর্সেপস বা ভ্যাকুয়াম ব্যবহার করে ডেলিভারি হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 132,
+        "text": {
+          "en": "Have you ever had a third- or fourth-degree perineal tear during delivery?",
+          "bn": "ডেলিভারির সময় কি আপনার তলপেটের নিচের অংশে (পরিনিয়াম) তৃতীয় বা চতুর্থ ডিগ্রির মারাত্মক ছিঁড়ে যাওয়ার সমস্যা হয়েছিল বলে ডাক্তার বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 133,
+        "text": {
+          "en": "Have you ever had a fistula or problem with controlling urine or stool after a delivery?",
+          "bn": "ডেলিভারির পর কি আপনার কখনও ফিস্টুলা হয়েছে বা প্রস্রাব/পায়খানা ধরে রাখতে সমস্যা হয়েছে বলে ডাক্তার বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 134,
+        "text": {
+          "en": "Do you have difficulty seeing at night or have been told you have night blindness?",
+          "bn": "আপনার কি রাতে পরিষ্কার দেখতে সমস্যা হয় বা আপনাকে কি নাইট ব্লাইন্ডনেস আছে বলে বলা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 135,
+        "text": {
+          "en": "Do you consume iodised salt regularly at home?",
+          "bn": "আপনার বাড়িতে কি নিয়মিত আয়োডিনযুক্ত লবণ ব্যবহার করা হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 136,
+        "text": {
+          "en": "Did you have a gap of less than two years between this pregnancy and your last delivery or miscarriage?",
+          "bn": "এই গর্ভধারণ ও আগের ডেলিভারি/গর্ভপাতের মধ্যে কি দুই বছরের কম বিরতি রয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 137,
+        "text": {
+          "en": "Was your last baby born less than one year before this pregnancy started?",
+          "bn": "আপনার আগের বাচ্চার জন্ম কি এই গর্ভধারণ শুরু হওয়ার এক বছরের কম সময় আগে হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 138,
+        "text": {
+          "en": "Have you had more than four previous deliveries?",
+          "bn": "আগে কি আপনার চারটির বেশি সন্তান জন্ম হয়েছে (হাই প্যারিটি)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 139,
+        "text": {
+          "en": "Have you ever had an induced abortion or menstrual regulation by a provider?",
+          "bn": "আপনি কি কখনও কোনো স্বাস্থ্যকর্মীর সাহায্যে ইচ্ছাকৃত গর্ভপাত বা মেনস্ট্রুয়াল রেগুলেশন করিয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 140,
+        "text": {
+          "en": "Was any previous abortion or menstrual regulation done by an untrained person or at home?",
+          "bn": "আগের কোনো গর্ভপাত বা মেনস্ট্রুয়াল রেগুলেশন কি অপ্রশিক্ষিত কারও দ্বারা বা বাড়িতে করানো হয়েছিল?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 141,
+        "text": {
+          "en": "Do you often feel that your baby’s movements are unusually strong and painful?",
+          "bn": "আপনি কি মনে করেন বাচ্চার নড়াচড়া অস্বাভাবিকভাবে বেশি এবং তা আপনাকে কষ্ট দেয় বা ব্যথা করে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 142,
+        "text": {
+          "en": "Do you experience severe cramps in your legs, especially at night?",
+          "bn": "বিশেষ করে রাতে কি আপনার পায়ে তীব্র ক্র্যাম্প বা টান ধরার মতো ব্যথা হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 143,
+        "text": {
+          "en": "Do you often feel your hands or feet are numb or tingling?",
+          "bn": "আপনি কি প্রায়ই হাত-পা ঝিনঝিন করা বা অবশ হয়ে যাওয়ার অনুভূতি পান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 144,
+        "text": {
+          "en": "Do you have difficulty climbing stairs or walking short distances due to breathlessness?",
+          "bn": "স্বল্প দূরত্ব হাঁটা বা সিঁড়ি ভাঙার সময় কি শ্বাসকষ্টের কারণে আপনার অনেক কষ্ট হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 145,
+        "text": {
+          "en": "Do you have any swelling, redness, or pain in your breasts with fever?",
+          "bn": "জ্বরের সাথে কি আপনার স্তনে ফোলাভাব, লালচে ভাব বা ব্যথা আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 146,
+        "text": {
+          "en": "Do you feel any lump or hard area in your breast?",
+          "bn": "আপনি কি স্তনে কোনো গিঁট বা শক্ত অংশ অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 147,
+        "text": {
+          "en": "Have you ever had any breast surgery or biopsy?",
+          "bn": "আপনার কি কখনও স্তনে কোনো অস্ত্রোপচার বা বায়োপসি করা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 148,
+        "text": {
+          "en": "Do you have any difficulty getting clean drinking water at home?",
+          "bn": "আপনার বাড়িতে কি নিরাপদ ও বিশুদ্ধ পানীয় জল পাওয়া কঠিন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 149,
+        "text": {
+          "en": "Do you regularly wash your hands with soap before eating and after using the toilet?",
+          "bn": "আপনি কি খাওয়ার আগে এবং টয়লেট ব্যবহারের পরে নিয়মিত সাবান দিয়ে হাত ধুয়ে থাকেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 150,
+        "text": {
+          "en": "Do you often eat street food or food that may not be freshly cooked?",
+          "bn": "আপনি কি প্রায়ই হোটেল/রাস্তায় তৈরি খাবার বা বাসি খাবার খান যা খুব তাজা নাও হতে পারে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 151,
+        "text": {
+          "en": "Do you eat betel leaf with tobacco or zarda regularly?",
+          "bn": "আপনি কি নিয়মিত পানের সাথে জর্দা বা তামাক খান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 152,
+        "text": {
+          "en": "Do you use smokeless tobacco products such as gul, khoinee, or sadapata?",
+          "bn": "আপনি কি গুল, খৈনী, সাদাপাতা ইত্যাদি ধোঁয়াবিহীন তামাকজাত দ্রব্য ব্যবহার করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 153,
+        "text": {
+          "en": "Do you spend a lot of time in a kitchen with poor ventilation and smoke from a clay stove or wood burning?",
+          "bn": "আপনি কি বেশিরভাগ সময় এমন রান্নাঘরে থাকেন যেখানে চুলার ধোঁয়া বের হওয়ার ভালো ব্যবস্থা নেই এবং মাটির চুলা বা কাঠের আগুন ব্যবহার হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 154,
+        "text": {
+          "en": "Do you have to stand for very long hours every day (such as in factory or shop work)?",
+          "bn": "আপনাকে কি প্রতিদিন অনেক ঘন্টা দাঁড়িয়ে কাজ করতে হয় (যেমন গার্মেন্টস, দোকান বা ফ্যাক্টরির কাজ)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 155,
+        "text": {
+          "en": "Do you work night shifts or irregular hours during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনাকে রাতের শিফটে বা খুব অনিয়মিত সময়ে কাজ করতে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 156,
+        "text": {
+          "en": "Do you get less than six hours of sleep most nights?",
+          "bn": "প্রায় সব রাতেই কি আপনার ছয় ঘন্টার কম ঘুম হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 157,
+        "text": {
+          "en": "Do you have difficulty lying flat due to breathlessness when you go to sleep?",
+          "bn": "ঘুমাতে গিয়ে কি শ্বাসকষ্টের কারণে চিৎ হয়ে শুতে কষ্ট হয় বা বালিশ উঁচু করে শুতে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 158,
+        "text": {
+          "en": "Do you snore loudly or stop breathing for short periods during sleep (as noticed by others)?",
+          "bn": "ঘুমের সময় কি আপনি খুব জোরে নাক ডাকেন বা মাঝেমধ্যে শ্বাস বন্ধ হয়ে যায় বলে অন্যরা বলেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 159,
+        "text": {
+          "en": "Do you have frequent nosebleeds or bleeding from gums?",
+          "bn": "আপনার কি প্রায়ই নাক দিয়ে রক্ত পড়ে বা মাড়ি থেকে সহজেই রক্তপাত হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 160,
+        "text": {
+          "en": "Do you get bruises or black marks on your body easily without injury?",
+          "bn": "আঘাত না লাগলেও কি আপনার গায়ে সহজে নীলচে দাগ বা কালশিটে পড়ে যায় বলে মনে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 161,
+        "text": {
+          "en": "Do you have difficulty remembering things or concentrating on daily tasks?",
+          "bn": "দৈনন্দিন কাজে মনোযোগ দিতে বা কিছু মনে রাখতে কি আপনার কষ্ট হয় বলে মনে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 162,
+        "text": {
+          "en": "Do you feel guilty or blame yourself excessively for problems in your life?",
+          "bn": "জীবনের নানা সমস্যার জন্য কি আপনি নিজেকে অতিরিক্ত দোষারোপ করেন বা সব ভুল নিজের বলে মনে করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 163,
+        "text": {
+          "en": "Do you have frequent arguments or serious conflicts with your husband or in-laws?",
+          "bn": "আপনার কি স্বামী বা শ্বশুরবাড়ির লোকজনের সাথে প্রায়ই ঝগড়া বা গুরুতর মতবিরোধ হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 164,
+        "text": {
+          "en": "Do you feel pressured to continue heavy household work despite feeling unwell?",
+          "bn": "শারীরিকভাবে অসুস্থ বা ক্লান্ত থাকলেও কি আপনাকে জোর করে ঘরের সব ভারী কাজ করতে হয় বলে অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 165,
+        "text": {
+          "en": "Do you have any difficulty understanding health information given by doctors or nurses?",
+          "bn": "ডাক্তার বা নার্স যে স্বাস্থ্যবিষয়ক নির্দেশনা দেন, সেগুলো বুঝতে কি আপনার কষ্ট হয় বলে মনে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 166,
+        "text": {
+          "en": "Do you feel reluctant or shy to discuss your pregnancy problems with health workers?",
+          "bn": "গর্ভাবস্থার সমস্যা নিয়ে স্বাস্থ্যকর্মীদের সাথে কথা বলতে কি আপনি লজ্জা পান বা দ্বিধা অনুভব করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 1,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 167,
+        "text": {
+          "en": "Do you have difficulty arranging someone to stay with your other children if you need to go to hospital?",
+          "bn": "হাসপাতালে যেতে হলে আপনার অন্য বাচ্চাদের দেখাশোনার জন্য কাউকে জোগাড় করতে কি সমস্যা হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 1,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 168,
+        "text": {
+          "en": "Do you feel unsure about where you will deliver your baby (home or facility)?",
+          "bn": "আপনি কি এখনো ঠিক করতে পারেননি যে বাড়িতে নাকি হাসপাতালে আপনার ডেলিভারি হবে বলে অনিশ্চয়তা অনুভব করছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 169,
+        "text": {
+          "en": "Have you received counselling or information on danger signs in pregnancy from any health worker?",
+          "bn": "কোনো স্বাস্থ্যকর্মীর কাছ থেকে কি আপনি গর্ভাবস্থার ঝুঁকির লক্ষণ সম্পর্কে পরামর্শ বা তথ্য পেয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 170,
+        "text": {
+          "en": "Do you have any difficulty reading written health messages or leaflets?",
+          "bn": "লিখিত স্বাস্থ্য বার্তা বা লিফলেট পড়তে কি আপনার অসুবিধা হয় বলে মনে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 171,
+        "text": {
+          "en": "Has any doctor or nurse told you that your blood pressure is too high in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি কোনো ডাক্তার বা নার্স বলেছেন যে আপনার রক্তচাপ স্বাভাবিকের চেয়ে বেশি বা খুব বেশি?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 172,
+        "text": {
+          "en": "Has any urine test shown protein or albumin in your urine during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় আপনার প্রস্রাব পরীক্ষায় কি কখনও প্রোটিন বা অ্যালবুমিন পাওয়া গেছে বলে জানানো হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 173,
+        "text": {
+          "en": "Has any blood test shown that your haemoglobin is less than 10 g/dl in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় আপনার রক্ত পরীক্ষায় কি হিমোগ্লোবিন ১০ গ্রাম/ডেসিলিটারের কম এসেছে বলে বলা হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "nutrition",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 174,
+        "text": {
+          "en": "Has your blood sugar test ever been high in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় আপনার রক্তে শর্করার পরীক্ষায় কি কখনও বেশি এসেছে বলে জানানো হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 175,
+        "text": {
+          "en": "Has any ultrasound report mentioned placenta previa, placental abruption, or placental insufficiency?",
+          "bn": "কোনো আল্ট্রাসাউন্ড রিপোর্টে কি প্লাসেন্টা প্রেভিয়া, প্লাসেন্টা আবরাপশন বা প্লাসেন্টার কাজ ঠিকমতো না করার কথা উল্লেখ আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 176,
+        "text": {
+          "en": "Has any ultrasound shown that your baby has any structural anomaly or birth defect?",
+          "bn": "কোনো আল্ট্রাসাউন্ডে কি দেখা গেছে যে আপনার বাচ্চার শরীরে কোনো গঠনগত ত্রুটি বা জন্মগত সমস্যা আছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 5,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 177,
+        "text": {
+          "en": "Has any doctor told you that your baby’s growth is restricted or there is intrauterine growth restriction (IUGR)?",
+          "bn": "কোনো ডাক্তার কি বলেছেন যে আপনার বাচ্চার বৃদ্ধি সীমিত (গ্রোথ রেস্ট্রিকশন) বা IUGR হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 178,
+        "text": {
+          "en": "Has any doctor recommended that you deliver in a higher level referral hospital due to risk factors?",
+          "bn": "ঝুঁকির কারণে কি কোনো ডাক্তার পরামর্শ দিয়েছেন যে আপনার ডেলিভারি বড় বা রেফারেল হাসপাতালেই করানো উচিত?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 179,
+        "text": {
+          "en": "Has any health worker referred you urgently to a hospital during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি কোনো স্বাস্থ্যকর্মী আপনাকে জরুরি ভিত্তিতে হাসপাতালে যাওয়ার জন্য রেফার করেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 180,
+        "text": {
+          "en": "Have you ever ignored or refused a doctor’s advice to get admitted for pregnancy problems?",
+          "bn": "গর্ভাবস্থার সমস্যার জন্য ডাক্তার হাসপাতালে ভর্তি হতে বললেও কি আপনি কখনও তা মানেননি বা উপেক্ষা করেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 181,
+        "text": {
+          "en": "Do you belong to a very poor household where arranging money for emergencies is difficult?",
+          "bn": "আপনার পরিবার কি এতটাই আর্থিকভাবে দুর্বল যে জরুরি পরিস্থিতিতে টাকা জোগাড় করা খুব কষ্টকর হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 182,
+        "text": {
+          "en": "Do you live in a remote char, haor, or hill area with limited access to health facilities?",
+          "bn": "আপনি কি এমন দুর্গম চর, হাওর বা পাহাড়ি এলাকায় থাকেন যেখানে স্বাস্থ্যসেবার ব্যবস্থা সীমিত?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 183,
+        "text": {
+          "en": "Have you experienced any major flood, cyclone, or disaster during this pregnancy affecting your living conditions?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার এলাকায় বন্যা, ঘূর্ণিঝড় বা অন্য কোনো দুর্যোগ হয়েছে যা আপনার জীবনযাত্রায় বড় প্রভাব ফেলেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 184,
+        "text": {
+          "en": "Do you feel that cultural or religious beliefs in your family restrict you from seeking timely medical care?",
+          "bn": "আপনার পরিবারে সাংস্কৃতিক বা ধর্মীয় বিশ্বাসের কারণে কি সময়মতো চিকিৎসা নিতে আপনার বাধা সৃষ্টি হয় বলে মনে করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "mental_health",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 185,
+        "text": {
+          "en": "Do you or your family prefer home delivery without a skilled birth attendant?",
+          "bn": "আপনি বা আপনার পরিবার কি দক্ষ স্বাস্থ্যকর্মী ছাড়া বাড়িতেই ডেলিভারি করতে বেশি পছন্দ করেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 186,
+        "text": {
+          "en": "Have you made a birth preparedness plan including money, transport, and support person?",
+          "bn": "আপনি কি ডেলিভারির জন্য টাকা, যাতায়াতের ব্যবস্থা ও সহযাত্রী/সহযোগী নির্বাচনসহ কোনো জন্ম-প্রস্তুতি পরিকল্পনা করেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 187,
+        "text": {
+          "en": "Do you know at least three danger signs in pregnancy that need urgent hospital care?",
+          "bn": "আপনি কি অন্তত তিনটি গর্ভাবস্থার ঝুঁকির লক্ষণ জানেন যেগুলো দেখা দিলে দ্রুত হাসপাতালে যেতে হয়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 188,
+        "text": {
+          "en": "Have you attended any community meeting or counselling session on maternal health during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনি মায়েদের স্বাস্থ্য নিয়ে কোনো কমিউনিটি মিটিং বা পরামর্শ সভায় অংশগ্রহণ করেছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 189,
+        "text": {
+          "en": "Have you ever delivered a baby at a health facility with a skilled doctor or nurse?",
+          "bn": "আপনি কি আগে কোনো সন্তানকে হাসপাতালে বা স্বাস্থ্যকেন্দ্রে দক্ষ ডাক্তার/নার্সের মাধ্যমে জন্ম দিয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 190,
+        "text": {
+          "en": "Did you face any serious problem in reaching a health facility in any previous pregnancy?",
+          "bn": "আগের কোনো গর্ভাবস্থায় কি হাসপাতালে পৌঁছাতে গিয়ে আপনাকে বড় ধরনের সমস্যার মুখোমুখি হতে হয়েছে (যেমন যানবাহন না পাওয়া, রাস্তার সমস্যা)?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "previous_complications",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      
+      {
+        "id": 191,
+        "text": {
+          "en": "Do you currently have any COVID-19 symptoms such as fever, cough, or loss of smell?",
+          "bn": "এখন কি আপনার জ্বর, কাশি, গন্ধ না পাওয়ার মতো কোভিড-১৯ এর লক্ষণ রয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 192,
+        "text": {
+          "en": "Have you tested positive for COVID-19 during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার কোভিড-১৯ পজিটিভ রিপোর্ট এসেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 193,
+        "text": {
+          "en": "Have you taken recommended vaccines in pregnancy, such as tetanus and other advised vaccines?",
+          "bn": "গর্ভাবস্থায় প্রস্তাবিত সব টিকা (যেমন টিটেনাস ও ডাক্তার পরামর্শকৃত অন্যান্য টিকা) কি নিয়মিত নিয়েছেন?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 194,
+        "text": {
+          "en": "Do you have any allergy to medicines, foods, or injections that has caused serious reactions before?",
+          "bn": "ওষুধ, খাবার বা ইনজেকশনের প্রতি কি আপনার এমন অ্যালার্জি আছে যা আগে গুরুতর প্রতিক্রিয়া সৃষ্টি করেছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "medical_history",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 195,
+        "text": {
+          "en": "Have you travelled to any malaria-endemic area during this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনি এমন এলাকায় গিয়েছেন যেখানে ম্যালেরিয়া বেশি হয় বলে পরিচিত?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 3,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 196,
+        "text": {
+          "en": "Have you had fever with chills and rigors after visiting a malaria-prone area?",
+          "bn": "ম্যালেরিয়ার ঝুঁকিপূর্ণ এলাকায় যাওয়ার পর কি আপনার কাঁপুনি, রিগরসহ জ্বর হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 197,
+        "text": {
+          "en": "Do you sleep under an insecticide-treated or safe mosquito net every night?",
+          "bn": "আপনি কি প্রতিদিন রাতে কীটনাশকযুক্ত বা নিরাপদ মশারি টানিয়ে ঘুমান?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 1,
+        "yesIncreasesRisk": false
+      },
+      {
+        "id": 198,
+        "text": {
+          "en": "Do you or any family member have frequent dengue or chikungunya infection in your area?",
+          "bn": "আপনার এলাকায় কি আপনার বা পরিবারের কারও প্রায়ই ডেঙ্গু বা চিকুনগুনিয়া হয়েছে বলে জানা যায়?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "lifestyle",
+        "weight": 2,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 199,
+        "text": {
+          "en": "Have you had high fever with severe body pain and rash in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনার প্রচণ্ড শরীর ব্যথা, গা জ্বালা আর ফুসকুড়ির সাথে উঁচু মাত্রার জ্বর হয়েছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "symptoms",
+        "weight": 4,
+        "yesIncreasesRisk": true
+      },
+      {
+        "id": 200,
+        "text": {
+          "en": "Have you or your baby been diagnosed with any other condition that worries you in this pregnancy?",
+          "bn": "এই গর্ভাবস্থায় কি আপনাকে বা বাচ্চাকে নিয়ে এমন কোনো চিকিৎসা-সংক্রান্ত বিষয় ধরা পড়েছে যা আপনাকে খুব চিন্তায় রাখছে?"
+        },
+        "answers": {
+          "yes": {
+            "en": "Yes",
+            "bn": "হ্যাঁ"
+          },
+          "no": {
+            "en": "No",
+            "bn": "না"
+          }
+        },
+        "category": "complications",
+        "weight": 3,
+        "yesIncreasesRisk": true
+    }
+    ]
+}

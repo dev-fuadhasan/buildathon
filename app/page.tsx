@@ -96,6 +96,18 @@ export default function Home() {
                 </p>
               </div>
               
+              {/* Risk Detection Button - Top */}
+              <div className="mb-6">
+                <Link
+                  href="/risk-detection"
+                  className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg font-bold px-6 py-3.5 sm:px-8 sm:py-4 md:px-10 md:py-5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-xl sm:rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 hover:from-orange-600 hover:to-pink-600"
+                >
+                  <span className="text-xl">🩺</span>
+                  <span className="whitespace-nowrap">Risk Detection Tool (Works Offline)</span>
+                  <span className="text-xs sm:text-sm font-normal opacity-90 ml-1">→</span>
+                </Link>
+              </div>
+
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-neutral-900 leading-[1.1] tracking-tight">
                 {t.home.title}
           </h1>

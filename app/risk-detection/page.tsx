@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import Icon from "@/components/Icon";
-import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 
 type Question = {
@@ -136,7 +134,6 @@ const calculateRisk = (questions: Question[], answers: Answer[]): RiskResult => 
 };
 
 export default function RiskDetectionPage() {
-  const t = useTranslation();
   const [lang] = useState(() => getLanguage());
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
@@ -238,7 +235,7 @@ export default function RiskDetectionPage() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-16">
-          <Icon name="pending" size={48} className="mx-auto mb-4 text-blue-500 animate-spin" />
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg text-slate-600">
             {lang === "bn" ? "প্রশ্ন লোড হচ্ছে..." : "Loading questions..."}
           </p>
@@ -251,7 +248,7 @@ export default function RiskDetectionPage() {
     return (
       <Layout>
         <div className="max-w-2xl mx-auto text-center py-16">
-          <Icon name="error" size={48} className="mx-auto mb-4 text-red-500" />
+          <div className="text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-slate-800 mb-4">
             {lang === "bn" ? "ত্রুটি" : "Error"}
           </h1>
@@ -296,32 +293,52 @@ export default function RiskDetectionPage() {
       <Layout>
         <div className="max-w-3xl mx-auto py-8 px-4">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">
-              {lang === "bn" ? "ঝুঁকি মূল্যায়ন ফলাফল" : "Risk Assessment Result"}
-            </h1>
-            <p className="text-slate-600">
-              {lang === "bn"
-                ? "আপনার উত্তরগুলির উপর ভিত্তি করে ঝুঁকি বিশ্লেষণ"
-                : "Risk analysis based on your answers"}
-            </p>
+            <div className="mb-2">
+              <h1 className="text-3xl font-bold text-slate-800 mb-1">
+                Risk Assessment Result
+              </h1>
+              <h2 className="text-2xl font-semibold text-slate-700">
+                ঝুঁকি মূল্যায়ন ফলাফল
+              </h2>
+            </div>
+            <div className="space-y-1">
+              <p className="text-slate-600">
+                Risk analysis based on your answers
+              </p>
+              <p className="text-slate-600">
+                আপনার উত্তরগুলির উপর ভিত্তি করে ঝুঁকি বিশ্লেষণ
+              </p>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-            <div
-              className={`bg-gradient-to-r ${riskColors[result.level]} rounded-xl p-8 text-white text-center mb-6`}
-            >
-              <div className="text-6xl font-bold mb-2">{result.percentage}%</div>
-              <div className="text-2xl font-semibold">
-                {riskLabels[result.level][lang]}
-              </div>
-            </div>
+           <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+             <div
+               className={`bg-gradient-to-r ${riskColors[result.level]} rounded-xl p-8 text-white text-center mb-6`}
+             >
+               <div className="text-6xl font-bold mb-2">{result.percentage}%</div>
+               <div className="text-2xl font-semibold mb-2">
+                 {riskLabels[result.level].en}
+               </div>
+               <div className="text-xl font-medium opacity-90">
+                 {riskLabels[result.level].bn}
+               </div>
+             </div>
 
-            <div className="space-y-4">
-              <div className="bg-slate-50 rounded-lg p-4">
-                <p className="text-slate-700 leading-relaxed">
-                  {riskMessages[result.level][lang]}
-                </p>
-              </div>
+             <div className="space-y-4">
+               <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                 <div>
+                   <p className="text-xs text-slate-500 mb-1 uppercase font-semibold">English</p>
+                   <p className="text-slate-700 leading-relaxed">
+                     {riskMessages[result.level].en}
+                   </p>
+                 </div>
+                 <div className="border-t border-slate-200 pt-3">
+                   <p className="text-xs text-slate-500 mb-1 uppercase font-semibold">বাংলা</p>
+                   <p className="text-slate-700 leading-relaxed">
+                     {riskMessages[result.level].bn}
+                   </p>
+                 </div>
+               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-blue-50 rounded-lg p-4">
@@ -356,16 +373,14 @@ export default function RiskDetectionPage() {
             </button>
           </div>
 
-          <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-sm text-yellow-900 flex items-start gap-2">
-              <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
-              <span>
-                {lang === "bn"
-                  ? "দ্রষ্টব্য: এটি একটি প্রাথমিক ঝুঁকি মূল্যায়ন সরঞ্জাম। এটি চিকিৎসা পরামর্শের বিকল্প নয়। গুরুতর লক্ষণ বা উদ্বেগের জন্য, অবিলম্বে একজন স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।"
-                  : "Note: This is a preliminary risk assessment tool. It is not a substitute for medical advice. For serious symptoms or concerns, please consult with a healthcare provider immediately."}
-              </span>
-            </p>
-          </div>
+           <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+             <p className="text-sm text-yellow-900">
+               <strong>{lang === "bn" ? "দ্রষ্টব্য:" : "Note:"}</strong>{" "}
+               {lang === "bn"
+                 ? "এটি একটি প্রাথমিক ঝুঁকি মূল্যায়ন সরঞ্জাম। এটি চিকিৎসা পরামর্শের বিকল্প নয়। গুরুতর লক্ষণ বা উদ্বেগের জন্য, অবিলম্বে একজন স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।"
+                 : "This is a preliminary risk assessment tool. It is not a substitute for medical advice. For serious symptoms or concerns, please consult with a healthcare provider immediately."}
+             </p>
+           </div>
         </div>
       </Layout>
     );
@@ -375,14 +390,22 @@ export default function RiskDetectionPage() {
     <Layout>
       <div className="max-w-3xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            {lang === "bn" ? "গর্ভাবস্থা ঝুঁকি মূল্যায়ন" : "Pregnancy Risk Assessment"}
-          </h1>
-          <p className="text-slate-600">
-            {lang === "bn"
-              ? "১০টি প্রশ্নের উত্তর দিন এবং আপনার ঝুঁকির মাত্রা জানুন"
-              : "Answer 10 questions to assess your risk level"}
-          </p>
+          <div className="mb-2">
+            <h1 className="text-3xl font-bold text-slate-800 mb-1">
+              Pregnancy Risk Assessment
+            </h1>
+            <h2 className="text-2xl font-semibold text-slate-700">
+              গর্ভাবস্থা ঝুঁকি মূল্যায়ন
+            </h2>
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-600">
+              Answer 10 questions to assess your risk level
+            </p>
+            <p className="text-slate-600">
+              ১০টি প্রশ্নের উত্তর দিন এবং আপনার ঝুঁকির মাত্রা জানুন
+            </p>
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -403,50 +426,60 @@ export default function RiskDetectionPage() {
           </div>
         </div>
 
-        {/* Question Card */}
-        {currentQuestion && (
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-2xl font-bold mb-4">
-                {currentIndex + 1}
-              </div>
-              <h2 className="text-2xl font-semibold text-slate-800 leading-relaxed">
-                {currentQuestion.text[lang]}
-              </h2>
-            </div>
+         {/* Question Card */}
+         {currentQuestion && (
+           <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+             <div className="text-center mb-6">
+               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-2xl font-bold mb-4">
+                 {currentIndex + 1}
+               </div>
+               {/* Show both English and Bangla */}
+               <div className="space-y-4">
+                 <div>
+                   <p className="text-xs text-slate-500 mb-2 uppercase font-semibold">English</p>
+                   <h2 className="text-2xl font-semibold text-slate-800 leading-relaxed">
+                     {currentQuestion.text.en}
+                   </h2>
+                 </div>
+                 <div className="border-t border-slate-200 pt-4">
+                   <p className="text-xs text-slate-500 mb-2 uppercase font-semibold">বাংলা</p>
+                   <h2 className="text-2xl font-semibold text-slate-800 leading-relaxed">
+                     {currentQuestion.text.bn}
+                   </h2>
+                 </div>
+               </div>
+             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => handleAnswer("yes")}
-                disabled={saving}
-                className="btn-primary text-lg py-6 px-8 flex items-center justify-center gap-3 hover:scale-105 transition-transform disabled:opacity-50"
-              >
-                <Icon name="success" size={24} />
-                {currentQuestion.answers.yes[lang]}
-              </button>
-              <button
-                onClick={() => handleAnswer("no")}
-                disabled={saving}
-                className="btn-secondary text-lg py-6 px-8 flex items-center justify-center gap-3 hover:scale-105 transition-transform disabled:opacity-50"
-              >
-                <Icon name="cancel" size={24} />
-                {currentQuestion.answers.no[lang]}
-              </button>
-            </div>
-          </div>
-        )}
+             <div className="grid grid-cols-2 gap-4">
+               <button
+                 onClick={() => handleAnswer("yes")}
+                 disabled={saving}
+                 className="btn-primary text-lg py-6 px-8 flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform disabled:opacity-50"
+               >
+                 <span className="font-semibold">{currentQuestion.answers.yes.en}</span>
+                 <span className="text-sm opacity-90">{currentQuestion.answers.yes.bn}</span>
+               </button>
+               <button
+                 onClick={() => handleAnswer("no")}
+                 disabled={saving}
+                 className="btn-secondary text-lg py-6 px-8 flex flex-col items-center justify-center gap-2 hover:scale-105 transition-transform disabled:opacity-50"
+               >
+                 <span className="font-semibold">{currentQuestion.answers.no.en}</span>
+                 <span className="text-sm opacity-90">{currentQuestion.answers.no.bn}</span>
+               </button>
+             </div>
+           </div>
+         )}
 
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-900 flex items-start gap-2">
-            <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
-            <span>
-              {lang === "bn"
-                ? "এই সরঞ্জামটি সম্পূর্ণ অফলাইনে কাজ করে। আপনার উত্তরগুলি স্থানীয়ভাবে সংরক্ষণ করা হয় এবং আপনি যে কোনও সময় পরীক্ষা চালিয়ে যেতে পারেন।"
-                : "This tool works completely offline. Your answers are saved locally and you can continue the assessment at any time."}
-            </span>
-          </p>
-        </div>
+         {/* Info Box */}
+         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+           <p className="text-sm text-blue-900">
+             <strong>💡 {lang === "bn" ? "টিপ:" : "Tip:"}</strong>{" "}
+             {lang === "bn"
+               ? "এই সরঞ্জামটি সম্পূর্ণ অফলাইনে কাজ করে। আপনার উত্তরগুলি স্থানীয়ভাবে সংরক্ষণ করা হয় এবং আপনি যে কোনও সময় পরীক্ষা চালিয়ে যেতে পারেন।"
+               : "This tool works completely offline. Your answers are saved locally and you can continue the assessment at any time."}
+           </p>
+         </div>
       </div>
     </Layout>
   );
