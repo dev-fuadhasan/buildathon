@@ -165,6 +165,25 @@ export default function MotherDashboard() {
   });
   const [showQuestionPopup, setShowQuestionPopup] = useState(false);
   const [questionSession, setQuestionSession] = useState<any>(null);
+  const [shouldScrollToNotifications, setShouldScrollToNotifications] = useState(false);
+
+  // Scroll to notifications when tab is active and scroll is requested
+  useEffect(() => {
+    if (activeTab === "notifications" && shouldScrollToNotifications) {
+      const scrollToNotifications = () => {
+        const notificationsElement = document.getElementById("notifications-section");
+        if (notificationsElement) {
+          notificationsElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          setShouldScrollToNotifications(false);
+        } else {
+          // Retry if element not found yet
+          setTimeout(scrollToNotifications, 100);
+        }
+      };
+      // Wait for tab to render
+      setTimeout(scrollToNotifications, 150);
+    }
+  }, [activeTab, shouldScrollToNotifications]);
 
   useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
@@ -1077,7 +1096,11 @@ export default function MotherDashboard() {
           <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-6 sm:p-8 md:p-12 mt-6 border border-pink-200 shadow-lg">
             <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
             <button
-              onClick={() => setActiveTab("notifications")}
+              onClick={() => {
+                setActiveTab("notifications");
+                setShowCards(false);
+                setShouldScrollToNotifications(true);
+              }}
               aria-label="View notifications"
               className="absolute top-4 right-4 md:top-6 md:right-6 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-pink-200 shadow-md flex items-center justify-center hover:shadow-lg hover:scale-[1.02] transition-all"
             >
