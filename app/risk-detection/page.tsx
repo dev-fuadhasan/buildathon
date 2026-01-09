@@ -434,13 +434,13 @@ export default function RiskDetectionPage() {
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-slate-500 mb-1.5 uppercase font-semibold">English</p>
-                  <h2 className="text-lg font-semibold text-slate-800 leading-relaxed">
+                  <h2 className="text-base font-semibold text-slate-800 leading-relaxed">
                     {currentQuestion.text.en}
                   </h2>
                 </div>
                 <div className="border-t border-slate-200 pt-3">
                   <p className="text-xs text-slate-500 mb-1.5 uppercase font-semibold">বাংলা</p>
-                  <h2 className="text-lg font-semibold text-slate-800 leading-relaxed">
+                  <h2 className="text-base font-semibold text-slate-800 leading-relaxed">
                     {currentQuestion.text.bn}
                   </h2>
                 </div>
