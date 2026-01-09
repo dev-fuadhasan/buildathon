@@ -134,6 +134,9 @@ export default function AdminDashboard() {
   const [vectorAnalytics, setVectorAnalytics] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedMother, setSelectedMother] = useState<Mother | null>(null);
+  const [motherConversations, setMotherConversations] = useState<any[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
   const [actionModal, setActionModal] = useState<{
     doctorId: string;
     action: "approve" | "reject" | "delete";
@@ -184,6 +187,26 @@ export default function AdminDashboard() {
     if (res.ok) {
       const data = await res.json();
       setSelectedMother(data.profile);
+      // Load conversations for this mother
+      loadMotherConversations(motherId);
+    }
+  };
+
+  const loadMotherConversations = async (motherId: string) => {
+    setLoadingConversations(true);
+    try {
+      const res = await fetch(`/api/admin/mother-conversations?motherId=${motherId}`, {
+        headers: headers(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMotherConversations(data.conversations || []);
+      }
+    } catch (err) {
+      console.error("Failed to load conversations:", err);
+      setMotherConversations([]);
+    } finally {
+      setLoadingConversations(false);
     }
   };
 
@@ -2402,6 +2425,141 @@ export default function AdminDashboard() {
                     {new Date(selectedMother.createdAt).toLocaleString()}
                   </p>
                 </div>
+              </div>
+
+              {/* Chat Conversations Section */}
+              <div className="border-t border-slate-200 pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <Icon name="chat" size={20} />
+                    AI Chat Conversations ({motherConversations.length})
+                  </h3>
+                  <button
+                    onClick={() => loadMotherConversations(selectedMother.id)}
+                    disabled={loadingConversations}
+                    className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-2"
+                  >
+                    <Icon name="sync" size={16} className={loadingConversations ? "animate-spin" : ""} />
+                    Refresh
+                  </button>
+                </div>
+
+                {loadingConversations ? (
+                  <div className="text-center py-8">
+                    <Icon name="pending" size={32} className="mx-auto mb-2 text-slate-400 animate-spin" />
+                    <p className="text-slate-500">Loading conversations...</p>
+                  </div>
+                ) : motherConversations.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50">
+                    <Icon name="chat" size={48} className="mx-auto mb-3 text-slate-300" />
+                    <p className="text-lg font-medium mb-2">No conversations yet</p>
+                    <p className="text-sm">This mother hasn't started any AI chat conversations.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {motherConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => setSelectedConversation(conversation)}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-800 mb-1 truncate">
+                              {conversation.title || "Untitled Conversation"}
+                            </h4>
+                            <p className="text-sm text-slate-600 mb-2">
+                              {conversation.messages?.length || 0} messages
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Icon name="clock" size={14} />
+                                Created: {new Date(conversation.createdAt).toLocaleString()}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Icon name="clock" size={14} />
+                                Updated: {new Date(conversation.updatedAt).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <Icon name="view" size={20} className="text-blue-500 flex-shrink-0" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DetailModal>
+
+        {/* Conversation Details Modal */}
+        <DetailModal
+          isOpen={!!selectedConversation}
+          onClose={() => setSelectedConversation(null)}
+          title={selectedConversation?.title || "Conversation Details"}
+        >
+          {selectedConversation && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm text-slate-600 mb-4 pb-4 border-b border-slate-200">
+                <span className="flex items-center gap-2">
+                  <Icon name="clock" size={16} />
+                  Created: {new Date(selectedConversation.createdAt).toLocaleString()}
+                </span>
+                <span className="flex items-center gap-2">
+                  <Icon name="clock" size={16} />
+                  Updated: {new Date(selectedConversation.updatedAt).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
+                  selectedConversation.messages.map((message: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg ${
+                        message.role === "user"
+                          ? "bg-blue-50 border border-blue-200 ml-8"
+                          : "bg-slate-50 border border-slate-200 mr-8"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            message.role === "user"
+                              ? "bg-blue-500 text-white"
+                              : "bg-slate-500 text-white"
+                          }`}
+                        >
+                          {message.role === "user" ? (
+                            <Icon name="mom" size={16} />
+                          ) : (
+                            <Icon name="chat" size={16} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-slate-800">
+                              {message.role === "user" ? "Mother" : "MomsCare AI"}
+                            </span>
+                            {message.timestamp && (
+                              <span className="text-xs text-slate-500">
+                                {new Date(message.timestamp).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-slate-700 whitespace-pre-wrap break-words">
+                            {message.content}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No messages in this conversation.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

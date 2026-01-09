@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother } from "@/lib/data";
+import { getMother, getConversationsList } from "@/lib/data";
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -20,7 +20,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Mother not found" }, { status: 404 });
   }
 
+  // Get conversations count
+  const conversationsList = await getConversationsList(motherId);
+
   const { passwordHash, ...safe } = mother;
-  return NextResponse.json({ profile: safe });
+  return NextResponse.json({ 
+    profile: safe,
+    conversationsCount: conversationsList.length 
+  });
 }
 
