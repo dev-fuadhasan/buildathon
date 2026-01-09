@@ -1071,7 +1071,7 @@ export default function MotherDashboard() {
           token={token}
           onComplete={() => {
             setShowQuestionPopup(false);
-            checkDailyQuestions(token); // Refresh to get updated session
+            // Removed checkDailyQuestions - Daily Health Questions section removed
           }}
         />
       )}
@@ -2172,67 +2172,6 @@ export default function MotherDashboard() {
         {/* Progress Tab */}
         {activeTab === "progress" && (
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Daily Questions Status */}
-            <DashboardCard title="Daily Health Questions">
-              {questionSession ? (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium">Today's Progress</span>
-                      <span className="text-pink-600 font-semibold">
-                        {questionSession.answeredCount} / {questionSession.totalQuestions}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                      <div
-                        className={`h-4 rounded-full transition-all duration-500 ${
-                          questionSession.completed ? "bg-green-500" : "bg-pink-500"
-                        }`}
-                        style={{ width: `${Math.round((questionSession.answeredCount / questionSession.totalQuestions) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  {questionSession.completed ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-green-800 text-sm font-medium">
-                        ✓ All questions completed for today
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <p className="text-yellow-800 text-sm">
-                        Please complete today's health questions
-                      </p>
-                    </div>
-                  )}
-                  {questionSession.earlyProblems && questionSession.earlyProblems.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-red-800 mb-2">Early Detection Alerts:</h4>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-red-700 mb-2">
-                        {questionSession.earlyProblems.map((problem: string, idx: number) => (
-                          <li key={idx}>{problem}</li>
-                        ))}
-                      </ul>
-                      {(questionSession as any).earlyProblemRecommendation && (
-                        <div className="mt-2 pt-2 border-t border-red-300">
-                          <p className="text-xs font-medium mb-1 text-red-800">Recommendation:</p>
-                          <p className="text-xs text-red-700">{(questionSession as any).earlyProblemRecommendation}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {(!questionSession.earlyProblems || questionSession.earlyProblems.length === 0) && (questionSession as any).earlyProblemRecommendation && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-green-800 mb-2">Health Status:</h4>
-                      <p className="text-sm text-green-700">{(questionSession as any).earlyProblemRecommendation}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-slate-500 text-sm">Loading question status...</p>
-              )}
-            </DashboardCard>
-            
             <DashboardCard title="Pregnancy Progress">
               {progress ? (
                 <div className="space-y-4">

@@ -409,7 +409,7 @@ export default function Layout({ children }: Props) {
               </nav>
               
               {/* Language Toggle - Always visible in top right */}
-              <div className="ml-2">
+              <div className="ml-2 flex-shrink-0">
                 <LanguageSelector />
               </div>
               
