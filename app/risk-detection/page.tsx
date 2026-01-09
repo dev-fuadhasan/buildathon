@@ -1,0 +1,454 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Layout from "@/components/Layout";
+import Icon from "@/components/Icon";
+import { useTranslation } from "@/hooks/useTranslation";
+import { getLanguage } from "@/lib/i18n";
+
+type Question = {
+  id: number;
+  text: {
+    en: string;
+    bn: string;
+  };
+  answers: {
+    yes: { en: string; bn: string };
+    no: { en: string; bn: string };
+  };
+  category: string;
+  weight: number;
+  yesIncreasesRisk: boolean;
+};
+
+type Answer = {
+  questionId: number;
+  answer: "yes" | "no";
+};
+
+type RiskResult = {
+  level: "low" | "medium" | "high";
+  percentage: number;
+  score: number;
+  maxScore: number;
+};
+
+const DB_NAME = "risk-detection-db";
+const DB_VERSION = 1;
+const STORE_NAME = "answers";
+
+// Initialize IndexedDB
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "questionId" });
+      }
+    };
+  });
+};
+
+// Save answer to IndexedDB
+const saveAnswer = async (questionId: number, answer: "yes" | "no") => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    await store.put({ questionId, answer, timestamp: Date.now() });
+  } catch (err) {
+    console.error("Failed to save answer:", err);
+  }
+};
+
+// Get saved answers from IndexedDB
+const getSavedAnswers = async (): Promise<Record<number, "yes" | "no">> => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    return new Promise((resolve) => {
+      request.onsuccess = () => {
+        const answers: Record<number, "yes" | "no"> = {};
+        request.result.forEach((item: Answer) => {
+          answers[item.questionId] = item.answer;
+        });
+        resolve(answers);
+      };
+      request.onerror = () => resolve({});
+    });
+  } catch (err) {
+    console.error("Failed to get saved answers:", err);
+    return {};
+  }
+};
+
+// Clear saved answers
+const clearAnswers = async () => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    await store.clear();
+  } catch (err) {
+    console.error("Failed to clear answers:", err);
+  }
+};
+
+// Calculate risk
+const calculateRisk = (questions: Question[], answers: Answer[]): RiskResult => {
+  let totalScore = 0;
+  let maxScore = 0;
+
+  questions.forEach((question) => {
+    const answer = answers.find((a) => a.questionId === question.id);
+    maxScore += question.weight;
+
+    if (answer) {
+      if (answer.answer === "yes" && question.yesIncreasesRisk) {
+        totalScore += question.weight;
+      } else if (answer.answer === "no" && !question.yesIncreasesRisk) {
+        // If "no" increases risk, add weight
+        totalScore += question.weight;
+      }
+    }
+  });
+
+  const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+  let level: "low" | "medium" | "high";
+  if (percentage >= 70) {
+    level = "high";
+  } else if (percentage >= 40) {
+    level = "medium";
+  } else {
+    level = "low";
+  }
+
+  return { level, percentage, score: totalScore, maxScore };
+};
+
+export default function RiskDetectionPage() {
+  const t = useTranslation();
+  const [lang] = useState(() => getLanguage());
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [result, setResult] = useState<RiskResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Load questions
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        const response = await fetch("/risk-questions.json");
+        if (!response.ok) {
+          throw new Error("Failed to load questions");
+        }
+        const data = await response.json();
+        setQuestions(data.questions || []);
+
+        // Load saved answers
+        const savedAnswers = await getSavedAnswers();
+        if (Object.keys(savedAnswers).length > 0) {
+          // Resume from saved state
+          const savedQuestions = data.questions.filter((q: Question) =>
+            Object.keys(savedAnswers).includes(q.id.toString())
+          );
+          if (savedQuestions.length > 0) {
+            setSelectedQuestions(savedQuestions.slice(0, 10));
+            const savedAnswersArray: Answer[] = Object.entries(savedAnswers).map(
+              ([questionId, answer]) => ({
+                questionId: parseInt(questionId),
+                answer: answer as "yes" | "no",
+              })
+            );
+            setAnswers(savedAnswersArray);
+            setCurrentIndex(savedAnswersArray.length);
+          }
+        } else {
+          // Start new assessment
+          const shuffled = [...data.questions].sort(() => Math.random() - 0.5);
+          setSelectedQuestions(shuffled.slice(0, 10));
+        }
+      } catch (err: any) {
+        console.error("Error loading questions:", err);
+        setError(
+          lang === "bn"
+            ? "প্রশ্ন লোড করতে ব্যর্থ হয়েছে। ইন্টারনেট সংযোগ পরীক্ষা করুন।"
+            : "Failed to load questions. Please check your internet connection."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestions();
+  }, [lang]);
+
+  const handleAnswer = async (answer: "yes" | "no") => {
+    if (!selectedQuestions[currentIndex]) return;
+
+    setSaving(true);
+    const questionId = selectedQuestions[currentIndex].id;
+    const newAnswer: Answer = { questionId, answer };
+
+    // Save to IndexedDB
+    await saveAnswer(questionId, answer);
+
+    // Update answers
+    const updatedAnswers = [...answers, newAnswer];
+    setAnswers(updatedAnswers);
+
+    // Move to next question or show result
+    if (currentIndex < selectedQuestions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      // All questions answered
+      const riskResult = calculateRisk(selectedQuestions, updatedAnswers);
+      setResult(riskResult);
+    }
+    setSaving(false);
+  };
+
+  const handleRestart = async () => {
+    await clearAnswers();
+    setAnswers([]);
+    setCurrentIndex(0);
+    setResult(null);
+    // Reshuffle questions
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    setSelectedQuestions(shuffled.slice(0, 10));
+  };
+
+  const currentQuestion = selectedQuestions[currentIndex];
+  const progress = ((currentIndex + 1) / selectedQuestions.length) * 100;
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto text-center py-16">
+          <Icon name="pending" size={48} className="mx-auto mb-4 text-blue-500 animate-spin" />
+          <p className="text-lg text-slate-600">
+            {lang === "bn" ? "প্রশ্ন লোড হচ্ছে..." : "Loading questions..."}
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto text-center py-16">
+          <Icon name="error" size={48} className="mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold text-slate-800 mb-4">
+            {lang === "bn" ? "ত্রুটি" : "Error"}
+          </h1>
+          <p className="text-lg text-slate-600 mb-8">{error}</p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            {lang === "bn" ? "পুনরায় চেষ্টা করুন" : "Try Again"}
+          </button>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (result) {
+    const riskColors = {
+      low: "from-green-500 to-emerald-500",
+      medium: "from-yellow-500 to-orange-500",
+      high: "from-red-500 to-rose-500",
+    };
+
+    const riskLabels = {
+      low: { en: "Low Risk", bn: "নিম্ন ঝুঁকি" },
+      medium: { en: "Medium Risk", bn: "মধ্যম ঝুঁকি" },
+      high: { en: "High Risk", bn: "উচ্চ ঝুঁকি" },
+    };
+
+    const riskMessages = {
+      low: {
+        en: "Your risk level is low. Continue regular check-ups and maintain a healthy lifestyle.",
+        bn: "আপনার ঝুঁকির মাত্রা কম। নিয়মিত চেক-আপ চালিয়ে যান এবং স্বাস্থ্যকর জীবনযাপন বজায় রাখুন।",
+      },
+      medium: {
+        en: "Your risk level is moderate. Please consult with your healthcare provider for personalized advice.",
+        bn: "আপনার ঝুঁকির মাত্রা মধ্যম। ব্যক্তিগত পরামর্শের জন্য আপনার স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।",
+      },
+      high: {
+        en: "Your risk level is high. Please consult with your healthcare provider immediately for proper care.",
+        bn: "আপনার ঝুঁকির মাত্রা বেশি। সঠিক যত্নের জন্য অবিলম্বে আপনার স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।",
+      },
+    };
+
+    return (
+      <Layout>
+        <div className="max-w-3xl mx-auto py-8 px-4">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">
+              {lang === "bn" ? "ঝুঁকি মূল্যায়ন ফলাফল" : "Risk Assessment Result"}
+            </h1>
+            <p className="text-slate-600">
+              {lang === "bn"
+                ? "আপনার উত্তরগুলির উপর ভিত্তি করে ঝুঁকি বিশ্লেষণ"
+                : "Risk analysis based on your answers"}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+            <div
+              className={`bg-gradient-to-r ${riskColors[result.level]} rounded-xl p-8 text-white text-center mb-6`}
+            >
+              <div className="text-6xl font-bold mb-2">{result.percentage}%</div>
+              <div className="text-2xl font-semibold">
+                {riskLabels[result.level][lang]}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="text-slate-700 leading-relaxed">
+                  {riskMessages[result.level][lang]}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-slate-600 mb-1">
+                    {lang === "bn" ? "স্কোর" : "Score"}
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {result.score} / {result.maxScore}
+                  </p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-slate-600 mb-1">
+                    {lang === "bn" ? "প্রশ্ন উত্তর দেওয়া হয়েছে" : "Questions Answered"}
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {answers.length} / {selectedQuestions.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 justify-center">
+            <button onClick={handleRestart} className="btn-primary">
+              {lang === "bn" ? "আবার শুরু করুন" : "Start Again"}
+            </button>
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="btn-secondary"
+            >
+              {lang === "bn" ? "হোমে ফিরুন" : "Back to Home"}
+            </button>
+          </div>
+
+          <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-900 flex items-start gap-2">
+              <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                {lang === "bn"
+                  ? "দ্রষ্টব্য: এটি একটি প্রাথমিক ঝুঁকি মূল্যায়ন সরঞ্জাম। এটি চিকিৎসা পরামর্শের বিকল্প নয়। গুরুতর লক্ষণ বা উদ্বেগের জন্য, অবিলম্বে একজন স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।"
+                  : "Note: This is a preliminary risk assessment tool. It is not a substitute for medical advice. For serious symptoms or concerns, please consult with a healthcare provider immediately."}
+              </span>
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">
+            {lang === "bn" ? "গর্ভাবস্থা ঝুঁকি মূল্যায়ন" : "Pregnancy Risk Assessment"}
+          </h1>
+          <p className="text-slate-600">
+            {lang === "bn"
+              ? "১০টি প্রশ্নের উত্তর দিন এবং আপনার ঝুঁকির মাত্রা জানুন"
+              : "Answer 10 questions to assess your risk level"}
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">
+              {lang === "bn" ? "অগ্রগতি" : "Progress"}
+            </span>
+            <span className="text-sm font-medium text-slate-700">
+              {currentIndex + 1} / {selectedQuestions.length}
+            </span>
+          </div>
+          <div className="w-full bg-slate-200 rounded-full h-3">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Question Card */}
+        {currentQuestion && (
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white text-2xl font-bold mb-4">
+                {currentIndex + 1}
+              </div>
+              <h2 className="text-2xl font-semibold text-slate-800 leading-relaxed">
+                {currentQuestion.text[lang]}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => handleAnswer("yes")}
+                disabled={saving}
+                className="btn-primary text-lg py-6 px-8 flex items-center justify-center gap-3 hover:scale-105 transition-transform disabled:opacity-50"
+              >
+                <Icon name="success" size={24} />
+                {currentQuestion.answers.yes[lang]}
+              </button>
+              <button
+                onClick={() => handleAnswer("no")}
+                disabled={saving}
+                className="btn-secondary text-lg py-6 px-8 flex items-center justify-center gap-3 hover:scale-105 transition-transform disabled:opacity-50"
+              >
+                <Icon name="cancel" size={24} />
+                {currentQuestion.answers.no[lang]}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Info Box */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-900 flex items-start gap-2">
+            <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
+            <span>
+              {lang === "bn"
+                ? "এই সরঞ্জামটি সম্পূর্ণ অফলাইনে কাজ করে। আপনার উত্তরগুলি স্থানীয়ভাবে সংরক্ষণ করা হয় এবং আপনি যে কোনও সময় পরীক্ষা চালিয়ে যেতে পারেন।"
+                : "This tool works completely offline. Your answers are saved locally and you can continue the assessment at any time."}
+            </span>
+          </p>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+

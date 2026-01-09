@@ -254,6 +254,15 @@ export default function Home() {
                 <p className="text-xs sm:text-sm text-neutral-600 mt-3 sm:mt-4">
                   ✓ Free AI support 24/7 • ✓ Track your pregnancy • ✓ Upload prescriptions
                 </p>
+                <div className="mt-4 pt-4 border-t border-pink-200">
+                  <Link
+                    href="/risk-detection"
+                    className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 w-full"
+                  >
+                    <Icon name="health" size={18} />
+                    <span>Risk Detection Tool (Works Offline)</span>
+                  </Link>
+                </div>
               </div>
             </div>
 

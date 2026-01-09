@@ -1,13 +1,15 @@
 // Service Worker for Offline Support
 // Version updates with each deployment to force cache refresh
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v3.0.0';
 const CACHE_NAME = `momscare-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline';
 
 // Assets to cache for offline use (only static assets, not HTML pages)
 const STATIC_ASSETS = [
   '/offline',
+  '/risk-detection',
   '/manifest.json',
+  '/risk-questions.json', // Risk detection questions
 ];
 
 // Install event - cache static assets only
@@ -75,8 +77,35 @@ self.addEventListener('fetch', (event) => {
               if (cachedResponse) {
                 return cachedResponse;
               }
-              // Show offline page for navigation requests
+              // Allow risk-detection page to work offline
+              if (url.pathname === '/risk-detection') {
+                return caches.match('/risk-detection');
+              }
+              // Show offline page for other navigation requests
               return caches.match(OFFLINE_URL);
+            });
+        })
+    );
+    return;
+  }
+  
+  // Special handling for risk-questions.json - Cache First for offline support
+  if (url.pathname === '/risk-questions.json') {
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME).then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
+              }
+              return response;
             });
         })
     );
