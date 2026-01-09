@@ -4,11 +4,14 @@ import { PropsWithChildren, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useTranslation } from "@/hooks/useTranslation";
 type Props = PropsWithChildren;
 
 export default function Layout({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslation();
   const isHome = pathname === "/";
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
@@ -98,36 +101,36 @@ export default function Layout({ children }: Props) {
       // Logged in as mother - show full navigation
       return (
         <>
-          <Link
-            href="/mother/dashboard"
-            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
-              pathname === "/mother/dashboard"
-                ? "text-pink-600 bg-pink-50 font-semibold"
-                : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
-            }`}
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/chat"
-            className={`font-medium transition-colors px-4 py-2 rounded-lg flex items-center gap-2 ${
-              pathname === "/chat"
-                ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
-                : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
-            }`}
-          >
-            <Icon name="chat" size={18} />
-            Chat
-          </Link>
-          <button
-            onClick={() => {
-              localStorage.removeItem("motherToken");
-              location.href = "/";
-            }}
-            className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            Logout
-          </button>
+            <Link
+              href="/mother/dashboard"
+              className={`font-medium transition-colors px-4 py-2 rounded-lg ${
+                pathname === "/mother/dashboard"
+                  ? "text-pink-600 bg-pink-50 font-semibold"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+              }`}
+            >
+              {t.mother.dashboard}
+            </Link>
+            <Link
+              href="/chat"
+              className={`font-medium transition-colors px-4 py-2 rounded-lg flex items-center gap-2 ${
+                pathname === "/chat"
+                  ? "bg-pink-100 text-pink-700 border-2 border-pink-300"
+                  : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
+              }`}
+            >
+              <Icon name="chat" size={18} />
+              {t.chat.title}
+            </Link>
+            <button
+              onClick={() => {
+                localStorage.removeItem("motherToken");
+                location.href = "/";
+              }}
+              className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              {t.common.logout}
+            </button>
         </>
       );
     } else if (isNurse) {
@@ -142,7 +145,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            Dashboard
+            {t.mother.dashboard}
           </Link>
           <Link
             href="/nurse/dashboard"
@@ -162,7 +165,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            Profile
+            {t.doctor.myProfile}
           </Link>
           <button
             onClick={() => {
@@ -171,7 +174,7 @@ export default function Layout({ children }: Props) {
             }}
             className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            Logout
+            {t.common.logout}
           </button>
         </>
       );
@@ -187,7 +190,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            Dashboard
+            {t.doctor.dashboard}
           </Link>
           <Link
             href="/doctor/dashboard"
@@ -197,7 +200,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            Q&A
+            {t.mother.questions}
           </Link>
           <Link
             href="/doctor/profile"
@@ -207,7 +210,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            Profile
+            {t.doctor.myProfile}
           </Link>
           <button
             onClick={() => {
@@ -216,7 +219,7 @@ export default function Layout({ children }: Props) {
             }}
             className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            Logout
+            {t.common.logout}
           </button>
         </>
       );
@@ -251,21 +254,21 @@ export default function Layout({ children }: Props) {
                   : "text-neutral-600 hover:text-pink-600"
               }`}
             >
-              Home
+              {t.common.home}
             </Link>
             <a
               href="#get-started"
               onClick={(e) => { e.preventDefault(); scrollToSection("get-started"); }}
               className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600 cursor-pointer"
             >
-              For Mothers
+              {t.home.mothersTitle}
             </a>
             <a
               href="#get-started"
               onClick={(e) => { e.preventDefault(); scrollToSection("get-started"); }}
               className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-blue-600 cursor-pointer"
             >
-              For Health Workers
+              {t.home.doctorsTitle}
             </a>
             <a
               href="#features"
@@ -279,13 +282,13 @@ export default function Layout({ children }: Props) {
               className="font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 text-neutral-600 hover:text-pink-600 hover:bg-pink-50"
             >
               <Icon name="chat" size={18} />
-              Chat
+              {t.chat.title}
             </Link>
             <Link
               href="/mother/login"
               className="text-sm font-semibold transition-all px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md hover:shadow-lg transform hover:scale-105"
             >
-              Login
+              {t.common.login}
             </Link>
           </>
         );
@@ -297,7 +300,7 @@ export default function Layout({ children }: Props) {
               href="/"
               className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600"
             >
-              Home
+              {t.common.home}
             </Link>
             <Link
               href="/chat"
@@ -308,7 +311,7 @@ export default function Layout({ children }: Props) {
               }`}
             >
               <Icon name="chat" size={18} />
-              MomsCare AI Chat
+              {t.chat.title}
             </Link>
             <Link
               href="/healthworker/login"
@@ -320,7 +323,7 @@ export default function Layout({ children }: Props) {
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
-              Login
+              {t.common.login}
             </Link>
             <Link
               href="/healthworker/register"
@@ -332,7 +335,7 @@ export default function Layout({ children }: Props) {
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
-              Register
+              {t.common.register}
             </Link>
           </>
         );
@@ -344,7 +347,7 @@ export default function Layout({ children }: Props) {
               href="/"
               className="font-medium transition-colors px-3 py-2 rounded-lg text-neutral-600 hover:text-pink-600"
             >
-              Home
+              {t.common.home}
             </Link>
             <Link
               href="/chat"
@@ -355,7 +358,7 @@ export default function Layout({ children }: Props) {
               }`}
             >
               <Icon name="chat" size={18} />
-              MomsCare AI Chat
+              {t.chat.title}
             </Link>
             <Link
               href="/mother/login"
@@ -367,7 +370,7 @@ export default function Layout({ children }: Props) {
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
-              Login
+              {t.common.login}
             </Link>
             <Link
               href="/mother/register"
@@ -379,7 +382,7 @@ export default function Layout({ children }: Props) {
                   : "text-neutral-600 hover:text-pink-600 hover:bg-pink-50 border-2 border-transparent"
               }`}
             >
-              Register
+              {t.common.register}
             </Link>
           </>
         );
@@ -402,6 +405,9 @@ export default function Layout({ children }: Props) {
             
             <nav className="hidden lg:flex items-center gap-1">
               {getNavItems()}
+              <div className="ml-2">
+                <LanguageSelector />
+              </div>
             </nav>
             
             {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
@@ -436,6 +442,9 @@ export default function Layout({ children }: Props) {
            !pathname.startsWith("/admin/dashboard") && (
             <nav className="lg:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-2">
               {getNavItems()}
+              <div className="pt-2">
+                <LanguageSelector />
+              </div>
             </nav>
           )}
         </div>

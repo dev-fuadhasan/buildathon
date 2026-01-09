@@ -10,17 +10,14 @@ export default function LanguageSelector() {
   useEffect(() => {
     const savedLang = getLanguage();
     setLang(savedLang);
-    // Show modal on first visit if no language is set
-    if (!localStorage.getItem("language")) {
-      setShowModal(true);
-    }
   }, []);
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
     setLang(newLang);
     setShowModal(false);
-    window.location.reload(); // Reload to apply translations
+    // Trigger a custom event to notify all components
+    window.dispatchEvent(new CustomEvent("languagechange", { detail: newLang }));
   };
 
   return (
