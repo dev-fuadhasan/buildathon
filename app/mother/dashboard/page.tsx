@@ -202,11 +202,7 @@ export default function MotherDashboard() {
     updatePregnancyProgress(t);
     checkDailyTask(t);
     
-    // Check questions in background (don't block dashboard)
-    // Use setTimeout to avoid blocking initial render
-    setTimeout(() => {
-      checkDailyQuestions(t);
-    }, 500);
+    // Removed checkDailyQuestions - Daily Health Questions section removed
     
     const frequentInterval = setInterval(() => {
       fetchNotifications(t);
