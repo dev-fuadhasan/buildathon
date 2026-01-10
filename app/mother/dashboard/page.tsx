@@ -766,37 +766,45 @@ export default function MotherDashboard() {
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
       
-      // Create HTML content for the report
-      const fullHTML = generateReportHTML(reportData);
-      console.log("Generated HTML length:", fullHTML.length);
+      // Create HTML content for the report (just body content, no full HTML structure)
+      const bodyHTML = generateReportBodyHTML(reportData);
+      console.log("Generated HTML length:", bodyHTML.length);
       
-      // Extract body content from full HTML
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(fullHTML, "text/html");
-      const bodyContent = doc.body.innerHTML;
-      
-      if (!bodyContent || bodyContent.trim().length === 0) {
+      if (!bodyHTML || bodyHTML.trim().length === 0) {
         throw new Error("Generated HTML is empty");
       }
       
       // Create a temporary container element
       const element = document.createElement("div");
-      element.innerHTML = bodyContent;
+      element.id = "pdf-content";
       
-      // Inject styles from head into the element
+      // Load fonts first
+      const fontLink = document.createElement("link");
+      fontLink.rel = "stylesheet";
+      fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap";
+      document.head.appendChild(fontLink);
+      
+      // Wait for fonts to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      
+      // Inject styles
       const styleElement = document.createElement("style");
       styleElement.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, div {
+        #pdf-content * { margin: 0; padding: 0; box-sizing: border-box; }
+        #pdf-content {
           font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
           font-size: 11pt;
           line-height: 1.6;
           color: #333;
           padding: 20px;
           background: white;
+          width: 210mm;
+          min-height: 297mm;
         }
-        .header {
+        #pdf-content .header {
           background: #1e40af;
           color: white;
           padding: 20px;
@@ -804,20 +812,20 @@ export default function MotherDashboard() {
           margin-bottom: 20px;
           border-radius: 8px;
         }
-        .header h1 {
+        #pdf-content .header h1 {
           font-size: 20pt;
           font-weight: 700;
           margin-bottom: 10px;
         }
-        .header-info {
+        #pdf-content .header-info {
           font-size: 9pt;
           opacity: 0.9;
         }
-        .section {
+        #pdf-content .section {
           margin-bottom: 25px;
           page-break-inside: avoid;
         }
-        .section-title {
+        #pdf-content .section-title {
           font-size: 14pt;
           font-weight: 700;
           color: #059669;
@@ -825,20 +833,20 @@ export default function MotherDashboard() {
           padding-bottom: 5px;
           border-bottom: 2px solid #059669;
         }
-        .info-row {
+        #pdf-content .info-row {
           margin-bottom: 8px;
           padding: 5px 0;
         }
-        .info-label {
+        #pdf-content .info-label {
           font-weight: 600;
           color: #555;
           display: inline-block;
           min-width: 150px;
         }
-        .info-value {
+        #pdf-content .info-value {
           color: #333;
         }
-        .analysis {
+        #pdf-content .analysis {
           background: #f8fafc;
           padding: 15px;
           border-left: 4px solid #3b82f6;
@@ -848,34 +856,37 @@ export default function MotherDashboard() {
           font-size: 10pt;
           line-height: 1.8;
         }
-        .allergy {
+        #pdf-content .allergy {
           color: #dc2626;
           font-weight: 600;
         }
-        .stats {
+        #pdf-content .stats {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 10px;
           margin: 15px 0;
         }
-        .stat-item {
+        #pdf-content .stat-item {
           background: #f1f5f9;
           padding: 10px;
           border-radius: 4px;
           text-align: center;
         }
-        .stat-value {
+        #pdf-content .stat-value {
           font-size: 16pt;
           font-weight: 700;
           color: #1e40af;
         }
-        .stat-label {
+        #pdf-content .stat-label {
           font-size: 9pt;
           color: #64748b;
           margin-top: 5px;
         }
       `;
-      element.insertBefore(styleElement, element.firstChild);
+      document.head.appendChild(styleElement);
+      
+      // Set innerHTML after styles are added
+      element.innerHTML = bodyHTML;
       
       element.style.width = "210mm";
       element.style.minHeight = "297mm";
@@ -938,7 +949,7 @@ export default function MotherDashboard() {
     }
   };
 
-  const generateReportHTML = (reportData: any): string => {
+  const generateReportBodyHTML = (reportData: any): string => {
     const formatDate = (dateStr: string) => {
       return new Date(dateStr).toLocaleString();
     };
@@ -955,106 +966,6 @@ export default function MotherDashboard() {
     };
 
     return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap');
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
-      font-size: 11pt;
-      line-height: 1.6;
-      color: #333;
-      padding: 20px;
-      background: white;
-    }
-    .header {
-      background: #1e40af;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
-      border-radius: 8px;
-    }
-    .header h1 {
-      font-size: 20pt;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-    .header-info {
-      font-size: 9pt;
-      opacity: 0.9;
-    }
-    .section {
-      margin-bottom: 25px;
-      page-break-inside: avoid;
-    }
-    .section-title {
-      font-size: 14pt;
-      font-weight: 700;
-      color: #059669;
-      margin-bottom: 12px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #059669;
-    }
-    .info-row {
-      margin-bottom: 8px;
-      padding: 5px 0;
-    }
-    .info-label {
-      font-weight: 600;
-      color: #555;
-      display: inline-block;
-      min-width: 150px;
-    }
-    .info-value {
-      color: #333;
-    }
-    .analysis {
-      background: #f8fafc;
-      padding: 15px;
-      border-left: 4px solid #3b82f6;
-      margin: 15px 0;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      font-size: 10pt;
-      line-height: 1.8;
-    }
-    .allergy {
-      color: #dc2626;
-      font-weight: 600;
-    }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin: 15px 0;
-    }
-    .stat-item {
-      background: #f1f5f9;
-      padding: 10px;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .stat-value {
-      font-size: 16pt;
-      font-weight: 700;
-      color: #1e40af;
-    }
-    .stat-label {
-      font-size: 9pt;
-      color: #64748b;
-      margin-top: 5px;
-    }
-    @media print {
-      body { padding: 10px; }
-      .section { page-break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
   <div class="header">
     <h1>COMPREHENSIVE MEDICAL REPORT</h1>
     <div class="header-info">
@@ -1161,8 +1072,6 @@ export default function MotherDashboard() {
   <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 9pt;">
     Generated by MomsCare - Comprehensive Pregnancy Care Platform
   </div>
-</body>
-</html>
     `;
   };
 
