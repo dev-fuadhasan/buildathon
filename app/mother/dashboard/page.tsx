@@ -1626,32 +1626,33 @@ export default function MotherDashboard() {
 
           {/* Doctor Details Popup */}
           {selectedDoctorDetails && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">Doctor Details</h2>
+                <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Doctor Details</h2>
                   <button
                     onClick={() => setSelectedDoctorDetails(null)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 -mr-2 touch-manipulation"
+                    aria-label="Close"
                   >
                     <Icon name="close" size={24} />
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
                   {doctorDetailsLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <Icon name="sync" size={32} className="animate-spin text-pink-600" />
-                        <p className="text-gray-600">Loading doctor details...</p>
+                        <p className="text-gray-600 text-sm sm:text-base">Loading doctor details...</p>
                       </div>
                     </div>
                   ) : (
                     <>
                       {/* Doctor Info */}
-                      <div className="flex items-start gap-4 pb-4 border-b border-gray-200">
+                      <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 pb-4 border-b border-gray-200">
                         {selectedDoctorDetails.doctor.image ? (
                           <img
                             src={selectedDoctorDetails.doctor.image}
@@ -1746,10 +1747,10 @@ export default function MotherDashboard() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
                   <button
                     onClick={() => setSelectedDoctorDetails(null)}
-                    className="w-full btn-primary"
+                    className="w-full btn-primary touch-manipulation min-h-[44px]"
                   >
                     Close
                   </button>
@@ -1783,21 +1784,21 @@ export default function MotherDashboard() {
           {/* Quick navigation cards to replace tabs */}
           {showCards && (
             <section>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 {navigationCards.map((card) => {
                   const CardContent = (
-                    <div className="flex items-start gap-4">
-                      <div className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-lg flex-shrink-0`}>
-                        <Icon name={card.icon} size={24} className="text-white" />
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                        <Icon name={card.icon} size={20} className="sm:w-6 sm:h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-bold text-neutral-900">{card.title}</h3>
+                          <h3 className="text-base sm:text-lg font-bold text-neutral-900">{card.title}</h3>
                         </div>
-                        <p className="text-neutral-600 text-sm mb-2 leading-relaxed">
+                        <p className="text-neutral-600 text-xs sm:text-sm mb-2 leading-relaxed">
                           {card.description}
                         </p>
-                        <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm group-hover:gap-3 transition-all">
+                        <div className="flex items-center gap-2 text-pink-600 font-semibold text-xs sm:text-sm group-hover:gap-3 transition-all">
                           <span>{card.href ? "Open" : "Go to section"}</span>
                           <span>→</span>
                         </div>
@@ -1810,7 +1811,7 @@ export default function MotherDashboard() {
                       <Link
                         key={card.id}
                         href={card.href}
-                        className="group relative rounded-xl bg-white border-2 border-neutral-200 p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300"
+                        className="group relative rounded-xl bg-white border-2 border-neutral-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300 active:scale-[0.98]"
                         onClick={() => setShowCards(false)}
                       >
                         {CardContent}
@@ -1822,7 +1823,7 @@ export default function MotherDashboard() {
                     <button
                       key={card.id}
                       onClick={() => card.action && card.action()}
-                      className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300"
+                      className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300 active:scale-[0.98] touch-manipulation"
                     >
                       {CardContent}
                     </button>
@@ -1837,7 +1838,7 @@ export default function MotherDashboard() {
           <DashboardCard title={t.mother.yourHealthProfile}>
             {profile && (
               <form className="space-y-4" onSubmit={saveProfile}>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       {t.mother.name}
@@ -2048,7 +2049,7 @@ export default function MotherDashboard() {
                     </div>
                   </div>
                 </div>
-                <button type="submit" className="btn-primary flex items-center gap-2" disabled={loading}>
+                <button type="submit" className="btn-primary flex items-center gap-2 w-full sm:w-auto touch-manipulation min-h-[44px] justify-center sm:justify-start" disabled={loading}>
                   {loading ? t.common.loading : (
                     <>
                       <Icon name="save" size={18} />
@@ -2065,14 +2066,14 @@ export default function MotherDashboard() {
           {activeTab === "prescriptions" && (
             <DashboardCard title={t.mother.prescriptions}>
               <div className="space-y-6">
-                <div className="rounded-xl border-2 border-dashed border-pink-300 bg-gradient-to-br from-pink-50 to-rose-50 p-8 shadow-sm hover:shadow-md transition-shadow">
+                <div className="rounded-xl border-2 border-dashed border-pink-300 bg-gradient-to-br from-pink-50 to-rose-50 p-4 sm:p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow">
                   <form onSubmit={uploadPrescription} className="space-y-4">
-                    <div className="text-center mb-6">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-lg">
-                        <Icon name="upload" size={40} className="text-white" />
+                    <div className="text-center mb-4 sm:mb-6">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-lg">
+                        <Icon name="upload" size={32} className="sm:w-10 sm:h-10 text-white" />
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 mb-2">Upload Prescription for Better AI Guidance</h3>
-                      <p className="text-sm text-neutral-600">
+                      <h3 className="text-lg sm:text-xl font-bold text-neutral-900 mb-2">Upload Prescription for Better AI Guidance</h3>
+                      <p className="text-xs sm:text-sm text-neutral-600">
                         Drag and drop your prescription file here, or click to browse
                       </p>
                       <p className="text-xs text-neutral-500 mt-1">
@@ -2081,10 +2082,10 @@ export default function MotherDashboard() {
                     </div>
                     
                     {/* Upload Options */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <label className="flex flex-col items-center justify-center p-4 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <label className="flex flex-col items-center justify-center p-4 sm:p-5 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors touch-manipulation min-h-[100px] sm:min-h-[120px]">
                         <Icon name="upload" size={24} className="text-pink-600 mb-2" />
-                        <span className="text-sm font-medium text-neutral-700">Choose File</span>
+                        <span className="text-sm font-medium text-neutral-700 text-center">Choose File</span>
                         <input
                           type="file"
                           name="file"
@@ -2107,12 +2108,12 @@ export default function MotherDashboard() {
                         type="button"
                         onClick={startCamera}
                         disabled={uploading || showCamera}
-                        className="flex flex-col items-center justify-center p-4 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center justify-center p-4 sm:p-5 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[100px] sm:min-h-[120px]"
                       >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-600 mb-2">
                           <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z" fill="currentColor"/>
                         </svg>
-                        <span className="text-sm font-medium text-neutral-700">Take Photo</span>
+                        <span className="text-sm font-medium text-neutral-700 text-center">Take Photo</span>
                       </button>
                     </div>
                     
@@ -2135,7 +2136,7 @@ export default function MotherDashboard() {
                         }}
                       />
                     </div>
-                    <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-lg font-semibold" disabled={uploading}>
+                    <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" disabled={uploading}>
                       {uploading ? (
                         <>
                           <Icon name="pending" size={20} />
@@ -2153,14 +2154,15 @@ export default function MotherDashboard() {
 
                 {/* Camera Modal */}
                 {showCamera && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-                      <div className="p-6">
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-2 sm:p-4">
+                    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-auto">
+                      <div className="p-4 sm:p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-bold text-neutral-900">Take Prescription Photo</h3>
+                          <h3 className="text-lg sm:text-xl font-bold text-neutral-900">Take Prescription Photo</h3>
                           <button
                             onClick={stopCamera}
-                            className="text-neutral-500 hover:text-neutral-700"
+                            className="text-neutral-500 hover:text-neutral-700 p-2 -mr-2 touch-manipulation"
+                            aria-label="Close camera"
                           >
                             <Icon name="close" size={24} />
                           </button>
@@ -2173,7 +2175,7 @@ export default function MotherDashboard() {
                                 id="camera-video"
                                 autoPlay
                                 playsInline
-                                className="w-full h-auto max-h-[60vh]"
+                                className="w-full h-auto max-h-[50vh] sm:max-h-[60vh]"
                                 ref={(video) => {
                                   if (video && cameraStream) {
                                     video.srcObject = cameraStream;
@@ -2181,19 +2183,19 @@ export default function MotherDashboard() {
                                 }}
                               />
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
                               <button
                                 onClick={capturePhoto}
-                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 text-lg font-semibold"
+                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 sm:py-3 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]"
                               >
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg width="20" height="20" className="sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z" fill="currentColor"/>
                                 </svg>
                                 Capture Photo
                               </button>
                               <button
                                 onClick={stopCamera}
-                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6 touch-manipulation min-h-[44px]"
                               >
                                 Cancel
                               </button>
@@ -2205,14 +2207,14 @@ export default function MotherDashboard() {
                               <img
                                 src={capturedImage}
                                 alt="Captured prescription"
-                                className="w-full h-auto max-h-[60vh] mx-auto"
+                                className="w-full h-auto max-h-[50vh] sm:max-h-[60vh] mx-auto"
                               />
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
                               <button
                                 onClick={uploadCapturedImage}
                                 disabled={uploading}
-                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 text-lg font-semibold disabled:opacity-50"
+                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 text-base sm:text-lg font-semibold disabled:opacity-50 touch-manipulation min-h-[44px]"
                               >
                                 {uploading ? (
                                   <>
@@ -2230,14 +2232,14 @@ export default function MotherDashboard() {
                                 onClick={() => {
                                   setCapturedImage(null);
                                 }}
-                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-4 sm:px-6 touch-manipulation min-h-[44px]"
                                 disabled={uploading}
                               >
                                 Retake
                               </button>
                               <button
                                 onClick={stopCamera}
-                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-4 sm:px-6 touch-manipulation min-h-[44px]"
                                 disabled={uploading}
                               >
                                 Cancel
@@ -2262,32 +2264,32 @@ export default function MotherDashboard() {
                       <p className="text-sm">{t.mother.uploadPrescription}</p>
                     </div>
                   ) : (
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
                       {prescriptions.map((p) => {
                         const fileName = p.key.split("/").pop() || "prescription";
                         return (
                           <div
                             key={p.key}
-                            className="flex items-center justify-between rounded-xl border-2 border-neutral-200 bg-white p-5 hover:shadow-md hover:border-pink-300 transition-all"
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-xl border-2 border-neutral-200 bg-white p-4 sm:p-5 hover:shadow-md hover:border-pink-300 transition-all gap-3 sm:gap-0"
                           >
-                            <div className="flex items-center gap-4 flex-1 min-w-0">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-                                <Icon name="prescription" size={28} className="text-white" />
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <Icon name="prescription" size={24} className="sm:w-7 sm:h-7 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-800 truncate">{fileName}</p>
+                                <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">{fileName}</p>
                                 <p className="text-xs text-slate-500 mt-0.5">Click to view</p>
                               </div>
                             </div>
-                            <div className="flex gap-2 items-center flex-shrink-0">
+                            <div className="flex gap-2 items-center flex-shrink-0 w-full sm:w-auto">
                               <a
                                 href={p.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn-secondary text-sm px-4 py-2.5 h-[40px] flex items-center justify-center gap-1.5"
+                                className="btn-secondary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
                               >
                                 <Icon name="view" size={16} />
-                                View
+                                <span className="sm:inline">View</span>
                               </a>
                               <button
                                 onClick={safeAsync(async () => {
@@ -2319,7 +2321,7 @@ export default function MotherDashboard() {
                                   }
                                 })}
                                 disabled={deletingPrescription === p.key}
-                                className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-4 py-2.5 h-[40px] min-w-[40px]"
+                                className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] min-w-[44px] sm:min-w-[40px] touch-manipulation"
                               >
                                 {deletingPrescription === p.key ? (
                                   "..."
@@ -2343,27 +2345,27 @@ export default function MotherDashboard() {
             <div className="space-y-6">
               <DashboardCard title={t.mother.askDoctor}>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-neutral-900">Ask a Question</h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
+                    <h3 className="text-base sm:text-lg font-bold text-neutral-900">Ask a Question</h3>
                     <button 
-                      className="btn-primary flex items-center gap-2 px-6 py-2.5"
+                      className="btn-primary flex items-center gap-2 px-4 sm:px-6 py-2.5 touch-manipulation min-h-[44px] w-full sm:w-auto"
                       onClick={() => {
                         const textarea = document.querySelector('textarea');
                         if (textarea) textarea.focus();
                       }}
                     >
                       <Icon name="question" size={18} />
-                      Ask a Question
+                      <span className="text-sm sm:text-base">Ask a Question</span>
                     </button>
                   </div>
                   <textarea
-                    className="input w-full h-32 text-base"
+                    className="input w-full h-32 sm:h-36 text-base"
                     placeholder={t.mother.questionPlaceholder}
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
                     disabled={loading}
                   />
-                  <button className="btn-primary w-full flex items-center gap-2 justify-center py-4 text-lg font-semibold" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
+                  <button className="btn-primary w-full flex items-center gap-2 justify-center py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
                     {loading ? t.common.loading : (
                       <>
                         <Icon name="submit" size={20} />
@@ -2394,7 +2396,7 @@ export default function MotherDashboard() {
                           <Icon name="success" size={24} />
                           Answered Questions ({questions.filter(q => q.answer).length})
                         </h3>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
                         {questions.filter(q => q.answer).map((q) => {
                           const isReported = q.reported || q.reportStatus === "pending";
                           return (
@@ -2434,9 +2436,9 @@ export default function MotherDashboard() {
                                 </p>
                                 <p className="text-sm text-slate-700 line-clamp-2">{q.answer}</p>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <button
-                                  className="btn-secondary flex-1 text-sm"
+                                  className="btn-secondary flex-1 text-sm touch-manipulation min-h-[44px]"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     // Clear any pending timeout
@@ -2484,7 +2486,7 @@ export default function MotherDashboard() {
                                 </button>
                                 {q.answer && (
                                   <button
-                                    className={`text-sm px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
+                                    className={`text-sm px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1 touch-manipulation min-h-[44px] ${
                                       isReported
                                         ? "bg-orange-500 hover:bg-orange-600 text-white cursor-not-allowed"
                                         : "bg-red-500 hover:bg-red-600 text-white"
@@ -2640,10 +2642,10 @@ export default function MotherDashboard() {
 
         {/* Question Details Modal */}
         {selectedQuestion && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg sm:rounded-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold">Question Details</h2>
+                <h2 className="text-xl sm:text-2xl font-bold">Question Details</h2>
                 <button
                   onClick={() => {
                     // Clear any pending timeout
@@ -2654,7 +2656,8 @@ export default function MotherDashboard() {
                     setSelectedQuestion(null);
                     fetchQuestions();
                   }}
-                  className="text-slate-500 hover:text-slate-700"
+                  className="text-slate-500 hover:text-slate-700 p-2 -mr-2 touch-manipulation"
+                  aria-label="Close"
                 >
                   ✕
                 </button>
@@ -2800,7 +2803,7 @@ export default function MotherDashboard() {
 
         {/* Progress Tab */}
         {activeTab === "progress" && (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
             <DashboardCard title="Pregnancy Progress">
               {progress ? (
                 <div className="space-y-4">
@@ -2875,7 +2878,7 @@ export default function MotherDashboard() {
                   <p>Complete your profile to see progress</p>
                   <button
                     onClick={() => setActiveTab("profile")}
-                    className="btn-secondary mt-3"
+                    className="btn-secondary mt-3 touch-manipulation min-h-[44px] w-full sm:w-auto"
                   >
                     Update Profile
                   </button>
@@ -2945,12 +2948,12 @@ export default function MotherDashboard() {
                   </p>
                 </div>
                 <button
-                  className="btn-primary w-full"
+                  className="btn-primary w-full touch-manipulation min-h-[44px]"
                   onClick={saveDailyEntry}
                   disabled={loading || !newEntryText.trim()}
                 >
                   {loading ? "Saving..." : (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 justify-center">
                       <Icon name="save" size={18} />
                       Add Daily Entry
                     </span>
@@ -3007,21 +3010,21 @@ export default function MotherDashboard() {
                                       value={newEntryText}
                                       onChange={(e) => setNewEntryText(e.target.value)}
                                     />
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col sm:flex-row gap-2">
                                       <button
-                                        className="btn-primary text-sm"
+                                        className="btn-primary text-sm touch-manipulation min-h-[44px] flex-1 sm:flex-initial"
                                         onClick={() => updateDailyEntry(entry.id, newEntryText)}
                                         disabled={loading || !newEntryText.trim()}
                                       >
                                         {loading ? "Saving..." : (
-                                          <span className="flex items-center gap-1">
+                                          <span className="flex items-center gap-1 justify-center">
                                             <Icon name="save" size={16} />
                                             Save
                                           </span>
                                         )}
                                       </button>
                                       <button
-                                        className="btn-secondary text-sm"
+                                        className="btn-secondary text-sm touch-manipulation min-h-[44px] flex-1 sm:flex-initial"
                                         onClick={() => {
                                           setEditingEntryId(null);
                                           setNewEntryText("");
@@ -3087,13 +3090,13 @@ export default function MotherDashboard() {
             </span>
           }>
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1 w-full">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Choose your area
                   </label>
                   <select
-                    className="input w-full"
+                    className="input w-full text-base touch-manipulation min-h-[44px]"
                     value={doctorArea}
                     onChange={(e) => setDoctorArea(e.target.value)}
                   >
