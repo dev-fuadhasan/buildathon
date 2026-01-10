@@ -431,6 +431,14 @@ Provide this calculation FIRST, then add context.`;
           console.log(`[AI Message] Image ${idx + 1}: ${url.substring(0, 150)}...`);
         });
         
+        // CRITICAL: Groq Vision model only supports up to 5 images
+        // Limit to first 5 images to avoid API error
+        const imagesToSend = prescriptionUrls.slice(0, 5);
+        
+        if (prescriptionUrls.length > 5) {
+          console.log(`[AI Message] ⚠️ Limiting images from ${prescriptionUrls.length} to 5 (Groq Vision API limit)`);
+        }
+        
         formattedMessages.push({
           role: "user",
           content: [
@@ -438,7 +446,7 @@ Provide this calculation FIRST, then add context.`;
               type: "text" as const, 
               text: textContent,
             },
-            ...prescriptionUrls.slice(0, 10).map((url) => ({
+            ...imagesToSend.map((url) => ({
               type: "image_url" as const,
               image_url: {
                 url: url,
