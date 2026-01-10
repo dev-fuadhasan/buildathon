@@ -9,7 +9,7 @@ export interface PDFPageImage {
 
 /**
  * Convert a PDF buffer to an array of image buffers (one per page)
- * Uses pdfjs-dist v4 with proper worker configuration for Next.js serverless
+ * Uses pdfjs-dist legacy build with proper worker configuration for serverless
  * @param pdfBuffer - The PDF file as a Buffer
  * @param scale - Scale factor for image quality (default: 2.0 for good quality)
  * @returns Array of image buffers with metadata
@@ -19,42 +19,27 @@ export async function convertPdfToImages(
   scale: number = 2.0
 ): Promise<PDFPageImage[]> {
   try {
-    console.log(`[PDF Conversion] Starting conversion with pdfjs-dist v4...`);
+    console.log(`[PDF Conversion] Starting conversion...`);
     
-    // Import pdfjs-dist dynamically
-    const pdfjsLib = await import("pdfjs-dist");
+    // Use legacy build which has better Node.js/serverless support
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
     
     // Convert Buffer to Uint8Array
     const uint8Array = new Uint8Array(pdfBuffer);
     
-    // Configure worker for serverless environment
-    // Use CDN worker URL - most reliable for serverless (Vercel, etc.)
+    // Configure worker using legacy build's recommended approach
     if (typeof window === "undefined") {
+      // Legacy build uses import.meta.url for worker resolution
+      // For serverless, we'll use a CDN worker
       const version = pdfjsLib.version || "4.0.379";
+      const workerUrl = `https://unpkg.com/pdfjs-dist@${version}/legacy/build/pdf.worker.min.mjs`;
       
-      // Use unpkg CDN (more reliable than jsdelivr for serverless)
-      const workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
-      
-      // Set worker source - must be set before getDocument
+      // Set worker source
       if (pdfjsLib.GlobalWorkerOptions) {
-        // Create new object to avoid "not extensible" error
-        pdfjsLib.GlobalWorkerOptions = {
-          ...pdfjsLib.GlobalWorkerOptions,
-          workerSrc: workerSrc,
-        };
-        console.log(`[PDF Conversion] Worker source configured: ${workerSrc}`);
-      } else {
-        // Fallback: try to set it directly
-        (pdfjsLib as any).GlobalWorkerOptions = { workerSrc };
-        console.log(`[PDF Conversion] Worker source set (fallback): ${workerSrc}`);
+        // Use Object.assign to avoid "not extensible" error
+        Object.assign(pdfjsLib.GlobalWorkerOptions, { workerSrc: workerUrl });
+        console.log(`[PDF Conversion] Worker configured: ${workerUrl}`);
       }
-      
-      // Verify it's set
-      const actualWorkerSrc = pdfjsLib.GlobalWorkerOptions?.workerSrc || (pdfjsLib as any).GlobalWorkerOptions?.workerSrc;
-      if (!actualWorkerSrc) {
-        throw new Error("Failed to configure PDF.js worker - GlobalWorkerOptions.workerSrc is not set");
-      }
-      console.log(`[PDF Conversion] Verified worker source: ${actualWorkerSrc}`);
     }
     
     // Load PDF document
@@ -62,8 +47,7 @@ export async function convertPdfToImages(
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,
       useSystemFonts: true,
-      // Disable worker if CDN fails (fallback to main thread)
-      verbosity: 0, // Reduce logging
+      verbosity: 0,
     });
     
     const pdfDocument = await loadingTask.promise;
@@ -117,6 +101,12 @@ export async function convertPdfToImages(
       stack: error.stack,
       name: error.name,
     });
+    
+    // If worker error, provide helpful message
+    if (error.message?.includes("worker") || error.message?.includes("Worker") || error.message?.includes("module")) {
+      throw new Error(`PDF conversion failed: Worker configuration issue in serverless environment. Please try uploading as images (PNG/JPG) instead. Technical error: ${error.message}`);
+    }
+    
     throw new Error(`Failed to convert PDF to images: ${error.message}`);
   }
 }
