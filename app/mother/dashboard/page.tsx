@@ -2331,7 +2331,7 @@ export default function MotherDashboard() {
                       <p className="text-sm">{t.mother.uploadPrescription}</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                       {prescriptions
                         .filter((p) => p && p.key && p.url) // Filter out invalid items before mapping
                         .map((p) => {
@@ -2343,22 +2343,57 @@ export default function MotherDashboard() {
                         return (
                           <div
                             key={p.key}
-                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-xl border-2 border-neutral-200 bg-white p-4 sm:p-5 hover:shadow-md hover:border-pink-300 transition-all gap-3 sm:gap-0"
+                            className="group relative bg-white rounded-xl border-2 border-neutral-200 hover:border-pink-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
                           >
-                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-                                <Icon name="prescription" size={24} className="sm:w-7 sm:h-7 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                {isRenaming ? (
-                                  <div className="w-full">
-                                    <input
-                                      type="text"
-                                      value={renameValue}
-                                      onChange={(e) => setRenameValue(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          safeAsync(async () => {
+                            {/* Card Content */}
+                            <div className="p-5">
+                              {/* Header Section */}
+                              <div className="flex items-start gap-4 mb-4">
+                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                                  <Icon name="prescription" size={28} className="text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  {isRenaming ? (
+                                    <div className="space-y-3">
+                                      <input
+                                        type="text"
+                                        value={renameValue}
+                                        onChange={(e) => setRenameValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            safeAsync(async () => {
+                                              const encodedKey = encodeURIComponent(p.key);
+                                              const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                                method: "PATCH",
+                                                headers: {
+                                                  "Content-Type": "application/json",
+                                                  ...authHeaders(),
+                                                },
+                                                body: JSON.stringify({ customName: renameValue }),
+                                              });
+                                              if (res.ok) {
+                                                setMessage("✅ Prescription renamed successfully");
+                                                fetchPrescriptions();
+                                                setRenamingPrescription(null);
+                                                setRenameValue("");
+                                              } else {
+                                                const data = await res.json().catch(() => ({}));
+                                                setMessage(`❌ ${data.error || "Failed to rename prescription"}`);
+                                              }
+                                            })();
+                                          } else if (e.key === "Escape") {
+                                            setRenamingPrescription(null);
+                                            setRenameValue("");
+                                          }
+                                        }}
+                                        autoFocus
+                                        className="w-full px-4 py-2.5 border-2 border-pink-400 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                                        placeholder="Enter new name..."
+                                        maxLength={100}
+                                      />
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={safeAsync(async () => {
                                             const encodedKey = encodeURIComponent(p.key);
                                             const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
                                               method: "PATCH",
@@ -2377,177 +2412,159 @@ export default function MotherDashboard() {
                                               const data = await res.json().catch(() => ({}));
                                               setMessage(`❌ ${data.error || "Failed to rename prescription"}`);
                                             }
-                                          })();
-                                        } else if (e.key === "Escape") {
-                                          setRenamingPrescription(null);
-                                          setRenameValue("");
-                                        }
-                                      }}
-                                      autoFocus
-                                      className="w-full px-3 py-2 border-2 border-pink-400 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 mb-2"
-                                      placeholder="Enter new name..."
-                                      maxLength={100}
-                                    />
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={safeAsync(async () => {
-                                          const encodedKey = encodeURIComponent(p.key);
-                                          const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
-                                            method: "PATCH",
-                                            headers: {
-                                              "Content-Type": "application/json",
-                                              ...authHeaders(),
-                                            },
-                                            body: JSON.stringify({ customName: renameValue }),
-                                          });
-                                          if (res.ok) {
-                                            setMessage("✅ Prescription renamed successfully");
-                                            fetchPrescriptions();
+                                          })}
+                                          className="btn-primary px-4 py-2 text-sm font-medium"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={() => {
                                             setRenamingPrescription(null);
                                             setRenameValue("");
-                                          } else {
-                                            const data = await res.json().catch(() => ({}));
-                                            setMessage(`❌ ${data.error || "Failed to rename prescription"}`);
-                                          }
-                                        })}
-                                        className="btn-primary text-sm px-4 py-1.5 h-[36px] flex items-center justify-center"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setRenamingPrescription(null);
-                                          setRenameValue("");
-                                        }}
-                                        className="btn-secondary text-sm px-4 py-1.5 h-[36px] flex items-center justify-center"
-                                      >
-                                        Cancel
-                                      </button>
+                                          }}
+                                          className="btn-secondary px-4 py-2 text-sm font-medium"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">{displayName}</p>
-                                    {p.customName && p.customName.trim() && (
-                                      <p className="text-xs text-slate-400 mt-0.5 italic">Original: {fileName}</p>
-                                    )}
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      {isPdf && hasImages 
-                                        ? `${p.pageCount || (Array.isArray(p.imageUrls) ? p.imageUrls.length : 0)} page(s) converted to images • Click to view`
-                                        : "Click to view"}
-                                    </p>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            {!isRenaming && (
-                              <div className="flex gap-2 items-center flex-shrink-0 w-full sm:w-auto">
-                                <a
-                                  href={p.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn-secondary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
-                                >
-                                  <Icon name="view" size={16} />
-                                  <span className="sm:inline">{isPdf ? "View PDF" : "View"}</span>
-                                </a>
-                                {hasImages && (
-                                  <button
-                                    onClick={safeAsync(async () => {
-                                      // Show images in a modal
-                                      if (p.imageUrls && p.imageUrls.length > 0) {
-                                      const imageUrls = Array.isArray(p.imageUrls) ? p.imageUrls : [];
-                                      if (imageUrls.length === 0) {
-                                        setMessage("❌ No images available");
-                                        return;
-                                      }
-                                      const imagesHtml = imageUrls.map((url, idx) => 
-                                        `<div style="margin-bottom: 30px; text-align: center;">
-                                          <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${imageUrls.length}</h3>
-                                          <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
-                                        </div>`
-                                      ).join('');
-                                        const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
-                                        if (newWindow) {
-                                          newWindow.document.write(`
-                                            <!DOCTYPE html>
-                                            <html>
-                                              <head>
-                                                <title>${displayName} - Converted Images</title>
-                                                <style>
-                                                  body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-                                                  h1 { color: #333; margin-bottom: 10px; }
-                                                  p { color: #666; margin-bottom: 20px; }
-                                                </style>
-                                              </head>
-                                              <body>
-                                                <h1>${displayName}</h1>
-                                                <p><strong>${imageUrls.length} page(s)</strong> converted to images</p>
-                                                ${imagesHtml}
-                                              </body>
-                                            </html>
-                                          `);
-                                          newWindow.document.close();
-                                        }
-                                      }
-                                    })}
-                                    className="btn-primary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
-                                  >
-                                    <Icon name="view" size={16} />
-                                    <span className="sm:inline">Images ({Array.isArray(p.imageUrls) ? p.imageUrls.length : 0})</span>
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setRenamingPrescription(p.key);
-                                    setRenameValue(p.customName || fileName);
-                                  }}
-                                  className="btn-secondary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 touch-manipulation"
-                                  title="Rename prescription"
-                                >
-                                  <Icon name="edit" size={16} />
-                                  <span className="sm:inline">Rename</span>
-                                </button>
-                                <button
-                                  onClick={safeAsync(async () => {
-                                    if (!confirm("Are you sure you want to delete this prescription?")) {
-                                      return;
-                                    }
-                                    setDeletingPrescription(p.key);
-                                    try {
-                                      const encodedKey = encodeURIComponent(p.key);
-                                      const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
-                                        method: "DELETE",
-                                        headers: authHeaders(),
-                                      });
-                                      if (res.ok) {
-                                        setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
-                                        fetchPrescriptions();
-                                      } else {
-                                        let data: any = {};
-                                        try {
-                                          const text = await res.text();
-                                          data = text ? JSON.parse(text) : {};
-                                        } catch {}
-                                        setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
-                                      }
-                                    } catch (err) {
-                                      setMessage(`❌ Network error`);
-                                    } finally {
-                                      setDeletingPrescription(null);
-                                    }
-                                  })}
-                                  disabled={deletingPrescription === p.key}
-                                  className="btn-secondary text-sm bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] min-w-[44px] sm:min-w-[40px] touch-manipulation"
-                                >
-                                  {deletingPrescription === p.key ? (
-                                    "..."
                                   ) : (
-                                    <Icon name="delete" size={18} className="flex-shrink-0" />
+                                    <>
+                                      <h4 className="font-semibold text-lg text-slate-900 mb-1 break-words">{displayName}</h4>
+                                      {p.customName && p.customName.trim() && (
+                                        <p className="text-xs text-slate-400 mb-2 italic">Original: {fileName}</p>
+                                      )}
+                                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        {isPdf && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
+                                            <Icon name="file" size={12} />
+                                            PDF
+                                          </span>
+                                        )}
+                                        {hasImages && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-md font-medium">
+                                            <Icon name="view" size={12} />
+                                            {p.pageCount || (Array.isArray(p.imageUrls) ? p.imageUrls.length : 0)} page(s)
+                                          </span>
+                                        )}
+                                      </div>
+                                    </>
                                   )}
-                                </button>
+                                </div>
                               </div>
-                            )}
+
+                              {/* Action Buttons */}
+                              {!isRenaming && (
+                                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-neutral-100">
+                                  <a
+                                    href={p.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 btn-primary px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:shadow-md transition-shadow"
+                                  >
+                                    <Icon name="view" size={18} />
+                                    <span>{isPdf ? "View PDF" : "View File"}</span>
+                                  </a>
+                                  {hasImages && (
+                                    <button
+                                      onClick={safeAsync(async () => {
+                                        if (p.imageUrls && p.imageUrls.length > 0) {
+                                          const imageUrls = Array.isArray(p.imageUrls) ? p.imageUrls : [];
+                                          if (imageUrls.length === 0) {
+                                            setMessage("❌ No images available");
+                                            return;
+                                          }
+                                          const imagesHtml = imageUrls.map((url, idx) => 
+                                            `<div style="margin-bottom: 30px; text-align: center;">
+                                              <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${imageUrls.length}</h3>
+                                              <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+                                            </div>`
+                                          ).join('');
+                                          const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+                                          if (newWindow) {
+                                            newWindow.document.write(`
+                                              <!DOCTYPE html>
+                                              <html>
+                                                <head>
+                                                  <title>${displayName} - Converted Images</title>
+                                                  <style>
+                                                    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+                                                    h1 { color: #333; margin-bottom: 10px; }
+                                                    p { color: #666; margin-bottom: 20px; }
+                                                  </style>
+                                                </head>
+                                                <body>
+                                                  <h1>${displayName}</h1>
+                                                  <p><strong>${imageUrls.length} page(s)</strong> converted to images</p>
+                                                  ${imagesHtml}
+                                                </body>
+                                              </html>
+                                            `);
+                                            newWindow.document.close();
+                                          }
+                                        }
+                                      })}
+                                      className="flex-1 btn-secondary px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                                    >
+                                      <Icon name="view" size={18} />
+                                      <span>View Images</span>
+                                    </button>
+                                  )}
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setRenamingPrescription(p.key);
+                                        setRenameValue(p.customName || fileName);
+                                      }}
+                                      className="btn-secondary px-3 py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                                      title="Rename prescription"
+                                    >
+                                      <Icon name="edit" size={18} />
+                                      <span className="hidden sm:inline">Rename</span>
+                                    </button>
+                                    <button
+                                      onClick={safeAsync(async () => {
+                                        if (!confirm("Are you sure you want to delete this prescription?")) {
+                                          return;
+                                        }
+                                        setDeletingPrescription(p.key);
+                                        try {
+                                          const encodedKey = encodeURIComponent(p.key);
+                                          const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                            method: "DELETE",
+                                            headers: authHeaders(),
+                                          });
+                                          if (res.ok) {
+                                            setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
+                                            fetchPrescriptions();
+                                          } else {
+                                            let data: any = {};
+                                            try {
+                                              const text = await res.text();
+                                              data = text ? JSON.parse(text) : {};
+                                            } catch {}
+                                            setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
+                                          }
+                                        } catch (err) {
+                                          setMessage(`❌ Network error`);
+                                        } finally {
+                                          setDeletingPrescription(null);
+                                        }
+                                      })}
+                                      disabled={deletingPrescription === p.key}
+                                      className="btn-secondary px-3 py-2.5 text-sm font-medium bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center transition-colors"
+                                      title="Delete prescription"
+                                    >
+                                      {deletingPrescription === p.key ? (
+                                        <span className="text-xs">...</span>
+                                      ) : (
+                                        <Icon name="delete" size={18} />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
