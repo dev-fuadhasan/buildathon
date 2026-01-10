@@ -2332,11 +2332,9 @@ export default function MotherDashboard() {
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
-                      {prescriptions.map((p) => {
-                        // Safe property access with fallbacks
-                        if (!p || !p.key) {
-                          return null; // Skip invalid items
-                        }
+                      {prescriptions
+                        .filter((p) => p && p.key && p.url) // Filter out invalid items before mapping
+                        .map((p) => {
                         const fileName = p.key.split("/").pop() || "prescription";
                         const displayName = (p.customName && p.customName.trim()) || fileName;
                         const isPdf = p.isPdf === true || p.key.endsWith('.pdf');
