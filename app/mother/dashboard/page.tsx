@@ -54,7 +54,14 @@ type Notification = {
   createdAt: string;
 };
 
-type Prescription = { key: string; url: string };
+type Prescription = { 
+  key: string; 
+  url: string; 
+  imageUrls?: string[]; // For PDFs: converted image URLs
+  imageKeys?: string[]; // For PDFs: converted image keys
+  pageCount?: number; // For PDFs: number of pages
+  isPdf?: boolean; // Whether this is a PDF
+};
 type Comment = {
   id: string;
   authorId: string;
@@ -2302,6 +2309,8 @@ export default function MotherDashboard() {
                     <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
                       {prescriptions.map((p) => {
                         const fileName = p.key.split("/").pop() || "prescription";
+                        const isPdf = p.isPdf || p.key.endsWith('.pdf');
+                        const hasImages = p.imageUrls && p.imageUrls.length > 0;
                         return (
                           <div
                             key={p.key}
@@ -2313,7 +2322,11 @@ export default function MotherDashboard() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">{fileName}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Click to view</p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  {isPdf && hasImages 
+                                    ? `${p.pageCount || p.imageUrls?.length || 0} page(s) converted to images • Click to view`
+                                    : "Click to view"}
+                                </p>
                               </div>
                             </div>
                             <div className="flex gap-2 items-center flex-shrink-0 w-full sm:w-auto">
@@ -2324,8 +2337,49 @@ export default function MotherDashboard() {
                                 className="btn-secondary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
                               >
                                 <Icon name="view" size={16} />
-                                <span className="sm:inline">View</span>
+                                <span className="sm:inline">{isPdf ? "View PDF" : "View"}</span>
                               </a>
+                              {hasImages && (
+                                <button
+                                  onClick={safeAsync(async () => {
+                                    // Show images in a modal
+                                    if (p.imageUrls && p.imageUrls.length > 0) {
+                                      const imagesHtml = p.imageUrls.map((url, idx) => 
+                                        `<div style="margin-bottom: 30px; text-align: center;">
+                                          <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${p.imageUrls.length}</h3>
+                                          <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+                                        </div>`
+                                      ).join('');
+                                      const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+                                      if (newWindow) {
+                                        newWindow.document.write(`
+                                          <!DOCTYPE html>
+                                          <html>
+                                            <head>
+                                              <title>${fileName} - Converted Images</title>
+                                              <style>
+                                                body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+                                                h1 { color: #333; margin-bottom: 10px; }
+                                                p { color: #666; margin-bottom: 20px; }
+                                              </style>
+                                            </head>
+                                            <body>
+                                              <h1>${fileName}</h1>
+                                              <p><strong>${p.imageUrls.length} page(s)</strong> converted to images</p>
+                                              ${imagesHtml}
+                                            </body>
+                                          </html>
+                                        `);
+                                        newWindow.document.close();
+                                      }
+                                    }
+                                  })}
+                                  className="btn-primary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
+                                >
+                                  <Icon name="view" size={16} />
+                                  <span className="sm:inline">Images ({p.imageUrls?.length || 0})</span>
+                                </button>
+                              )}
                               <button
                                 onClick={safeAsync(async () => {
                                   if (!confirm("Are you sure you want to delete this prescription?")) {

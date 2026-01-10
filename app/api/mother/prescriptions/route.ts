@@ -12,13 +12,67 @@ export async function GET(req: NextRequest) {
 
   const prefix = `prescriptions/${user.id}/`;
   const items = await listObjects(prefix);
-  const enriched =
-    await Promise.all((items || []).map(async (obj) => ({
-      key: obj.Key!,
-      url: await signedUrl(obj.Key!),
-    })));
+  
+  // Group PDFs with their converted images
+  const pdfMap = new Map<string, string[]>(); // PDF key -> array of image keys
+  
+  // First pass: identify PDFs and their associated images
+  (items || []).forEach((obj) => {
+    const key = obj.Key!;
+    // Check if this is a page image (e.g., file.pdf_page1.jpg)
+    const pageMatch = key.match(/^(.+)_page(\d+)\.(jpg|jpeg|png)$/i);
+    if (pageMatch) {
+      const pdfKey = pageMatch[1]; // The base PDF key (without _pageX.jpg)
+      if (!pdfMap.has(pdfKey)) {
+        pdfMap.set(pdfKey, []);
+      }
+      pdfMap.get(pdfKey)!.push(key);
+    }
+  });
+  
+  // Sort image keys by page number
+  pdfMap.forEach((imageKeys, pdfKey) => {
+    imageKeys.sort((a, b) => {
+      const pageA = parseInt(a.match(/_page(\d+)\./)?.[1] || "0");
+      const pageB = parseInt(b.match(/_page(\d+)\./)?.[1] || "0");
+      return pageA - pageB;
+    });
+  });
+  
+  // Enrich items with imageUrls for PDFs
+  const enriched = await Promise.all((items || []).map(async (obj) => {
+    const key = obj.Key!;
+    const url = await signedUrl(key);
+    
+    // Skip page images in the main list (they'll be included as imageUrls of their PDF)
+    if (key.match(/_page\d+\.(jpg|jpeg|png)$/i)) {
+      return null; // Filter these out
+    }
+    
+    const result: any = {
+      key,
+      url,
+    };
+    
+    // If this is a PDF, add its converted images
+    if (key.endsWith('.pdf') && pdfMap.has(key)) {
+      const imageKeys = pdfMap.get(key)!;
+      result.imageUrls = await Promise.all(
+        imageKeys.map(async (imgKey) => await signedUrl(imgKey))
+      );
+      result.imageKeys = imageKeys;
+      result.pageCount = imageKeys.length;
+      result.isPdf = true;
+      console.log(`[Prescription GET] PDF ${key} has ${imageKeys.length} converted image(s)`);
+    }
+    
+    return result;
+  }));
+  
+  // Filter out nulls (page images)
+  const filtered = enriched.filter(item => item !== null);
 
-  return NextResponse.json({ items: enriched });
+  return NextResponse.json({ items: filtered });
 }
 
 export async function POST(req: NextRequest) {
