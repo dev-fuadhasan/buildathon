@@ -567,8 +567,11 @@ export async function POST(req: NextRequest) {
     // Get AI response with ONLY relevant filtered data
     let reply: string;
     try {
+      // Increase timeout for batch processing (batches can take longer)
+      const hasManyImages = prescriptionUrls && prescriptionUrls.length > 5;
+      const timeoutMs = hasManyImages ? 110000 : 30000; // 110s for batch processing, 30s for single requests
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(() => reject(new Error("Request timeout")), 30000);
+        setTimeout(() => reject(new Error("Request timeout")), timeoutMs);
       });
 
       // ✅ VECTOR SEARCH (for logged-in users)
