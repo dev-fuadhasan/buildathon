@@ -3,9 +3,9 @@
  * Analyzes journal entries and provides personalized recommendations
  */
 
-import { MotherProfile, DailyEntry, listDailyEntries, listMotherQuestions } from "./data";
+import { MotherProfile, DailyEntry, listDailyEntries, listMotherQuestions, ChatMessage } from "./data";
 import { askMomsCare } from "./momsCareChat";
-import { getCurrentTimeInTimezone } from "./pregnancyTracker";
+import { getCurrentTimeInTimezone, getCurrentDateInTimezone } from "./pregnancyTracker";
 
 /**
  * Generates AI recommendation based on journal entries, profile, prescriptions, Q&A, and past recommendations
@@ -17,11 +17,20 @@ export async function generateJournalRecommendation(
   prescriptionUrls?: string[],
   questionsAndAnswers?: Array<{ question: string; answer?: string }>,
   pastRecommendations?: string[],
-  foodTrackingStats?: string
+  dailyRoutineContext?: string,
+  chatHistory?: ChatMessage[]
 ): Promise<string> {
   try {
-    // Get recent daily entries (last 7 days, sorted by date and creation time)
+    // Filter entries to only include recent ones (within last 14 days from current date)
+    const today = getCurrentDateInTimezone(mother.timezone || "UTC");
+    const todayDate = new Date(today);
+    
     const recentEntries = dailyEntries
+      .filter(entry => {
+        const entryDate = new Date(entry.date);
+        const daysDiff = (todayDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 14; // Only entries from last 14 days
+      })
       .sort((a, b) => {
         const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateCompare !== 0) return dateCompare;
@@ -56,13 +65,19 @@ export async function generateJournalRecommendation(
     const weeksPregnant = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
     const monthsPregnant = daysPregnant ? Math.floor(daysPregnant / 30) : undefined;
     
+    // Get location from address
+    const location = mother.address || "Unknown";
+    
     const profileContext = `
 Name: ${mother.name || "N/A"}
 Age: ${mother.age || "N/A"}
 Days Pregnant: ${daysPregnant || "N/A"} (${weeksPregnant || "N/A"} weeks${monthsPregnant ? `, ${monthsPregnant} months` : ""})
 Medical Conditions: ${mother.conditions || "None"}
 Medications: ${mother.medications || "None"}
-Allergies: ${mother.allergies || "None"}
+Allergies: ${mother.allergies || "None"} - CRITICAL: Consider allergies in all recommendations
+Blood Group: ${mother.bloodGroup || "N/A"}
+Location: ${location} - Consider location-based availability and cultural preferences
+Previous Pregnancies: ${mother.previousPregnancies || 0}
 `;
     
     // Build Q&A context
@@ -78,27 +93,42 @@ Allergies: ${mother.allergies || "None"}
         })
         .join("\n\n---\n\n");
     }
+
+    // Build chat history context
+    let chatContext = "";
+    if (chatHistory && chatHistory.length > 0) {
+      // Get last 10 messages for context
+      const recentMessages = chatHistory
+        .slice(-10)
+        .map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+        .join("\n");
+      chatContext = `Recent Chat History:\n${recentMessages}`;
+    }
     
     // Create prompt based on time of day
     const timePrompt = timeOfDay === "morning"
-      ? "Good morning! Based on the mother's recent daily journal entries, profile, prescriptions (if any), and previous questions/answers, provide a brief, encouraging morning recommendation for today. Focus on: nutrition tips, activity suggestions, self-care reminders, medication compliance (if prescriptions exist), and any concerns to watch for. Keep it warm, supportive, and actionable (2-3 sentences)."
-      : "Good evening! Based on the mother's recent daily journal entries, profile, prescriptions (if any), and previous questions/answers, provide a brief, supportive evening recommendation. Focus on: rest suggestions, reflection on the day, preparation for tomorrow, medication reminders (if prescriptions exist), and any health reminders. Keep it warm, supportive, and actionable (2-3 sentences).";
+      ? "Good morning! Based on the mother's COMPLETE and UPDATED profile, recent daily journal entries (only from last 14 days), prescriptions/reports, chat conversation history, daily routine status, and previous questions/answers, provide a personalized, medically valid morning recommendation for today. Consider: current pregnancy stage, allergies (DO NOT suggest allergenic foods), medical conditions, medications, location, and all available data. Focus on: nutrition tips, activity suggestions, self-care reminders, medication compliance (if prescriptions exist), and any concerns to watch for. Keep it warm, supportive, medically accurate, and actionable (2-3 sentences). DO NOT use any predefined suggestions - generate everything based on the provided context."
+      : "Good evening! Based on the mother's COMPLETE and UPDATED profile, recent daily journal entries (only from last 14 days), prescriptions/reports, chat conversation history, daily routine status, and previous questions/answers, provide a personalized, medically valid evening recommendation. Consider: current pregnancy stage, allergies (DO NOT suggest allergenic foods), medical conditions, medications, location, and all available data. Focus on: rest suggestions, reflection on the day, preparation for tomorrow, medication reminders (if prescriptions exist), and any health reminders. Keep it warm, supportive, medically accurate, and actionable (2-3 sentences). DO NOT use any predefined suggestions - generate everything based on the provided context.";
     
-    let fullContext = `${timePrompt}\n\nProfile:\n${profileContext}\n\nRecent Journal Entries:\n${journalContext || "No entries yet. Encourage the mother to start journaling."}`;
+    let fullContext = `${timePrompt}\n\nCOMPLETE PROFILE (use all this information):\n${profileContext}\n\nRecent Journal Entries (only from last 14 days - current date: ${today}):\n${journalContext || "No recent entries. Encourage the mother to start journaling."}`;
+    
+    if (chatContext) {
+      fullContext += `\n\n${chatContext}`;
+    }
     
     if (qaContext) {
       fullContext += `\n\nRecent Questions & Answers:\n${qaContext}`;
     }
     
     if (prescriptionUrls && prescriptionUrls.length > 0) {
-      fullContext += `\n\nNote: The mother has ${prescriptionUrls.length} prescription(s) on file. Consider medication compliance and any prescription-related advice.`;
+      fullContext += `\n\nPrescriptions/Reports: The mother has ${prescriptionUrls.length} prescription/report file(s) on file. Consider medication compliance, test results, and any prescription-related advice.`;
     }
     
-    // Add food tracking stats if available
-    if (foodTrackingStats) {
-      fullContext += `\n\n${foodTrackingStats}`;
+    // Add daily routine context if available
+    if (dailyRoutineContext) {
+      fullContext += `\n\n${dailyRoutineContext}`;
       if (timeOfDay === "evening") {
-        fullContext += "In your evening recommendation, acknowledge their food tracking progress and encourage them to continue tracking meals for better nutrition monitoring.";
+        fullContext += "In your evening recommendation, acknowledge their daily routine progress and encourage them to continue tracking meals and exercises for better health monitoring.";
       }
     }
     
@@ -108,7 +138,15 @@ Allergies: ${mother.allergies || "None"}
       fullContext += `\n\nIMPORTANT: Review the past recommendations above and ensure your new recommendation is different, fresh, and provides new value. Avoid repeating similar advice, tips, or suggestions.`;
     }
     
-    fullContext += `\n\nPlease provide a personalized recommendation in the same language as the journal entries (English, Bengali, or Banglish).`;
+    fullContext += `\n\nCRITICAL REQUIREMENTS:
+1. Use ONLY the provided context - DO NOT use any predefined suggestions, tips, or recommendations
+2. All recommendations must be AI-generated based on the mother's specific profile and current data
+3. Consider current date: ${today} - only use data from recent entries (last 14 days)
+4. Consider allergies: ${mother.allergies || "None"} - DO NOT suggest anything containing allergens
+5. Consider location: ${location} - provide location-appropriate suggestions
+6. Consider medical conditions and medications
+7. Provide medically valid, personalized recommendations
+8. Use the same language as the journal entries (English, Bengali, or Banglish)`;
     
     const systemMessage = {
       role: "user",
@@ -119,15 +157,20 @@ Allergies: ${mother.allergies || "None"}
       [systemMessage],
       profileContext,
       prescriptionUrls, // Pass prescription URLs for analysis
-      mother.daysPregnant ? Math.floor(mother.daysPregnant / 7) : undefined
+      mother.daysPregnant ? Math.floor(mother.daysPregnant / 7) : undefined,
+      true, // isPersonal
+      true, // isLoggedIn
+      {
+        motherId: mother.id,
+      }
     );
     
-    return recommendation;
+    return recommendation.trim();
   } catch (err) {
     console.error("Error generating journal recommendation:", err);
-    return timeOfDay === "morning"
-      ? "Good morning! Remember to stay hydrated, eat nutritious meals, and take time for yourself today. If you have any concerns, don't hesitate to contact your healthcare provider."
-      : "Good evening! Take time to rest and relax. Make sure you're getting enough sleep and staying comfortable. Tomorrow is a new day!";
+    // Return empty string or retry - no predefined fallback
+    // The calling function should handle empty responses
+    throw new Error("Failed to generate AI recommendation. Please try again.");
   }
 }
 

@@ -1049,8 +1049,8 @@ export default function MotherDashboard() {
     },
     {
       id: "food",
-      title: "Food Recommendations",
-      description: "Get personalized daily meal suggestions and track your nutrition.",
+      title: "Daily Routine",
+      description: "Get personalized daily food and exercise suggestions based on your health profile.",
       icon: "health",
       action: () => navigateToTab("food"),
       accent: "from-orange-500 to-pink-500",
@@ -2181,7 +2181,7 @@ export default function MotherDashboard() {
           </div>
         )}
 
-        {/* Food Recommendations Tab */}
+        {/* Daily Routine Tab */}
         {activeTab === "food" && (
           <div className="space-y-6">
             <FoodRecommendations token={token} motherId={motherId} />

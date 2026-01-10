@@ -4,12 +4,14 @@ import {
   getFoodRecommendation, 
   saveFoodRecommendation, 
   listFoodRecommendations,
-  getMother 
+  getMother,
+  getChatHistory
 } from "@/lib/data";
-import { generateFoodRecommendations } from "@/lib/foodRecommendationAI";
+import { generateDailyRoutineRecommendations } from "@/lib/foodRecommendationAI";
 import { getCurrentDateInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
 import { listDailyEntries } from "@/lib/data";
+import { listObjects, signedUrl } from "@/lib/r2Client";
 import { v4 as uuid } from "uuid";
 
 /**
@@ -56,11 +58,28 @@ export async function GET(req: NextRequest) {
       // Get past recommendations for variety
       const pastRecommendations = await listFoodRecommendations(user.id);
       
+      // Get chat history
+      const chatHistory = await getChatHistory(user.id);
+      
+      // Get prescriptions
+      let prescriptionUrls: string[] = [];
+      try {
+        const prefix = `prescriptions/${user.id}/`;
+        const objects = await listObjects(prefix);
+        prescriptionUrls = await Promise.all(
+          (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
+        );
+      } catch (err) {
+        console.error("Error fetching prescriptions:", err);
+      }
+      
       // Generate new recommendations
-      const foodData = await generateFoodRecommendations(
+      const routineData = await generateDailyRoutineRecommendations(
         mother,
         dailyEntries,
-        pastRecommendations
+        pastRecommendations,
+        prescriptionUrls,
+        chatHistory?.messages
       );
 
       // Create new recommendation
@@ -69,12 +88,14 @@ export async function GET(req: NextRequest) {
         id: uuid(),
         motherId: user.id,
         date: today,
-        breakfast: foodData.breakfast,
-        lunch: foodData.lunch,
-        dinner: foodData.dinner,
+        breakfast: routineData.breakfast,
+        lunch: routineData.lunch,
+        dinner: routineData.dinner,
+        exercises: routineData.exercises,
         breakfastEaten: false,
         lunchEaten: false,
         dinnerEaten: false,
+        exercisesDone: false,
         createdAt: now,
         updatedAt: now,
       };
@@ -125,11 +146,28 @@ export async function POST(req: NextRequest) {
     // Get past recommendations for variety
     const pastRecommendations = await listFoodRecommendations(user.id);
     
+    // Get chat history
+    const chatHistory = await getChatHistory(user.id);
+    
+    // Get prescriptions
+    let prescriptionUrls: string[] = [];
+    try {
+      const prefix = `prescriptions/${user.id}/`;
+      const objects = await listObjects(prefix);
+      prescriptionUrls = await Promise.all(
+        (objects || []).slice(0, 5).map(async (obj) => await signedUrl(obj.Key!))
+      );
+    } catch (err) {
+      console.error("Error fetching prescriptions:", err);
+    }
+    
     // Generate new recommendations
-    const foodData = await generateFoodRecommendations(
+    const routineData = await generateDailyRoutineRecommendations(
       mother,
       dailyEntries,
-      pastRecommendations
+      pastRecommendations,
+      prescriptionUrls,
+      chatHistory?.messages
     );
 
     // Create or update recommendation
@@ -140,15 +178,19 @@ export async function POST(req: NextRequest) {
       id: existing?.id || uuid(),
       motherId: user.id,
       date: today,
-      breakfast: foodData.breakfast,
-      lunch: foodData.lunch,
-      dinner: foodData.dinner,
+      breakfast: routineData.breakfast,
+      lunch: routineData.lunch,
+      dinner: routineData.dinner,
+      exercises: routineData.exercises,
       breakfastEaten: existing?.breakfastEaten || false,
       lunchEaten: existing?.lunchEaten || false,
       dinnerEaten: existing?.dinnerEaten || false,
+      exercisesDone: existing?.exercisesDone || false,
       breakfastEatenAt: existing?.breakfastEatenAt,
       lunchEatenAt: existing?.lunchEatenAt,
       dinnerEatenAt: existing?.dinnerEatenAt,
+      exercisesDoneAt: existing?.exercisesDoneAt,
+      dailyReport: existing?.dailyReport,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
     };

@@ -34,6 +34,10 @@ export async function GET(req: NextRequest) {
         triggered: 0,
         skipped: 0,
       },
+      dailyReports: {
+        generated: 0,
+        skipped: 0,
+      },
       errors: [] as string[],
     };
 
@@ -63,7 +67,7 @@ export async function GET(req: NextRequest) {
         if ((hour === morningHour - 1 && minute >= 55) || (hour === morningHour && minute <= morningMinute + 5) || 
             (hour === eveningHour - 1 && minute >= 55) || (hour === eveningHour && minute <= eveningMinute + 5) ||
             (hour === questionHour - 1 && minute >= 55) || (hour === questionHour && minute <= questionMinute + 5) ||
-            (hour === 0 && minute <= 5)) {
+            (hour === 23 && minute >= 30) || (hour === 0 && minute <= 5)) {
           console.log(`[Cron] Mother ${mother.email || mother.id} - Timezone: ${timezone}, Local Time: ${hour}:${minute.toString().padStart(2, '0')}, Date: ${today}`);
         }
         
@@ -129,6 +133,38 @@ export async function GET(req: NextRequest) {
           console.log(`[Cron] ✅ Daily questions available for ${mother.email || mother.id} at ${hour}:${minute.toString().padStart(2, '0')} (${timezone})`);
         } else {
           results.questions.skipped++;
+        }
+
+        // 4. Generate daily routine report after 11:30 PM (23:30-23:35)
+        // Generate report for today's routine (the day that's ending)
+        if (hour === 23 && minute >= 30 && minute <= 35) {
+          try {
+            const { getFoodRecommendation, saveFoodRecommendation, getMother } = await import("@/lib/data");
+            const { generateDailyRoutineReport } = await import("@/lib/dailyRoutineReportAI");
+            
+            // Get today's routine to generate report for
+            const routine = await getFoodRecommendation(mother.id, today);
+            
+            if (routine && !routine.dailyReport) {
+              // Generate report only if it doesn't exist
+              const updatedMother = await getMother(mother.id);
+              if (updatedMother) {
+                const report = await generateDailyRoutineReport(routine, updatedMother);
+                routine.dailyReport = report;
+                routine.updatedAt = new Date().toISOString();
+                await saveFoodRecommendation(routine);
+                results.dailyReports.generated++;
+                console.log(`[Cron] ✅ Generated daily routine report for ${mother.email || mother.id} for ${today} (${timezone})`);
+              }
+            } else {
+              results.dailyReports.skipped++;
+            }
+          } catch (error: any) {
+            console.error(`Error generating daily routine report for ${mother.id}:`, error);
+            results.errors.push(`Daily report error for ${mother.email || mother.id}: ${error.message}`);
+          }
+        } else {
+          results.dailyReports.skipped++;
         }
         
         results.processed++;

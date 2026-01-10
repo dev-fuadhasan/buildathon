@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, getAdminSettings, getFoodRecommendation } from "@/lib/data";
+import { getMother, listDailyEntries, saveNotification, getNotifications, Notification, getAdminSettings, getFoodRecommendation, getChatHistory } from "@/lib/data";
 import { generateJournalRecommendation, shouldGenerateRecommendation } from "@/lib/journalAI";
 import { getCurrentDateInTimezone, getCurrentTimeInTimezone } from "@/lib/pregnancyTracker";
 import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
@@ -89,8 +89,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Get daily entries
-    const dailyEntries = await listDailyEntries(user.id);
+    // Get daily entries and filter to only recent ones (within last 14 days)
+    const allDailyEntries = await listDailyEntries(user.id);
+    const todayDate = new Date(today);
+    const dailyEntries = allDailyEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      const daysDiff = (todayDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24);
+      return daysDiff <= 14; // Only entries from last 14 days
+    });
     
     // Get prescriptions
     const { listObjects, signedUrl } = await import("@/lib/r2Client");
@@ -127,31 +133,44 @@ export async function POST(req: NextRequest) {
       .map(n => n.message || n.content || "")
       .filter(Boolean);
     
-    // Get today's food tracking stats
-    let foodTrackingStats = "";
+    // Get chat history for context
+    let chatHistory = null;
     try {
-      const todayFood = await getFoodRecommendation(user.id, today);
-      if (todayFood) {
+      chatHistory = await getChatHistory(user.id);
+    } catch (err) {
+      console.error("Failed to fetch chat history:", err);
+    }
+
+    // Get today's daily routine data
+    let dailyRoutineContext = "";
+    try {
+      const todayRoutine = await getFoodRecommendation(user.id, today);
+      if (todayRoutine) {
         const eatenCount = [
-          todayFood.breakfastEaten,
-          todayFood.lunchEaten,
-          todayFood.dinnerEaten,
+          todayRoutine.breakfastEaten,
+          todayRoutine.lunchEaten,
+          todayRoutine.dinnerEaten,
         ].filter(Boolean).length;
+        const exercisesDone = todayRoutine.exercisesDone || false;
         
+        dailyRoutineContext = `Daily Routine Status: `;
         if (eatenCount > 0) {
-          foodTrackingStats = `Food Tracking: The mother has marked ${eatenCount} out of 3 recommended meals as eaten today. `;
-          if (eatenCount === 3) {
-            foodTrackingStats += "All meals have been tracked. ";
-          } else {
-            foodTrackingStats += `Still ${3 - eatenCount} meal(s) remaining to track. `;
-          }
+          dailyRoutineContext += `Food: ${eatenCount}/3 meals tracked. `;
+        }
+        if (exercisesDone) {
+          dailyRoutineContext += `Exercises: Completed. `;
+        } else {
+          dailyRoutineContext += `Exercises: Not yet completed. `;
+        }
+        if (todayRoutine.dailyReport) {
+          dailyRoutineContext += `Daily report available with analysis. `;
         }
       }
     } catch (err) {
-      console.error("Failed to fetch food tracking stats:", err);
+      console.error("Failed to fetch daily routine data:", err);
     }
     
-    // Generate recommendation
+    // Generate recommendation with all context
     const recommendation = await generateJournalRecommendation(
       mother,
       dailyEntries,
@@ -159,7 +178,8 @@ export async function POST(req: NextRequest) {
       prescriptionUrls,
       questionsAndAnswers,
       pastRecommendations,
-      foodTrackingStats
+      dailyRoutineContext,
+      chatHistory?.messages
     );
 
     // Create notification

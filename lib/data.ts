@@ -241,22 +241,49 @@ export type DailyQuestionSession = {
   updatedAt: string;
 };
 
-export type FoodRecommendation = {
+export type DailyRoutine = {
   id: string;
   motherId: string;
   date: string; // YYYY-MM-DD format
   breakfast: string; // Food recommendation for breakfast
   lunch: string; // Food recommendation for lunch
   dinner: string; // Food recommendation for dinner
+  exercises: string; // Exercise recommendations
   breakfastEaten?: boolean; // Whether breakfast was eaten
   lunchEaten?: boolean; // Whether lunch was eaten
   dinnerEaten?: boolean; // Whether dinner was eaten
+  exercisesDone?: boolean; // Whether exercises were done
   breakfastEatenAt?: string; // ISO timestamp when marked as eaten
   lunchEatenAt?: string; // ISO timestamp when marked as eaten
   dinnerEatenAt?: string; // ISO timestamp when marked as eaten
+  exercisesDoneAt?: string; // ISO timestamp when marked as done
+  dailyReport?: DailyRoutineReport; // Daily report generated after 11:30 PM
   createdAt: string;
   updatedAt: string;
 };
+
+export type DailyRoutineReport = {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  foodAnalysis: {
+    eaten: string[]; // Meals that were eaten
+    notEaten: string[]; // Meals that were not eaten
+    benefits: string[]; // Benefits from eaten meals
+    negativeImpacts: string[]; // Negative impacts from not eaten meals
+    status: "good" | "moderate" | "poor"; // Overall food status
+  };
+  exerciseAnalysis: {
+    done: boolean; // Whether exercises were done
+    benefits?: string[]; // Benefits from doing exercises
+    negativeImpacts?: string[]; // Negative impacts from not doing exercises
+    status: "good" | "moderate" | "poor"; // Overall exercise status
+  };
+  overallStatus: "good" | "moderate" | "poor"; // Overall daily routine status
+  createdAt: string;
+};
+
+// Keep FoodRecommendation for backward compatibility
+export type FoodRecommendation = DailyRoutine;
 
 export type Notification = {
   id: string;

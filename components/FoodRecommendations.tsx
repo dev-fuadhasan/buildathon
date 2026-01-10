@@ -5,18 +5,40 @@ import DashboardCard from "./DashboardCard";
 import Icon from "./Icon";
 import { useTranslation } from "@/hooks/useTranslation";
 
-type FoodRecommendation = {
+type DailyRoutine = {
   id: string;
   date: string;
   breakfast: string;
   lunch: string;
   dinner: string;
+  exercises: string;
   breakfastEaten?: boolean;
   lunchEaten?: boolean;
   dinnerEaten?: boolean;
+  exercisesDone?: boolean;
   breakfastEatenAt?: string;
   lunchEatenAt?: string;
   dinnerEatenAt?: string;
+  exercisesDoneAt?: string;
+  dailyReport?: {
+    id: string;
+    date: string;
+    foodAnalysis: {
+      eaten: string[];
+      notEaten: string[];
+      benefits: string[];
+      negativeImpacts: string[];
+      status: "good" | "moderate" | "poor";
+    };
+    exerciseAnalysis: {
+      done: boolean;
+      benefits?: string[];
+      negativeImpacts?: string[];
+      status: "good" | "moderate" | "poor";
+    };
+    overallStatus: "good" | "moderate" | "poor";
+    createdAt: string;
+  };
 };
 
 type Props = {
@@ -26,7 +48,7 @@ type Props = {
 
 export default function FoodRecommendations({ token, motherId }: Props) {
   const t = useTranslation();
-  const [recommendation, setRecommendation] = useState<FoodRecommendation | null>(null);
+  const [recommendation, setRecommendation] = useState<DailyRoutine | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -88,10 +110,15 @@ export default function FoodRecommendations({ token, motherId }: Props) {
     }
   };
 
-  const toggleMeal = async (meal: "breakfast" | "lunch" | "dinner") => {
+  const toggleMeal = async (meal: "breakfast" | "lunch" | "dinner" | "exercises") => {
     if (!recommendation) return;
     
-    const currentValue = recommendation[`${meal}Eaten` as keyof FoodRecommendation] as boolean | undefined;
+    let currentValue: boolean | undefined;
+    if (meal === "exercises") {
+      currentValue = recommendation.exercisesDone;
+    } else {
+      currentValue = recommendation[`${meal}Eaten` as keyof DailyRoutine] as boolean | undefined;
+    }
     const newValue = !currentValue;
     
     setUpdating(meal);
@@ -132,25 +159,29 @@ export default function FoodRecommendations({ token, motherId }: Props) {
 
   const MealCard = ({ 
     meal, 
-    food, 
-    eaten, 
-    eatenAt 
+    content, 
+    done, 
+    doneAt,
+    isExercise = false
   }: { 
-    meal: "breakfast" | "lunch" | "dinner";
-    food: string;
-    eaten?: boolean;
-    eatenAt?: string;
+    meal: "breakfast" | "lunch" | "dinner" | "exercises";
+    content: string;
+    done?: boolean;
+    doneAt?: string;
+    isExercise?: boolean;
   }) => {
     const mealLabels = {
       breakfast: "Breakfast",
       lunch: "Lunch",
       dinner: "Dinner",
+      exercises: "Exercises",
     };
 
     const mealIcons = {
       breakfast: "morning",
       lunch: "health",
       dinner: "evening",
+      exercises: "progress",
     };
 
     const isUpdating = updating === meal;
@@ -165,19 +196,19 @@ export default function FoodRecommendations({ token, motherId }: Props) {
               </div>
               <div>
                 <h4 className="font-semibold text-slate-800 text-lg">{mealLabels[meal]}</h4>
-                {eaten && eatenAt && (
+                {done && doneAt && (
                   <p className="text-xs text-green-600 mt-0.5">
-                    Eaten at {new Date(eatenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {isExercise ? "Done" : "Eaten"} at {new Date(doneAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
               </div>
             </div>
-            <p className="text-slate-700 mb-4 leading-relaxed">{food}</p>
+            <p className="text-slate-700 mb-4 leading-relaxed">{content}</p>
             <button
               onClick={() => toggleMeal(meal)}
               disabled={isUpdating || loading}
               className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                eaten
+                done
                   ? "bg-green-50 text-green-700 border-2 border-green-300 hover:bg-green-100"
                   : "bg-slate-50 text-slate-700 border-2 border-slate-300 hover:bg-slate-100"
               } ${isUpdating ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -187,15 +218,15 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                   <Icon name="pending" size={18} />
                   Updating...
                 </>
-              ) : eaten ? (
+              ) : done ? (
                 <>
                   <Icon name="success" size={18} />
-                  Mark as Not Eaten
+                  {isExercise ? "Mark as Not Done" : "Mark as Not Eaten"}
                 </>
               ) : (
                 <>
                   <Icon name="save" size={18} />
-                  Mark as Eaten
+                  {isExercise ? "Mark as Done" : "Mark as Eaten"}
                 </>
               )}
             </button>
@@ -212,13 +243,14 @@ export default function FoodRecommendations({ token, motherId }: Props) {
     recommendation?.lunchEaten,
     recommendation?.dinnerEaten,
   ].filter(Boolean).length;
+  const exercisesDone = recommendation?.exercisesDone || false;
 
   return (
     <DashboardCard
       title={
         <span className="flex items-center gap-2">
           <Icon name="health" size={20} />
-          Daily Food Recommendations
+          Daily Routine
         </span>
       }
       action={
@@ -265,13 +297,13 @@ export default function FoodRecommendations({ token, motherId }: Props) {
         {loading ? (
           <div className="text-center py-12">
             <Icon name="pending" size={48} className="mx-auto mb-3 text-slate-300 animate-spin" />
-            <p className="text-slate-500">Loading food recommendations...</p>
+            <p className="text-slate-500">Loading daily routine...</p>
           </div>
         ) : !recommendation ? (
           <div className="text-center py-12 text-slate-500 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
             <Icon name="health" size={48} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-lg font-medium mb-2">No food recommendations for this date</p>
-            <p className="text-sm mb-4">Generate personalized food recommendations based on your pregnancy stage and health profile.</p>
+            <p className="text-lg font-medium mb-2">No daily routine for this date</p>
+            <p className="text-sm mb-4">Generate personalized food and exercise recommendations based on your pregnancy stage, health profile, allergies, and medical conditions.</p>
             <button
               onClick={generateRecommendation}
               disabled={generating}
@@ -296,38 +328,70 @@ export default function FoodRecommendations({ token, motherId }: Props) {
               <p className="text-sm text-slate-700 flex items-start gap-2">
                 <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
                 <span>
-                  <strong>AI-Powered Recommendations:</strong> These food suggestions are personalized based on your pregnancy stage, 
-                  medical conditions, allergies, and recent health journal entries. Mark meals as eaten to track your nutrition.
+                  <strong>AI-Powered Recommendations:</strong> These food and exercise suggestions are personalized based on your pregnancy stage, 
+                  medical conditions, allergies, location, chat history, prescriptions, and recent health journal entries. All recommendations are medically validated.
                 </span>
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <MealCard
-                meal="breakfast"
-                food={recommendation.breakfast}
-                eaten={recommendation.breakfastEaten}
-                eatenAt={recommendation.breakfastEatenAt}
-              />
-              <MealCard
-                meal="lunch"
-                food={recommendation.lunch}
-                eaten={recommendation.lunchEaten}
-                eatenAt={recommendation.lunchEatenAt}
-              />
-              <MealCard
-                meal="dinner"
-                food={recommendation.dinner}
-                eaten={recommendation.dinnerEaten}
-                eatenAt={recommendation.dinnerEatenAt}
-              />
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Icon name="health" size={20} />
+                Food Recommendations
+              </h3>
+              <div className="grid gap-4 md:grid-cols-3 mb-6">
+                <MealCard
+                  meal="breakfast"
+                  content={recommendation.breakfast}
+                  done={recommendation.breakfastEaten}
+                  doneAt={recommendation.breakfastEatenAt}
+                />
+                <MealCard
+                  meal="lunch"
+                  content={recommendation.lunch}
+                  done={recommendation.lunchEaten}
+                  doneAt={recommendation.lunchEatenAt}
+                />
+                <MealCard
+                  meal="dinner"
+                  content={recommendation.dinner}
+                  done={recommendation.dinnerEaten}
+                  doneAt={recommendation.dinnerEatenAt}
+                />
+              </div>
             </div>
 
-            {isToday && eatenCount === 3 && (
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Icon name="progress" size={20} />
+                Exercise Recommendations
+              </h3>
+              <div className="mb-6">
+                <MealCard
+                  meal="exercises"
+                  content={recommendation.exercises}
+                  done={recommendation.exercisesDone}
+                  doneAt={recommendation.exercisesDoneAt}
+                  isExercise={true}
+                />
+              </div>
+            </div>
+
+            {recommendation.dailyReport && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <Icon name="info" size={20} />
+                  Daily Report
+                </h3>
+                <DailyReportDisplay report={recommendation.dailyReport} />
+              </div>
+            )}
+
+            {isToday && eatenCount === 3 && exercisesDone && (
               <div className="rounded-xl bg-green-50 border-2 border-green-200 p-4">
                 <p className="text-green-700 font-medium flex items-center gap-2">
                   <Icon name="success" size={20} />
-                  Great job! You've tracked all three meals for today. Keep up the healthy eating! 🎉
+                  Great job! You've completed all meals and exercises for today. Keep up the healthy routine! 🎉
                 </p>
               </div>
             )}
@@ -335,6 +399,135 @@ export default function FoodRecommendations({ token, motherId }: Props) {
         )}
       </div>
     </DashboardCard>
+  );
+}
+
+function DailyReportDisplay({ report }: { report: DailyRoutine["dailyReport"] }) {
+  if (!report) return null;
+
+  const getStatusIcon = (status: "good" | "moderate" | "poor") => {
+    if (status === "good") {
+      return <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center">
+        <span className="text-white text-xs">✓</span>
+      </div>;
+    } else if (status === "moderate") {
+      return <div className="w-5 h-5 rounded-full bg-yellow-600 flex items-center justify-center">
+        <span className="text-white text-xs">!</span>
+      </div>;
+    } else {
+      return <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center">
+        <span className="text-white text-xs">✗</span>
+      </div>;
+    }
+  };
+
+  const getStatusColor = (status: "good" | "moderate" | "poor") => {
+    if (status === "good") return "bg-green-50 border-green-200";
+    if (status === "moderate") return "bg-yellow-50 border-yellow-200";
+    return "bg-red-50 border-red-200";
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Food Analysis */}
+      <div className={`rounded-xl border-2 p-4 ${getStatusColor(report.foodAnalysis.status)}`}>
+        <div className="flex items-center gap-2 mb-3">
+          {getStatusIcon(report.foodAnalysis.status)}
+          <h4 className="font-semibold text-slate-800">Food Analysis</h4>
+        </div>
+        
+        {report.foodAnalysis.eaten.length > 0 && (
+          <div className="mb-3">
+            <p className="text-sm font-medium text-slate-700 mb-2">✅ Meals Eaten:</p>
+            <ul className="text-sm text-slate-600 ml-4 list-disc">
+              {report.foodAnalysis.eaten.map((meal, idx) => (
+                <li key={idx}>{meal}</li>
+              ))}
+            </ul>
+            {report.foodAnalysis.benefits.length > 0 && (
+              <div className="mt-2">
+                <p className="text-sm font-medium text-green-700 mb-1">Benefits:</p>
+                <ul className="text-sm text-green-600 ml-4 list-disc">
+                  {report.foodAnalysis.benefits.map((benefit, idx) => (
+                    <li key={idx}>{benefit}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {report.foodAnalysis.notEaten.length > 0 && (
+          <div>
+            <p className="text-sm font-medium text-slate-700 mb-2">❌ Meals Not Eaten:</p>
+            <ul className="text-sm text-slate-600 ml-4 list-disc">
+              {report.foodAnalysis.notEaten.map((meal, idx) => (
+                <li key={idx}>{meal}</li>
+              ))}
+            </ul>
+            {report.foodAnalysis.negativeImpacts.length > 0 && (
+              <div className="mt-2">
+                <p className="text-sm font-medium text-red-700 mb-1">Potential Impacts:</p>
+                <ul className="text-sm text-red-600 ml-4 list-disc">
+                  {report.foodAnalysis.negativeImpacts.map((impact, idx) => (
+                    <li key={idx}>{impact}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Exercise Analysis */}
+      <div className={`rounded-xl border-2 p-4 ${getStatusColor(report.exerciseAnalysis.status)}`}>
+        <div className="flex items-center gap-2 mb-3">
+          {getStatusIcon(report.exerciseAnalysis.status)}
+          <h4 className="font-semibold text-slate-800">Exercise Analysis</h4>
+        </div>
+        
+        {report.exerciseAnalysis.done ? (
+          <div>
+            <p className="text-sm font-medium text-green-700 mb-2">✅ Exercises Completed</p>
+            {report.exerciseAnalysis.benefits && report.exerciseAnalysis.benefits.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-green-700 mb-1">Benefits:</p>
+                <ul className="text-sm text-green-600 ml-4 list-disc">
+                  {report.exerciseAnalysis.benefits.map((benefit, idx) => (
+                    <li key={idx}>{benefit}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm font-medium text-red-700 mb-2">❌ Exercises Not Completed</p>
+            {report.exerciseAnalysis.negativeImpacts && report.exerciseAnalysis.negativeImpacts.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-red-700 mb-1">Potential Impacts:</p>
+                <ul className="text-sm text-red-600 ml-4 list-disc">
+                  {report.exerciseAnalysis.negativeImpacts.map((impact, idx) => (
+                    <li key={idx}>{impact}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Overall Status */}
+      <div className={`rounded-xl border-2 p-4 ${getStatusColor(report.overallStatus)}`}>
+        <div className="flex items-center gap-2">
+          {getStatusIcon(report.overallStatus)}
+          <h4 className="font-semibold text-slate-800">Overall Daily Routine Status: {
+            report.overallStatus === "good" ? "Good" : 
+            report.overallStatus === "moderate" ? "Moderate" : "Needs Improvement"
+          }</h4>
+        </div>
+      </div>
+    </div>
   );
 }
 

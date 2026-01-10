@@ -10,8 +10,8 @@ import { getClientIP, detectTimezoneFromIP } from "@/lib/timezoneDetector";
 import { v4 as uuid } from "uuid";
 
 /**
- * PUT: Mark food as eaten/not eaten
- * Body: { meal: "breakfast" | "lunch" | "dinner", eaten: boolean, date?: string }
+ * PUT: Mark food as eaten/not eaten or exercises as done/not done
+ * Body: { meal: "breakfast" | "lunch" | "dinner" | "exercises", eaten: boolean, date?: string }
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -30,14 +30,14 @@ export async function PUT(req: NextRequest) {
 
     if (!meal || typeof eaten !== "boolean") {
       return NextResponse.json(
-        { error: "meal (breakfast/lunch/dinner) and eaten (boolean) are required" },
+        { error: "meal (breakfast/lunch/dinner/exercises) and eaten (boolean) are required" },
         { status: 400 }
       );
     }
 
-    if (!["breakfast", "lunch", "dinner"].includes(meal)) {
+    if (!["breakfast", "lunch", "dinner", "exercises"].includes(meal)) {
       return NextResponse.json(
-        { error: "meal must be 'breakfast', 'lunch', or 'dinner'" },
+        { error: "meal must be 'breakfast', 'lunch', 'dinner', or 'exercises'" },
         { status: 400 }
       );
     }
@@ -62,30 +62,40 @@ export async function PUT(req: NextRequest) {
     if (!recommendation) {
       // If no recommendation exists, return error (should generate recommendation first)
       return NextResponse.json(
-        { error: "No food recommendation found for this date. Please generate recommendations first." },
+        { error: "No daily routine recommendation found for this date. Please generate recommendations first." },
         { status: 404 }
       );
     }
 
-    // Update the meal tracking
+    // Update the meal/exercise tracking
     const now = new Date().toISOString();
-    const mealKey = `${meal}Eaten` as "breakfastEaten" | "lunchEaten" | "dinnerEaten";
-    const mealTimeKey = `${meal}EatenAt` as "breakfastEatenAt" | "lunchEatenAt" | "dinnerEatenAt";
+    
+    if (meal === "exercises") {
+      recommendation = {
+        ...recommendation,
+        exercisesDone: eaten,
+        exercisesDoneAt: eaten ? now : undefined,
+        updatedAt: now,
+      };
+    } else {
+      const mealKey = `${meal}Eaten` as "breakfastEaten" | "lunchEaten" | "dinnerEaten";
+      const mealTimeKey = `${meal}EatenAt` as "breakfastEatenAt" | "lunchEatenAt" | "dinnerEatenAt";
 
-    recommendation = {
-      ...recommendation,
-      [mealKey]: eaten,
-      [mealTimeKey]: eaten ? now : undefined,
-      updatedAt: now,
-    };
+      recommendation = {
+        ...recommendation,
+        [mealKey]: eaten,
+        [mealTimeKey]: eaten ? now : undefined,
+        updatedAt: now,
+      };
+    }
 
     await saveFoodRecommendation(recommendation);
 
     return NextResponse.json({ success: true, recommendation });
   } catch (error: any) {
-    console.error("Food tracking PUT error:", error);
+    console.error("Daily routine tracking PUT error:", error);
     return NextResponse.json(
-      { error: "Failed to update food tracking" },
+      { error: "Failed to update daily routine tracking" },
       { status: 500 }
     );
   }
