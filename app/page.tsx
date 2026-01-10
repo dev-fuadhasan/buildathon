@@ -332,8 +332,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="relative w-10 h-10 flex-shrink-0">
+              <div className="flex items-center mb-4">
+                <div className="relative w-32 h-10 flex-shrink-0">
                   <Image
                     src="/mainlogo.png"
                     alt="MomsCare Logo"
@@ -341,7 +341,6 @@ export default function Home() {
                     className="object-contain"
                   />
                 </div>
-                <span className="text-2xl font-bold text-white">MomsCare AI</span>
               </div>
               <p className="text-neutral-400 text-sm leading-relaxed max-w-md">
                 24/7 AI-powered pregnancy support at your fingertips. Get instant guidance, track your progress, and access healthcare professionals when needed.

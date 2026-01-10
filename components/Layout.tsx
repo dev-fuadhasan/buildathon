@@ -365,8 +365,8 @@ export default function Layout({ children }: Props) {
       <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-md sticky top-0 z-50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between h-16 md:h-18">
-            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-              <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+            <Link href="/" className="flex items-center group">
+              <div className="relative w-24 h-8 sm:w-32 sm:h-10 flex-shrink-0">
                 <Image
                   src="/mainlogo.png"
                   alt="MomsCare Logo"
@@ -375,7 +375,6 @@ export default function Layout({ children }: Props) {
                   priority
                 />
               </div>
-              <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
             
             <div className="flex items-center gap-2">
