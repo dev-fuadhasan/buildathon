@@ -392,51 +392,94 @@ export async function POST(req: NextRequest) {
           }
           
           // Load prescriptions
-          // Note: PDFs are converted to images, so we filter out PDF files and use image files instead
+          // CRITICAL: PDFs are converted to images, so we ONLY load image files (not PDFs)
+          // This includes:
+          // 1. Direct image uploads (.png, .jpg, .jpeg)
+          // 2. Converted PDF pages (stored as {filename}_page{number}.jpg)
           try {
             const prefix = `prescriptions/${user!.id}/`;
             const objects = await listObjects(prefix);
             
-            // Filter out PDF files and metadata.json - use only image files (PNG/JPG) for Groq analysis
-            // This includes both direct image uploads and PDF-converted images (stored as prescription.pdf_page1.jpg)
+            console.log(`[Chat] Found ${objects?.length || 0} total objects in prescriptions/${user!.id}/`);
+            
+            // Log all object keys for debugging
+            if (objects && objects.length > 0) {
+              console.log(`[Chat] All object keys found:`);
+              objects.forEach((obj, idx) => {
+                console.log(`[Chat]   ${idx + 1}. ${obj.Key} (${obj.Key?.endsWith('.pdf') ? 'PDF' : obj.Key?.match(/\.(jpg|jpeg|png)$/i) ? 'IMAGE' : 'OTHER'})`);
+              });
+            }
+            
+            // Filter to get ONLY image files - exclude PDFs and metadata.json
+            // Include: .png, .jpg, .jpeg files (both direct uploads AND converted PDF pages like _page1.jpg, _page2.jpg)
             const imageObjects = (objects || []).filter(obj => {
               const key = obj.Key || "";
-              // Exclude metadata.json and PDF files
+              
+              // Explicitly exclude PDF files and metadata
               if (key.includes('metadata.json') || key.endsWith('.pdf')) {
                 return false;
               }
-              // Include PNG and JPG files (including _page*.jpg from PDF conversions)
-              return key.endsWith('.png') || key.endsWith('.jpg') || key.endsWith('.jpeg');
+              
+              // Explicitly include ALL image files (direct uploads + converted PDF pages)
+              const isImage = key.endsWith('.png') || 
+                             key.endsWith('.jpg') || 
+                             key.endsWith('.jpeg') ||
+                             key.endsWith('.PNG') ||
+                             key.endsWith('.JPG') ||
+                             key.endsWith('.JPEG');
+              
+              return isImage;
             });
             
-            // Limit to most recent 20 images (to handle multi-page PDFs - each PDF can have multiple pages)
+            console.log(`[Chat] Filtered to ${imageObjects.length} image file(s) (excluding PDFs and metadata)`);
+            
+            if (imageObjects.length > 0) {
+              console.log(`[Chat] Image file keys:`);
+              imageObjects.forEach((obj, idx) => {
+                console.log(`[Chat]   ${idx + 1}. ${obj.Key}`);
+              });
+            }
+            
+            // Sort by most recent and limit to 30 images (to handle multiple PDFs with many pages)
             const recentImages = imageObjects
               .sort((a, b) => (b.LastModified?.getTime() || 0) - (a.LastModified?.getTime() || 0))
-              .slice(0, 20);
+              .slice(0, 30);
             
+            console.log(`[Chat] Selected ${recentImages.length} most recent image(s) for AI analysis`);
+            
+            // Generate signed URLs for all images
             allPrescriptionUrls = await Promise.all(
-              recentImages.map(async (obj) => await signedUrl(obj.Key!))
+              recentImages.map(async (obj) => {
+                try {
+                  const url = await signedUrl(obj.Key!);
+                  console.log(`[Chat] ✅ Generated signed URL for: ${obj.Key} -> ${url.substring(0, 100)}...`);
+                  return url;
+                } catch (urlError: any) {
+                  console.error(`[Chat] ❌ Failed to generate signed URL for ${obj.Key}:`, urlError.message);
+                  return null;
+                }
+              })
             );
             
-            console.log(`[Chat] Loaded ${allPrescriptionUrls.length} prescription image(s) (PDFs filtered out, includes converted PDF pages)`);
+            // Filter out any null URLs (failed to generate)
+            allPrescriptionUrls = allPrescriptionUrls.filter(url => url !== null) as string[];
+            
+            console.log(`[Chat] ✅ Successfully loaded ${allPrescriptionUrls.length} prescription image URL(s) for AI analysis`);
             if (allPrescriptionUrls.length > 0) {
-              console.log(`[Chat] Sample prescription URLs:`);
+              console.log(`[Chat] First 5 prescription URLs:`);
               allPrescriptionUrls.slice(0, 5).forEach((url, idx) => {
                 console.log(`[Chat]   ${idx + 1}. ${url.substring(0, 150)}...`);
               });
             } else {
-              console.log(`[Chat] ⚠️ No prescription images found! Checking R2 objects...`);
-              console.log(`[Chat] Total objects in prescriptions/${user!.id}/: ${objects?.length || 0}`);
-              if (objects && objects.length > 0) {
-                console.log(`[Chat] Sample object keys:`);
-                objects.slice(0, 10).forEach((obj, idx) => {
-                  console.log(`[Chat]   ${idx + 1}. ${obj.Key}`);
-                });
-              }
+              console.log(`[Chat] ⚠️ WARNING: No prescription image URLs generated! This means AI cannot access prescriptions.`);
             }
           } catch (err) {
-            console.error("Failed to fetch prescriptions:", err);
-            console.error("Prescription fetch error details:", err);
+            console.error("[Chat] ❌ CRITICAL ERROR: Failed to fetch prescriptions:", err);
+            console.error("[Chat] Error details:", {
+              message: (err as any)?.message,
+              stack: (err as any)?.stack,
+              name: (err as any)?.name,
+            });
           }
           
           // Add chat image if provided
