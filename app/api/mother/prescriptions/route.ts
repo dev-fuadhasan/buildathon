@@ -103,12 +103,21 @@ export async function POST(req: NextRequest) {
       const imageUrls: string[] = [];
       const imageKeys: string[] = [];
 
+      console.log(`[Prescription Upload] Starting upload of ${pdfImages.length} image(s) to R2...`);
+      
       for (let i = 0; i < pdfImages.length; i++) {
         const image = pdfImages[i];
         // Use .jpg extension (images are already converted to JPEG format)
         const imageKey = `${baseKey}_page${image.pageNumber}.jpg`;
         
         try {
+          // Verify image buffer exists and has data
+          if (!image.imageBuffer || image.imageBuffer.length === 0) {
+            throw new Error(`Image buffer for page ${image.pageNumber} is empty`);
+          }
+          
+          console.log(`[Prescription Upload] Uploading page ${image.pageNumber}/${pdfImages.length} to R2: ${imageKey} (${Math.round(image.imageBuffer.length / 1024)}KB)`);
+          
           await uploadFile({
             key: imageKey,
             body: image.imageBuffer, // Already JPEG format from conversion
@@ -119,12 +128,16 @@ export async function POST(req: NextRequest) {
           imageUrls.push(imageUrl);
           imageKeys.push(imageKey);
           
-          console.log(`[Prescription Upload] ✅ Page ${image.pageNumber}/${pdfImages.length} uploaded as image: ${imageKey} (${Math.round(image.imageBuffer.length / 1024)}KB)`);
+          console.log(`[Prescription Upload] ✅ Page ${image.pageNumber}/${pdfImages.length} uploaded successfully: ${imageKey}`);
+          console.log(`[Prescription Upload] Image URL: ${imageUrl.substring(0, 100)}...`);
         } catch (imageUploadError: any) {
           console.error(`[Prescription Upload] ❌ Failed to upload page ${image.pageNumber}: ${imageUploadError.message}`);
-          // Continue with other pages
+          console.error(`[Prescription Upload] Error stack:`, imageUploadError.stack);
+          // Continue with other pages but log the error
         }
       }
+      
+      console.log(`[Prescription Upload] Upload summary: ${imageUrls.length}/${pdfImages.length} images uploaded successfully`);
 
       if (imageUrls.length === 0) {
         return NextResponse.json(
