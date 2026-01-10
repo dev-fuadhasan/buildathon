@@ -132,6 +132,7 @@ export default function MotherDashboard() {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
   const [newEntryText, setNewEntryText] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -1284,15 +1285,13 @@ export default function MotherDashboard() {
 
   const uploadPrescription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const fileInput = form.elements.namedItem("file") as HTMLInputElement;
-    const file = fileInput.files?.[0];
-    if (!file) {
+    if (!selectedFile) {
       setMessage("Please select a file");
       return;
     }
     
-    await handleFileUpload(file);
+    await handleFileUpload(selectedFile);
+    setSelectedFile(null);
   };
 
   const handleFileUpload = async (file: File) => {
@@ -1329,6 +1328,7 @@ export default function MotherDashboard() {
         setMessage(`✅ ${t.mother.prescriptionUploaded}`);
         const fileInput = document.querySelector('input[name="file"]') as HTMLInputElement;
         if (fileInput) fileInput.value = "";
+        setSelectedFile(null);
         fetchPrescriptions();
         // Reset camera state
         setShowCamera(false);
@@ -2095,6 +2095,7 @@ export default function MotherDashboard() {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
+                              setSelectedFile(file);
                               // Auto-submit on file selection
                               const form = e.target.closest('form');
                               if (form) {
@@ -2117,26 +2118,7 @@ export default function MotherDashboard() {
                       </button>
                     </div>
                     
-                    <div>
-                      <input
-                        type="file"
-                        name="file"
-                        className="input w-full cursor-pointer"
-                        accept=".pdf,.png,.jpg,.jpeg"
-                        disabled={uploading}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            // Auto-submit on file selection
-                            const form = e.target.closest('form');
-                            if (form) {
-                              form.requestSubmit();
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                    <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" disabled={uploading}>
+                    <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" disabled={uploading || !selectedFile}>
                       {uploading ? (
                         <>
                           <Icon name="pending" size={20} />
