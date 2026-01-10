@@ -2437,7 +2437,7 @@ export default function MotherDashboard() {
                                       <div className="flex items-center gap-2 text-xs text-slate-500">
                                         {isPdf && (
                                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
-                                            <Icon name="file" size={12} />
+                                            <Icon name="prescription" size={12} />
                                             PDF
                                           </span>
                                         )}
@@ -2455,15 +2455,15 @@ export default function MotherDashboard() {
 
                               {/* Action Buttons */}
                               {!isRenaming && (
-                                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-neutral-100">
+                                <div className="flex flex-wrap gap-2 pt-4 border-t border-neutral-100">
                                   <a
                                     href={p.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex-1 btn-primary px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:shadow-md transition-shadow"
+                                    className="btn-primary px-3 py-1.5 text-xs font-medium flex items-center justify-center gap-1.5 hover:shadow-md transition-shadow"
                                   >
-                                    <Icon name="view" size={18} />
-                                    <span>{isPdf ? "View PDF" : "View File"}</span>
+                                    <Icon name="view" size={14} />
+                                    <span>{isPdf ? "View PDF" : "View"}</span>
                                   </a>
                                   {hasImages && (
                                     <button
@@ -2504,64 +2504,62 @@ export default function MotherDashboard() {
                                           }
                                         }
                                       })}
-                                      className="flex-1 btn-secondary px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                                      className="btn-secondary px-3 py-1.5 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-pink-50 hover:border-pink-300 transition-colors"
                                     >
-                                      <Icon name="view" size={18} />
-                                      <span>View Images</span>
+                                      <Icon name="view" size={14} />
+                                      <span>Images</span>
                                     </button>
                                   )}
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setRenamingPrescription(p.key);
-                                        setRenameValue(p.customName || fileName);
-                                      }}
-                                      className="btn-secondary px-3 py-2.5 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-pink-50 hover:border-pink-300 transition-colors"
-                                      title="Rename prescription"
-                                    >
-                                      <Icon name="edit" size={18} />
-                                      <span className="hidden sm:inline">Rename</span>
-                                    </button>
-                                    <button
-                                      onClick={safeAsync(async () => {
-                                        if (!confirm("Are you sure you want to delete this prescription?")) {
-                                          return;
+                                  <button
+                                    onClick={() => {
+                                      setRenamingPrescription(p.key);
+                                      setRenameValue(p.customName || fileName);
+                                    }}
+                                    className="btn-secondary px-3 py-1.5 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                                    title="Rename prescription"
+                                  >
+                                    <Icon name="edit" size={14} />
+                                    <span className="hidden sm:inline">Rename</span>
+                                  </button>
+                                  <button
+                                    onClick={safeAsync(async () => {
+                                      if (!confirm("Are you sure you want to delete this prescription?")) {
+                                        return;
+                                      }
+                                      setDeletingPrescription(p.key);
+                                      try {
+                                        const encodedKey = encodeURIComponent(p.key);
+                                        const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                          method: "DELETE",
+                                          headers: authHeaders(),
+                                        });
+                                        if (res.ok) {
+                                          setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
+                                          fetchPrescriptions();
+                                        } else {
+                                          let data: any = {};
+                                          try {
+                                            const text = await res.text();
+                                            data = text ? JSON.parse(text) : {};
+                                          } catch {}
+                                          setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
                                         }
-                                        setDeletingPrescription(p.key);
-                                        try {
-                                          const encodedKey = encodeURIComponent(p.key);
-                                          const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
-                                            method: "DELETE",
-                                            headers: authHeaders(),
-                                          });
-                                          if (res.ok) {
-                                            setMessage(`✅ ${t.mother.prescriptionDeleted || "Prescription deleted successfully"}`);
-                                            fetchPrescriptions();
-                                          } else {
-                                            let data: any = {};
-                                            try {
-                                              const text = await res.text();
-                                              data = text ? JSON.parse(text) : {};
-                                            } catch {}
-                                            setMessage(`❌ ${data.error || "Failed to delete prescription"}`);
-                                          }
-                                        } catch (err) {
-                                          setMessage(`❌ Network error`);
-                                        } finally {
-                                          setDeletingPrescription(null);
-                                        }
-                                      })}
-                                      disabled={deletingPrescription === p.key}
-                                      className="btn-secondary px-3 py-2.5 text-sm font-medium bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center transition-colors"
-                                      title="Delete prescription"
-                                    >
-                                      {deletingPrescription === p.key ? (
-                                        <span className="text-xs">...</span>
-                                      ) : (
-                                        <Icon name="delete" size={18} />
-                                      )}
-                                    </button>
-                                  </div>
+                                      } catch (err) {
+                                        setMessage(`❌ Network error`);
+                                      } finally {
+                                        setDeletingPrescription(null);
+                                      }
+                                    })}
+                                    disabled={deletingPrescription === p.key}
+                                    className="btn-secondary px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 border-red-200 hover:bg-red-100 disabled:opacity-50 flex items-center justify-center transition-colors"
+                                    title="Delete prescription"
+                                  >
+                                    {deletingPrescription === p.key ? (
+                                      <span className="text-xs">...</span>
+                                    ) : (
+                                      <Icon name="delete" size={14} />
+                                    )}
+                                  </button>
                                 </div>
                               )}
                             </div>
