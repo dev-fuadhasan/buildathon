@@ -768,9 +768,9 @@ export default function MotherDashboard() {
       doc.setFontSize(fontSize);
       doc.setTextColor(color);
       if (isBold) {
-        doc.setFont(undefined, "bold");
+        doc.setFont("helvetica", "bold");
       } else {
-        doc.setFont(undefined, "normal");
+        doc.setFont("helvetica", "normal");
       }
       
       const lines = doc.splitTextToSize(String(text), contentWidth);
@@ -799,13 +799,13 @@ export default function MotherDashboard() {
     doc.rect(margin, yPos - 5, contentWidth, 15, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.text("COMPREHENSIVE MEDICAL REPORT", pageWidth / 2, yPos + 5, { align: "center" });
     yPos += 15;
     
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
-    doc.setFont(undefined, "normal");
+    doc.setFont("helvetica", "normal");
     doc.text(`Generated on: ${new Date(reportData.generatedAt).toLocaleString()}`, margin, yPos);
     if (reportData.dateRange) {
       doc.text(`Report Period: ${reportData.dateRange.startDate} to ${reportData.dateRange.endDate}`, margin, yPos + 5);
