@@ -510,12 +510,11 @@ Provide this calculation FIRST, then add context.`;
       
       console.log(`[Batch Processing] Created ${batches.length} batch(es)`);
       
-      // Analyze each batch
-      const batchAnalyses: string[] = [];
+      // Analyze each batch IN PARALLEL for faster processing
+      console.log(`[Batch Processing] Processing ${batches.length} batches in parallel...`);
       
-      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
-        console.log(`[Batch Processing] Analyzing batch ${batchIndex + 1}/${batches.length} (${batch.length} images)...`);
+      const batchPromises = batches.map(async (batch, batchIndex) => {
+        console.log(`[Batch Processing] Preparing batch ${batchIndex + 1}/${batches.length} (${batch.length} images)...`);
         
         // Create messages for this batch (replace images in last message)
         const batchMessages = [...formattedMessages];
@@ -541,7 +540,7 @@ Provide this calculation FIRST, then add context.`;
           };
         }
         
-        // Analyze this batch
+        // Analyze this batch with longer timeout (60 seconds per batch)
         try {
           const batchCompletion = await Promise.race([
             groq.chat.completions.create({
@@ -556,18 +555,46 @@ Provide this calculation FIRST, then add context.`;
               ...aiParams,
               stop: ["\n\n\n\n"],
             }),
-            createTimeoutPromise(30000)
+            createTimeoutPromise(60000) // 60 seconds per batch
           ]);
           
           const batchAnalysis = batchCompletion.choices?.[0]?.message?.content?.trim() || "";
           if (batchAnalysis) {
-            batchAnalyses.push(`=== Analysis of Images ${batchIndex * 5 + 1}-${batchIndex * 5 + batch.length} ===\n${batchAnalysis}`);
             console.log(`[Batch Processing] ✅ Batch ${batchIndex + 1}/${batches.length} analyzed successfully`);
+            return {
+              success: true,
+              batchIndex: batchIndex + 1,
+              analysis: `=== Analysis of Images ${batchIndex * 5 + 1}-${batchIndex * 5 + batch.length} ===\n${batchAnalysis}`
+            };
+          } else {
+            throw new Error("Empty response from batch analysis");
           }
         } catch (batchError: any) {
           console.error(`[Batch Processing] ❌ Failed to analyze batch ${batchIndex + 1}:`, batchError.message);
-          batchAnalyses.push(`=== Batch ${batchIndex + 1} analysis failed ===\nError: ${batchError.message}`);
+          return {
+            success: false,
+            batchIndex: batchIndex + 1,
+            analysis: `=== Batch ${batchIndex + 1} analysis failed ===\nError: ${batchError.message}`
+          };
         }
+      });
+      
+      // Wait for all batches to complete (parallel processing)
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Collect successful analyses
+      const batchAnalyses = batchResults
+        .filter(result => result.success)
+        .sort((a, b) => a.batchIndex - b.batchIndex)
+        .map(result => result.analysis);
+      
+      // Include failed batches for context
+      const failedBatches = batchResults.filter(result => !result.success);
+      if (failedBatches.length > 0) {
+        console.warn(`[Batch Processing] ⚠️ ${failedBatches.length} batch(es) failed out of ${batches.length} total`);
+        failedBatches.forEach(failed => {
+          batchAnalyses.push(failed.analysis);
+        });
       }
       
       // Combine all batch analyses into final summary

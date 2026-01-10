@@ -14,8 +14,8 @@ function formatSearchResultsForContext(results: any[]): string {
     .join('\n---\n');
 }
 
-// Increase timeout for chat API (60 seconds)
-export const maxDuration = 60;
+// Increase timeout for chat API (120 seconds for batch processing)
+export const maxDuration = 120;
 
 // Helper to clean and deduplicate messages
 function cleanMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
