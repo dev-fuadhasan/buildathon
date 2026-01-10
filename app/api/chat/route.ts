@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
     
     // ⚠️ LOG: Check if embedding was provided
     if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
-      console.log('[Chat API] ✅ Client embedding available (384-d) - will use semantic search');
+      console.log('[Chat API] ✅ Client embedding available (384-d) - will use client-side semantic search');
     } else {
-      console.log('[Chat API] ⚠️ Client embedding unavailable - using keyword-only search as fallback');
+      console.log('[Chat API] ⚠️ Client embedding unavailable - will use SERVER-SIDE semantic search instead (Hugging Face)');
     }
 
     // Check if user is logged in
