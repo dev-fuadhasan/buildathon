@@ -483,7 +483,7 @@ Provide this calculation FIRST, then add context.`;
     if (prescriptionUrls && prescriptionUrls.length > 0 && !hasImages) {
       console.error(`[AI Model] ⚠️⚠️⚠️ CRITICAL ERROR: Have ${prescriptionUrls.length} prescription URLs but hasImages is false!`);
     }
-    
+
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
     const aiParams = {
       temperature: 0.5,
@@ -579,23 +579,50 @@ Provide this calculation FIRST, then add context.`;
         }
       });
       
-      // Wait for all batches to complete (parallel processing)
-      const batchResults = await Promise.all(batchPromises);
+      // Wait for all batches to complete (parallel processing) with timeout
+      // Use Promise.allSettled to ensure all batches complete even if some fail
+      console.log(`[Batch Processing] Waiting for all ${batches.length} batches to complete...`);
+      const batchResults = await Promise.allSettled(batchPromises);
       
-      // Collect successful analyses
-      const batchAnalyses = batchResults
-        .filter(result => result.success)
+      // Process results
+      const successfulResults: Array<{success: boolean, batchIndex: number, analysis: string}> = [];
+      const failedResults: Array<{success: boolean, batchIndex: number, analysis: string}> = [];
+      
+      batchResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          if (result.value.success) {
+            successfulResults.push(result.value);
+            console.log(`[Batch Processing] ✅ Batch ${result.value.batchIndex} completed successfully`);
+          } else {
+            failedResults.push(result.value);
+            console.warn(`[Batch Processing] ⚠️ Batch ${result.value.batchIndex} failed: ${result.value.analysis}`);
+          }
+        } else {
+          console.error(`[Batch Processing] ❌ Batch ${index + 1} promise rejected:`, result.reason);
+          failedResults.push({
+            success: false,
+            batchIndex: index + 1,
+            analysis: `=== Batch ${index + 1} promise rejected ===\nError: ${result.reason?.message || 'Unknown error'}`
+          });
+        }
+      });
+      
+      // Collect successful analyses (sorted by batch index)
+      const batchAnalyses = successfulResults
         .sort((a, b) => a.batchIndex - b.batchIndex)
         .map(result => result.analysis);
       
       // Include failed batches for context
-      const failedBatches = batchResults.filter(result => !result.success);
-      if (failedBatches.length > 0) {
-        console.warn(`[Batch Processing] ⚠️ ${failedBatches.length} batch(es) failed out of ${batches.length} total`);
-        failedBatches.forEach(failed => {
-          batchAnalyses.push(failed.analysis);
-        });
+      if (failedResults.length > 0) {
+        console.warn(`[Batch Processing] ⚠️ ${failedResults.length} batch(es) failed out of ${batches.length} total`);
+        failedResults
+          .sort((a, b) => a.batchIndex - b.batchIndex)
+          .forEach(failed => {
+            batchAnalyses.push(failed.analysis);
+          });
       }
+      
+      console.log(`[Batch Processing] Completed: ${successfulResults.length} successful, ${failedResults.length} failed`);
       
       // Combine all batch analyses into final summary
       if (batchAnalyses.length > 0) {
@@ -635,7 +662,7 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
             ...aiParams,
             stop: ["\n\n\n\n"],
           }),
-          createTimeoutPromise(30000)
+          createTimeoutPromise(60000) // 60 seconds for final combination
         ]);
         
         reply = finalCompletion.choices?.[0]?.message?.content?.trim() || "";
@@ -645,21 +672,21 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
       }
     } else {
       // Standard single request (5 or fewer images)
-      const completion = await Promise.race([
-        groq.chat.completions.create({
-          model,
-          messages: [
-            { 
-              role: "system", 
-              content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
-            },
-            ...formattedMessages,
-          ],
-          ...aiParams,
+    const completion = await Promise.race([
+      groq.chat.completions.create({
+        model,
+        messages: [
+          { 
+            role: "system", 
+            content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
+          },
+          ...formattedMessages,
+        ],
+        ...aiParams,
           stop: ["\n\n\n\n"],
-        }),
+      }),
         createTimeoutPromise(30000)
-      ]);
+    ]);
 
       reply = completion.choices?.[0]?.message?.content?.trim() || "";
     }
