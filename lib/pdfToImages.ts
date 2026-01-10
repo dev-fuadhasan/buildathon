@@ -60,50 +60,70 @@ export async function convertPdfToImages(
     
     // Try legacy build first, fallback to regular build
     let pdfjsLib: any;
+    let pdfVersion = "5.4.530";
+    
     try {
       pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
-    } catch {
-      // Fallback to regular build
-      pdfjsLib = await import("pdfjs-dist/build/pdf.mjs" as any);
+      pdfVersion = pdfjsLib.version || pdfVersion;
+    } catch (legacyError) {
+      console.log("[PDF Conversion] Legacy build failed, trying regular build...");
+      try {
+        pdfjsLib = await import("pdfjs-dist/build/pdf.mjs" as any);
+        pdfVersion = pdfjsLib.version || pdfVersion;
+      } catch (regularError) {
+        // Last resort: try the main package
+        pdfjsLib = await import("pdfjs-dist" as any);
+        pdfVersion = pdfjsLib.version || pdfVersion;
+      }
     }
     
-    // Set up worker (disable for serverless) - MUST be set on the dynamically imported module
+    // CRITICAL: Set up GlobalWorkerOptions BEFORE calling getDocument
+    // pdfjs-dist requires this to be set, even if we don't use a worker
     if (typeof window === "undefined") {
-      // The dynamically imported module needs GlobalWorkerOptions set
-      // Try multiple ways to set it based on module structure
+      // Initialize GlobalWorkerOptions if it doesn't exist
       if (!pdfjsLib.GlobalWorkerOptions) {
-        // Create GlobalWorkerOptions if it doesn't exist
-        pdfjsLib.GlobalWorkerOptions = {};
+        pdfjsLib.GlobalWorkerOptions = {} as any;
       }
       
-      // Set worker source to empty string to disable worker (use main thread)
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      // Use CDN worker URL - this is the most reliable for serverless
+      const cdnWorkerUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfVersion}/pdf.worker.min.js`;
       
-      // Also try setting it on the default export if it exists
-      if (pdfjsLib.default && !pdfjsLib.default.GlobalWorkerOptions) {
-        pdfjsLib.default.GlobalWorkerOptions = { workerSrc: "" };
+      // Set worker source - try multiple locations to ensure it's set
+      pdfjsLib.GlobalWorkerOptions.workerSrc = cdnWorkerUrl;
+      
+      // Also set on default export if it exists
+      if (pdfjsLib.default) {
+        if (!pdfjsLib.default.GlobalWorkerOptions) {
+          pdfjsLib.default.GlobalWorkerOptions = {} as any;
+        }
+        pdfjsLib.default.GlobalWorkerOptions.workerSrc = cdnWorkerUrl;
       }
       
-      console.log(`[PDF Conversion] Worker disabled: GlobalWorkerOptions.workerSrc = "${pdfjsLib.GlobalWorkerOptions.workerSrc}"`);
+      // Set on the module itself (some versions need this)
+      (pdfjsLib as any).workerSrc = cdnWorkerUrl;
+      
+      // Verify it's set
+      const workerSrcValue = pdfjsLib.GlobalWorkerOptions?.workerSrc || 
+                            pdfjsLib.default?.GlobalWorkerOptions?.workerSrc ||
+                            (pdfjsLib as any).workerSrc ||
+                            'NOT SET';
+      
+      console.log(`[PDF Conversion] Worker configured: ${workerSrcValue}`);
+      
+      // If still not set, throw error early
+      if (workerSrcValue === 'NOT SET') {
+        throw new Error("Failed to set GlobalWorkerOptions.workerSrc - pdfjs-dist worker configuration failed");
+      }
     }
     
-    // Load the PDF document - use Uint8Array instead of Buffer
-    // Use disableWorker option if available (for some pdfjs-dist versions)
+    // Load the PDF document
     const getDocumentOptions: any = {
       data: uint8Array,
       useSystemFonts: true,
+      // Don't use disableWorker - let it use the CDN worker
     };
     
-    // Try to disable worker in options (some versions support this)
-    if (typeof window === "undefined") {
-      // Check if disableWorker option is supported
-      try {
-        getDocumentOptions.disableWorker = true;
-      } catch {
-        // If not supported, rely on GlobalWorkerOptions.workerSrc = ""
-      }
-    }
-    
+    console.log(`[PDF Conversion] Loading PDF document...`);
     const loadingTask = pdfjsLib.getDocument(getDocumentOptions);
 
     const pdfDocument = await loadingTask.promise;
