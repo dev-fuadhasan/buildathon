@@ -472,9 +472,9 @@ Provide this calculation FIRST, then add context.`;
 
     // Use a vision-capable model if we have images, otherwise use the 70B versatile model
     const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
-    const model = hasImages
-      ? "meta-llama/llama-4-maverick-17b-128e-instruct" // CORRECT Groq vision model
-      : "llama-3.3-70b-versatile"; // Text-only model for better accuracy
+    const visionModel = "meta-llama/llama-4-maverick-17b-128e-instruct"; // Groq vision model
+    const textModel = "llama-3.3-70b-versatile"; // Text-only model for better accuracy
+    const model = hasImages ? visionModel : textModel;
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
     
@@ -483,46 +483,158 @@ Provide this calculation FIRST, then add context.`;
       console.error(`[AI Model] ⚠️⚠️⚠️ CRITICAL ERROR: Have ${prescriptionUrls.length} prescription URLs but hasImages is false!`);
     }
     
-    // Log the actual message structure being sent
-    if (hasImages) {
-      const lastMessage = formattedMessages[formattedMessages.length - 1];
-      if (lastMessage && Array.isArray(lastMessage.content)) {
-        const imageCount = lastMessage.content.filter((item: any) => item.type === 'image_url').length;
-        console.log(`[AI Model] Message structure: ${formattedMessages.length} messages, last message has ${imageCount} image(s)`);
-        console.log(`[AI Model] Last message content types: ${lastMessage.content.map((item: any) => item.type).join(', ')}`);
-      }
-    }
-
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
-    // Use balanced parameters that work well for all question types
     const aiParams = {
-      temperature: 0.5, // Balanced for both factual and creative responses
-      max_tokens: 2400, // Enough for comprehensive lists and detailed answers
+      temperature: 0.5,
+      max_tokens: 2400,
       top_p: 0.9,
     };
 
-    // Create timeout wrapper to prevent 502/504 errors
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), 30000); // 30 seconds
+    // Create timeout wrapper
+    const createTimeoutPromise = (timeoutMs: number) => new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request timeout - AI response took too long")), timeoutMs);
     });
-    
-    const completion = await Promise.race([
-      groq.chat.completions.create({
-        model,
-        messages: [
-          { 
-            role: "system", 
-            content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
-          },
-          ...formattedMessages,
-        ],
-        ...aiParams,
-        stop: ["\n\n\n\n"], // Stop on excessive newlines
-      }),
-      timeoutPromise
-    ]);
 
-    const reply = completion.choices?.[0]?.message?.content;
+    let reply: string;
+
+    // BATCH PROCESSING: If more than 5 images, process in batches and combine results
+    if (hasImages && prescriptionUrls && prescriptionUrls.length > 5) {
+      console.log(`[Batch Processing] Processing ${prescriptionUrls.length} images in batches of 5...`);
+      
+      // Split images into batches of 5
+      const batches: string[][] = [];
+      for (let i = 0; i < prescriptionUrls.length; i += 5) {
+        batches.push(prescriptionUrls.slice(i, i + 5));
+      }
+      
+      console.log(`[Batch Processing] Created ${batches.length} batch(es)`);
+      
+      // Analyze each batch
+      const batchAnalyses: string[] = [];
+      
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        console.log(`[Batch Processing] Analyzing batch ${batchIndex + 1}/${batches.length} (${batch.length} images)...`);
+        
+        // Create messages for this batch (replace images in last message)
+        const batchMessages = [...formattedMessages];
+        const lastMessageIndex = batchMessages.length - 1;
+        
+        if (batchMessages[lastMessageIndex] && Array.isArray(batchMessages[lastMessageIndex].content)) {
+          // Replace images in last message with this batch's images
+          const lastMessage = batchMessages[lastMessageIndex];
+          const textContent = lastMessage.content.find((item: any) => item.type === 'text')?.text || lastUserMessage;
+          
+          batchMessages[lastMessageIndex] = {
+            role: "user",
+            content: [
+              { 
+                type: "text" as const, 
+                text: textContent + `\n\n[Analyzing images ${batchIndex * 5 + 1}-${batchIndex * 5 + batch.length} of ${prescriptionUrls.length} total images]`,
+              },
+              ...batch.map((url) => ({
+                type: "image_url" as const,
+                image_url: { url },
+              })),
+            ],
+          };
+        }
+        
+        // Analyze this batch
+        try {
+          const batchCompletion = await Promise.race([
+            groq.chat.completions.create({
+              model: visionModel,
+              messages: [
+                { 
+                  role: "system", 
+                  content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
+                },
+                ...batchMessages,
+              ],
+              ...aiParams,
+              stop: ["\n\n\n\n"],
+            }),
+            createTimeoutPromise(30000)
+          ]);
+          
+          const batchAnalysis = batchCompletion.choices?.[0]?.message?.content?.trim() || "";
+          if (batchAnalysis) {
+            batchAnalyses.push(`=== Analysis of Images ${batchIndex * 5 + 1}-${batchIndex * 5 + batch.length} ===\n${batchAnalysis}`);
+            console.log(`[Batch Processing] ✅ Batch ${batchIndex + 1}/${batches.length} analyzed successfully`);
+          }
+        } catch (batchError: any) {
+          console.error(`[Batch Processing] ❌ Failed to analyze batch ${batchIndex + 1}:`, batchError.message);
+          batchAnalyses.push(`=== Batch ${batchIndex + 1} analysis failed ===\nError: ${batchError.message}`);
+        }
+      }
+      
+      // Combine all batch analyses into final summary
+      if (batchAnalyses.length > 0) {
+        console.log(`[Batch Processing] Combining ${batchAnalyses.length} batch analyses into final summary...`);
+        
+        const combinedAnalysis = batchAnalyses.join('\n\n');
+        const combinePrompt = `You are analyzing a comprehensive medical prescription/report that was split into ${batches.length} batches for analysis.
+
+Below are the analyses from each batch:
+
+${combinedAnalysis}
+
+User's original question: "${lastUserMessage}"
+
+Please provide a COMPREHENSIVE, UNIFIED summary that combines all the information from all batches. Extract and organize:
+- ALL medication names, dosages, frequencies, durations
+- ALL test results, values, normal ranges, units  
+- ALL doctor's notes, recommendations, diagnoses
+- ALL dates, patient information, clinic/hospital names
+- Any other relevant medical information
+
+Provide a clear, organized summary that covers ALL the information from ALL the images analyzed.`;
+        
+        const finalCompletion = await Promise.race([
+          groq.chat.completions.create({
+            model: textModel, // Use text model for final combination
+            messages: [
+              { 
+                role: "system", 
+                content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
+              },
+              {
+                role: "user",
+                content: combinePrompt,
+              },
+            ],
+            ...aiParams,
+            stop: ["\n\n\n\n"],
+          }),
+          createTimeoutPromise(30000)
+        ]);
+        
+        reply = finalCompletion.choices?.[0]?.message?.content?.trim() || "";
+        console.log(`[Batch Processing] ✅ Final summary generated successfully`);
+      } else {
+        throw new Error("All batch analyses failed");
+      }
+    } else {
+      // Standard single request (5 or fewer images)
+      const completion = await Promise.race([
+        groq.chat.completions.create({
+          model,
+          messages: [
+            { 
+              role: "system", 
+              content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + calculationContext + datasetContext 
+            },
+            ...formattedMessages,
+          ],
+          ...aiParams,
+          stop: ["\n\n\n\n"],
+        }),
+        createTimeoutPromise(30000)
+      ]);
+
+      reply = completion.choices?.[0]?.message?.content?.trim() || "";
+    }
     if (!reply || reply.trim().length < 3) {
       throw new Error("No valid response from AI");
     }
