@@ -406,21 +406,30 @@ Provide this calculation FIRST, then add context.`;
       const isLastUserMessage = role === "user" && index === filteredMessages.length - 1;
       if (isLastUserMessage && prescriptionUrls && prescriptionUrls.length > 0) {
         // Determine if images are prescriptions or chat images based on context
-        const hasPrescriptionFolder = prescriptionUrls.some(url => url.includes('/prescriptions/'));
-        const hasChatImageFolder = prescriptionUrls.some(url => url.includes('/chat-images/'));
+        const hasPrescriptionFolder = prescriptionUrls.some(url => url.includes('/prescriptions/') || url.includes('prescriptions%2F'));
+        const hasChatImageFolder = prescriptionUrls.some(url => url.includes('/chat-images/') || url.includes('chat-images%2F'));
+        
+        console.log(`[AI Message] Adding ${prescriptionUrls.length} image(s) to user message`);
+        console.log(`[AI Message] Has prescription folder: ${hasPrescriptionFolder}, Has chat image folder: ${hasChatImageFolder}`);
         
         let imageContext = "";
         if (hasPrescriptionFolder && hasChatImageFolder) {
-          imageContext = `\n\n[${prescriptionUrls.length} image(s) attached: prescriptions and/or health-related photos. Please analyze them carefully.]`;
+          imageContext = `\n\n🚨 CRITICAL: ${prescriptionUrls.length} PRESCRIPTION/MEDICAL REPORT IMAGE(S) ATTACHED 🚨\n\nThese are REAL images from the user's uploaded prescription and medical report files. You MUST analyze them NOW.\n\nREQUIRED ACTIONS:\n- Extract ALL medication names, dosages, frequencies, durations\n- Extract ALL test results, values, normal ranges, units\n- Extract doctor's notes, recommendations, diagnoses\n- Extract dates, patient information, clinic/hospital names\n- If user asks for summary: Provide COMPREHENSIVE summary of ALL images\n- If user asks about prescriptions/reports: Answer based on EXACT content of images\n\nDO NOT say "I don't have access" - YOU HAVE THE IMAGES BELOW. Analyze them and answer.`;
         } else if (hasPrescriptionFolder) {
-          imageContext = `\n\n[${prescriptionUrls.length} prescription/medical report image(s) attached from user's uploaded files. These are the user's actual prescriptions and medical reports. You MUST analyze them carefully and provide specific guidance based on what you see. Extract medication names, dosages, test results, doctor's notes, dates, and any other relevant medical information. If the user asks for a summary, provide a comprehensive summary of all prescriptions/reports. DO NOT say you don't have access - you DO have access through these images.]`;
+          imageContext = `\n\n🚨 CRITICAL: ${prescriptionUrls.length} PRESCRIPTION/MEDICAL REPORT IMAGE(S) ATTACHED 🚨\n\nThese are REAL images from the user's uploaded prescription and medical report files. You MUST analyze them NOW.\n\nREQUIRED ACTIONS:\n- Extract ALL medication names, dosages, frequencies, durations\n- Extract ALL test results, values, normal ranges, units\n- Extract doctor's notes, recommendations, diagnoses\n- Extract dates, patient information, clinic/hospital names\n- If user asks for summary: Provide COMPREHENSIVE summary of ALL images\n- If user asks about prescriptions/reports: Answer based on EXACT content of images\n\nDO NOT say "I don't have access" - YOU HAVE THE IMAGES BELOW. Analyze them and answer.`;
         } else if (hasChatImageFolder) {
           imageContext = `\n\n[Health-related image attached. Please analyze it in context of the question.]`;
         } else {
-          imageContext = `\n\n[${prescriptionUrls.length} medical image(s) attached.]`;
+          imageContext = `\n\n[${prescriptionUrls.length} medical image(s) attached. Please analyze them carefully.]`;
         }
         
         const textContent = content + imageContext;
+        
+        // Log the URLs being sent (first 3)
+        console.log(`[AI Message] Sending ${prescriptionUrls.length} image URL(s) to Groq Vision API`);
+        prescriptionUrls.slice(0, 3).forEach((url, idx) => {
+          console.log(`[AI Message] Image ${idx + 1}: ${url.substring(0, 150)}...`);
+        });
         
         formattedMessages.push({
           role: "user",
@@ -429,7 +438,7 @@ Provide this calculation FIRST, then add context.`;
               type: "text" as const, 
               text: textContent,
             },
-            ...prescriptionUrls.slice(0, 5).map((url) => ({
+            ...prescriptionUrls.slice(0, 10).map((url) => ({
               type: "image_url" as const,
               image_url: {
                 url: url,

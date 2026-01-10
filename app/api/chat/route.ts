@@ -451,6 +451,22 @@ export async function POST(req: NextRequest) {
       doctorQA: rawDoctorQAData,
     });
     
+    // CRITICAL FIX: If question mentions prescriptions/reports and we have prescription URLs,
+    // ALWAYS include them (even if classifier said something else)
+    const questionLower = currentUserMessage.toLowerCase();
+    const mentionsPrescriptions = questionLower.includes("prescription") || 
+                                  questionLower.includes("report") ||
+                                  questionLower.includes("প্রেসক্রিপশন") ||
+                                  questionLower.includes("রিপোর্ট") ||
+                                  questionLower.includes("summary") ||
+                                  questionLower.includes("summarize") ||
+                                  questionLower.includes("analyze");
+    
+    if (mentionsPrescriptions && isPersonal && allPrescriptionUrls.length > 0) {
+      filteredData.filteredPrescriptions = allPrescriptionUrls;
+      console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - forcing inclusion of ${allPrescriptionUrls.length} prescription image(s)`);
+    }
+    
     // STEP 4: Use ONLY filtered data
     const profileContext = filteredData.filteredProfile;
     const prescriptionUrls = filteredData.filteredPrescriptions || [];
@@ -460,8 +476,10 @@ export async function POST(req: NextRequest) {
     console.log(`[✅ FILTERED DATA] Profile: ${!!profileContext}, Prescriptions: ${prescriptionUrls.length}, Daily: ${!!dailyContext}, DoctorQA: ${!!doctorQAContext}`);
     if (prescriptionUrls.length > 0) {
       console.log(`[✅ PRESCRIPTIONS] Will send ${prescriptionUrls.length} prescription image(s) to AI for analysis`);
+      console.log(`[✅ PRESCRIPTIONS] First 3 URLs: ${prescriptionUrls.slice(0, 3).map(url => url.substring(0, 100)).join('\n')}`);
     } else {
       console.log(`[⚠️ PRESCRIPTIONS] No prescription images found - AI will not have access to user's prescriptions`);
+      console.log(`[⚠️ DEBUG] Question mentions prescriptions: ${mentionsPrescriptions}, Is personal: ${isPersonal}, All prescription URLs loaded: ${allPrescriptionUrls.length}`);
     }
     
     // Get AI response with ONLY relevant filtered data
