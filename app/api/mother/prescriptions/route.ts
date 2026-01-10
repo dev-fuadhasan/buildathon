@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
 import { listObjects, signedUrl, uploadFile } from "@/lib/r2Client";
-// Import polyfill first
-import "@/lib/pdfPolyfill";
 import { convertPdfToImages } from "@/lib/pdfToImages";
 import { v4 as uuid } from "uuid";
 
