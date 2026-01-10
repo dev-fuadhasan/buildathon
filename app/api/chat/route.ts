@@ -310,15 +310,34 @@ export async function POST(req: NextRequest) {
     console.log(`[Question Classification] Type: ${questionClassification.primary}${questionClassification.secondary ? ` + ${questionClassification.secondary}` : ''}, Personal: ${isPersonal}`);
     console.log(`[Question Classification] Question: "${currentUserMessage.substring(0, 100)}..."`);
     
-    // STEP 2: Load ALL data types separately (only if personal question)
+    // STEP 2: Load ALL data types separately
+    // CRITICAL FIX: Load prescriptions even for general questions if they mention prescriptions/reports
     let rawProfileData: string | undefined = undefined;
     let rawDailyData: string | undefined = undefined;
     let rawDoctorQAData: string | undefined = undefined;
     let allPrescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
     
+    // Check if question mentions prescriptions/reports (needed for loading prescriptions)
+    const questionLower = currentUserMessage.toLowerCase();
+    const mentionsPrescriptions = questionLower.includes("prescription") || 
+                                  questionLower.includes("report") ||
+                                  questionLower.includes("প্রেসক্রিপশন") ||
+                                  questionLower.includes("রিপোর্ট") ||
+                                  questionLower.includes("summary") ||
+                                  questionLower.includes("summarize") ||
+                                  questionLower.includes("analyze");
+    
+    // Load prescriptions if personal question OR if question mentions prescriptions
+    const shouldLoadPrescriptions = isPersonal || mentionsPrescriptions;
+    
     if (isPersonal) {
       console.log("[Data Loading] Personal question - loading all data types...");
+    } else if (mentionsPrescriptions) {
+      console.log("[Data Loading] Question mentions prescriptions/reports - loading prescriptions even though not personal...");
+    }
+    
+    if (shouldLoadPrescriptions || isPersonal) {
       
       try {
         const { getMother, listDailyEntries, listMotherQuestions } = await import("@/lib/data");
@@ -507,24 +526,16 @@ export async function POST(req: NextRequest) {
     });
     
     // CRITICAL FIX: If question mentions prescriptions/reports and we have prescription URLs,
-    // ALWAYS include them (even if classifier said something else)
-    const questionLower = currentUserMessage.toLowerCase();
-    const mentionsPrescriptions = questionLower.includes("prescription") || 
-                                  questionLower.includes("report") ||
-                                  questionLower.includes("প্রেসক্রিপশন") ||
-                                  questionLower.includes("রিপোর্ট") ||
-                                  questionLower.includes("summary") ||
-                                  questionLower.includes("summarize") ||
-                                  questionLower.includes("analyze");
-    
+    // ALWAYS include them (even if classifier said something else or question isn't personal)
     // CRITICAL: Always include prescriptions if question mentions them AND user is logged in
-    if (mentionsPrescriptions && isPersonal) {
+    if (mentionsPrescriptions) {
       if (allPrescriptionUrls.length > 0) {
         filteredData.filteredPrescriptions = allPrescriptionUrls;
         console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - forcing inclusion of ${allPrescriptionUrls.length} prescription image(s)`);
       } else {
         console.log(`[⚠️ OVERRIDE] Question mentions prescriptions but NO prescription images found!`);
         console.log(`[⚠️ DEBUG] This means user has no prescriptions uploaded or they failed to load.`);
+        console.log(`[⚠️ DEBUG] User ID: ${user!.id}, Prefix: prescriptions/${user!.id}/`);
       }
     }
     
