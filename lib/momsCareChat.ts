@@ -469,6 +469,21 @@ Provide this calculation FIRST, then add context.`;
       : "llama-3.3-70b-versatile"; // Text-only model for better accuracy
     
     console.log(`[AI Model] Using: ${model}, Images: ${hasImages ? prescriptionUrls!.length : 0}`);
+    
+    // CRITICAL: Log if we have images but aren't using vision model
+    if (prescriptionUrls && prescriptionUrls.length > 0 && !hasImages) {
+      console.error(`[AI Model] ⚠️⚠️⚠️ CRITICAL ERROR: Have ${prescriptionUrls.length} prescription URLs but hasImages is false!`);
+    }
+    
+    // Log the actual message structure being sent
+    if (hasImages) {
+      const lastMessage = formattedMessages[formattedMessages.length - 1];
+      if (lastMessage && Array.isArray(lastMessage.content)) {
+        const imageCount = lastMessage.content.filter((item: any) => item.type === 'image_url').length;
+        console.log(`[AI Model] Message structure: ${formattedMessages.length} messages, last message has ${imageCount} image(s)`);
+        console.log(`[AI Model] Last message content types: ${lastMessage.content.map((item: any) => item.type).join(', ')}`);
+      }
+    }
 
     // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
     // Use balanced parameters that work well for all question types

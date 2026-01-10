@@ -517,9 +517,15 @@ export async function POST(req: NextRequest) {
                                   questionLower.includes("summarize") ||
                                   questionLower.includes("analyze");
     
-    if (mentionsPrescriptions && isPersonal && allPrescriptionUrls.length > 0) {
-      filteredData.filteredPrescriptions = allPrescriptionUrls;
-      console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - forcing inclusion of ${allPrescriptionUrls.length} prescription image(s)`);
+    // CRITICAL: Always include prescriptions if question mentions them AND user is logged in
+    if (mentionsPrescriptions && isPersonal) {
+      if (allPrescriptionUrls.length > 0) {
+        filteredData.filteredPrescriptions = allPrescriptionUrls;
+        console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - forcing inclusion of ${allPrescriptionUrls.length} prescription image(s)`);
+      } else {
+        console.log(`[⚠️ OVERRIDE] Question mentions prescriptions but NO prescription images found!`);
+        console.log(`[⚠️ DEBUG] This means user has no prescriptions uploaded or they failed to load.`);
+      }
     }
     
     // STEP 4: Use ONLY filtered data
@@ -529,12 +535,22 @@ export async function POST(req: NextRequest) {
     const doctorQAContext = filteredData.filteredDoctorQA;
     
     console.log(`[✅ FILTERED DATA] Profile: ${!!profileContext}, Prescriptions: ${prescriptionUrls.length}, Daily: ${!!dailyContext}, DoctorQA: ${!!doctorQAContext}`);
+    console.log(`[✅ FILTERED DATA] Question classification: ${questionClassification.primary}, Mentions prescriptions: ${mentionsPrescriptions}, Is personal: ${isPersonal}`);
+    console.log(`[✅ FILTERED DATA] All prescription URLs loaded: ${allPrescriptionUrls.length}`);
+    
     if (prescriptionUrls.length > 0) {
       console.log(`[✅ PRESCRIPTIONS] Will send ${prescriptionUrls.length} prescription image(s) to AI for analysis`);
-      console.log(`[✅ PRESCRIPTIONS] First 3 URLs: ${prescriptionUrls.slice(0, 3).map(url => url.substring(0, 100)).join('\n')}`);
+      console.log(`[✅ PRESCRIPTIONS] First 3 URLs:`);
+      prescriptionUrls.slice(0, 3).forEach((url, idx) => {
+        console.log(`[✅ PRESCRIPTIONS]   ${idx + 1}. ${url.substring(0, 150)}...`);
+      });
     } else {
-      console.log(`[⚠️ PRESCRIPTIONS] No prescription images found - AI will not have access to user's prescriptions`);
-      console.log(`[⚠️ DEBUG] Question mentions prescriptions: ${mentionsPrescriptions}, Is personal: ${isPersonal}, All prescription URLs loaded: ${allPrescriptionUrls.length}`);
+      console.log(`[⚠️ PRESCRIPTIONS] ⚠️⚠️⚠️ NO PRESCRIPTION IMAGES WILL BE SENT TO AI ⚠️⚠️⚠️`);
+      console.log(`[⚠️ DEBUG] Question mentions prescriptions: ${mentionsPrescriptions}`);
+      console.log(`[⚠️ DEBUG] Is personal: ${isPersonal}`);
+      console.log(`[⚠️ DEBUG] All prescription URLs loaded: ${allPrescriptionUrls.length}`);
+      console.log(`[⚠️ DEBUG] Filtered prescription URLs: ${prescriptionUrls.length}`);
+      console.log(`[⚠️ DEBUG] Question classification primary: ${questionClassification.primary}`);
     }
     
     // Get AI response with ONLY relevant filtered data
