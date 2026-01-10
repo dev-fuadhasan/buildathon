@@ -1,4 +1,5 @@
-import { createCanvas } from "canvas";
+import { createCanvas, loadImage } from "canvas";
+import { pdfToImg } from "pdftoimg-js";
 
 export interface PDFPageImage {
   pageNumber: number;
@@ -9,7 +10,7 @@ export interface PDFPageImage {
 
 /**
  * Convert a PDF buffer to an array of image buffers (one per page)
- * Uses pdfjs-dist v3 which has better Node.js support
+ * Uses pdftoimg-js library - simple, reliable, no worker issues
  * @param pdfBuffer - The PDF file as a Buffer
  * @param scale - Scale factor for image quality (default: 2.0 for good quality)
  * @returns Array of image buffers with metadata
@@ -19,67 +20,83 @@ export async function convertPdfToImages(
   scale: number = 2.0
 ): Promise<PDFPageImage[]> {
   try {
-    console.log(`[PDF Conversion] Starting conversion with pdfjs-dist v3...`);
+    console.log(`[PDF Conversion] Starting conversion with pdftoimg-js library...`);
     
-    // Use pdfjs-dist v3 which has better Node.js support
-    const pdfjsLib = await import("pdfjs-dist");
+    // pdftoimg-js needs a file path, so write to temp file first
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const os = await import("os");
     
-    // Convert Buffer to Uint8Array
-    const uint8Array = new Uint8Array(pdfBuffer);
+    const tempDir = os.tmpdir();
+    const tempPdfPath = path.join(tempDir, `pdf_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`);
+    const tempOutputDir = path.join(tempDir, `pdf_images_${Date.now()}_${Math.random().toString(36).substring(7)}`);
     
-    // Set worker source BEFORE importing - use a data URL approach
-    // For v3, we can use a simpler worker setup
-    if (typeof window === "undefined") {
-      // v3 uses a different worker setup
-      const workerSrc = require.resolve("pdfjs-dist/build/pdf.worker.min.js");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-      console.log(`[PDF Conversion] Worker source set to: ${workerSrc}`);
-    }
-    
-    // Load PDF document
-    const loadingTask = pdfjsLib.getDocument({
-      data: uint8Array,
-      useSystemFonts: true,
-    });
-    
-    const pdfDocument = await loadingTask.promise;
-    const numPages = pdfDocument.numPages;
-    const images: PDFPageImage[] = [];
-
-    console.log(`[PDF Conversion] Converting ${numPages} page(s) to images...`);
-
-    // Convert each page to an image
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdfDocument.getPage(pageNum);
-      const viewport = page.getViewport({ scale });
-
-      // Create canvas
-      const canvas = createCanvas(viewport.width, viewport.height);
-      const context = canvas.getContext("2d");
-
-      // Render PDF page
-      const renderContext = {
-        canvasContext: context as any,
-        viewport: viewport,
-      };
-
-      await page.render(renderContext as any).promise;
-
-      // Convert to JPEG
-      const imageBuffer = canvas.toBuffer("image/jpeg", { quality: 0.9 });
-
-      images.push({
-        pageNumber: pageNum,
-        imageBuffer,
-        width: viewport.width,
-        height: viewport.height,
+    try {
+      // Write PDF buffer to temp file
+      await fs.writeFile(tempPdfPath, pdfBuffer);
+      await fs.mkdir(tempOutputDir, { recursive: true });
+      
+      console.log(`[PDF Conversion] PDF written to temp file: ${tempPdfPath}`);
+      
+      // Convert PDF to images using pdftoimg-js
+      // scale: 2.0 means 2x resolution (200% quality)
+      const images = await pdfToImg(tempPdfPath, {
+        pages: "all", // Convert all pages
+        imgType: "jpg", // Output as JPEG
+        scale: scale, // Scale factor
+        background: "white", // White background
+        outputPath: tempOutputDir, // Output directory
       });
-
-      console.log(`[PDF Conversion] Page ${pageNum}/${numPages} converted (${Math.round(imageBuffer.length / 1024)}KB)`);
+      
+      console.log(`[PDF Conversion] pdftoimg-js returned ${images.length} image(s)`);
+      
+      const result: PDFPageImage[] = [];
+      
+      // Read the generated image files
+      const files = await fs.readdir(tempOutputDir);
+      const imageFiles = files
+        .filter(f => f.endsWith('.jpg') || f.endsWith('.jpeg'))
+        .sort((a, b) => {
+          // Sort by page number
+          const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+          const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+          return numA - numB;
+        });
+      
+      for (let i = 0; i < imageFiles.length; i++) {
+        const imagePath = path.join(tempOutputDir, imageFiles[i]);
+        const imageBuffer = await fs.readFile(imagePath);
+        
+        // Get image dimensions
+        const img = await loadImage(imageBuffer);
+        
+        result.push({
+          pageNumber: i + 1,
+          imageBuffer: imageBuffer, // Already JPEG format
+          width: img.width,
+          height: img.height,
+        });
+        
+        console.log(`[PDF Conversion] Page ${i + 1}/${imageFiles.length} processed (${Math.round(imageBuffer.length / 1024)}KB, ${img.width}x${img.height})`);
+      }
+      
+      if (result.length === 0) {
+        throw new Error("No images were generated from PDF");
+      }
+      
+      console.log(`[PDF Conversion] ✅ Successfully converted ${result.length} page(s) to images`);
+      return result;
+      
+    } finally {
+      // Clean up temp files
+      try {
+        await fs.unlink(tempPdfPath).catch(() => {});
+        await fs.rm(tempOutputDir, { recursive: true, force: true }).catch(() => {});
+        console.log(`[PDF Conversion] Cleaned up temp files`);
+      } catch (cleanupError) {
+        console.warn(`[PDF Conversion] Failed to clean up temp files: ${cleanupError}`);
+      }
     }
-
-    console.log(`[PDF Conversion] ✅ Successfully converted ${numPages} page(s) to images`);
-    return images;
   } catch (error: any) {
     console.error("[PDF Conversion] Error converting PDF to images:", error);
     throw new Error(`Failed to convert PDF to images: ${error.message}`);
