@@ -356,22 +356,44 @@ export default function MotherDashboard() {
       if (res.ok) {
         const data = await res.json();
         console.log("Fetched prescriptions:", data.items?.length || 0, "items");
-        // Filter out page images (keep only main files - PDFs and direct image uploads)
-        // Page images are for AI analysis but shouldn't be shown in the list
-        const mainFiles = (data.items || []).filter((item: any) => {
-          const key = item.key || "";
-          // Exclude page images (files ending with _page1.jpg, _page2.jpg, etc.)
-          return !key.match(/_page\d+\.(jpg|jpeg|png)$/i);
-        });
+        // Ensure all items have required properties and filter out invalid items
+        const mainFiles = (data.items || [])
+          .filter((item: any) => {
+            // Ensure item has required properties
+            if (!item || !item.key || !item.url) {
+              console.warn("Invalid prescription item:", item);
+              return false;
+            }
+            const key = item.key || "";
+            // Exclude page images (files ending with _page1.jpg, _page2.jpg, etc.)
+            // Also exclude metadata.json (API should filter this, but double-check)
+            if (key.match(/_page\d+\.(jpg|jpeg|png)$/i) || key.endsWith('metadata.json')) {
+              return false;
+            }
+            return true;
+          })
+          .map((item: any) => ({
+            key: item.key || "",
+            url: item.url || "",
+            imageUrls: item.imageUrls || [],
+            imageKeys: item.imageKeys || [],
+            pageCount: item.pageCount || 0,
+            isPdf: item.isPdf || false,
+            customName: item.customName || null,
+          }));
         console.log("Filtered prescriptions (excluding page images):", mainFiles.length, "items");
         setPrescriptions(mainFiles);
       } else {
         console.error("Failed to fetch prescriptions:", res.status, res.statusText);
         const errorData = await res.json().catch(() => ({}));
         console.error("Error details:", errorData);
+        // Set empty array on error to prevent crashes
+        setPrescriptions([]);
       }
     } catch (err) {
       console.error("Error fetching prescriptions:", err);
+      // Set empty array on error to prevent crashes
+      setPrescriptions([]);
     }
   };
 
@@ -2311,10 +2333,14 @@ export default function MotherDashboard() {
                   ) : (
                     <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
                       {prescriptions.map((p) => {
+                        // Safe property access with fallbacks
+                        if (!p || !p.key) {
+                          return null; // Skip invalid items
+                        }
                         const fileName = p.key.split("/").pop() || "prescription";
-                        const displayName = p.customName || fileName;
-                        const isPdf = p.isPdf || p.key.endsWith('.pdf');
-                        const hasImages = p.imageUrls && p.imageUrls.length > 0;
+                        const displayName = (p.customName && p.customName.trim()) || fileName;
+                        const isPdf = p.isPdf === true || p.key.endsWith('.pdf');
+                        const hasImages = Array.isArray(p.imageUrls) && p.imageUrls.length > 0;
                         const isRenaming = renamingPrescription === p.key;
                         return (
                           <div
@@ -2404,12 +2430,12 @@ export default function MotherDashboard() {
                                 ) : (
                                   <>
                                     <p className="font-semibold text-sm sm:text-base text-slate-800 truncate">{displayName}</p>
-                                    {p.customName && (
+                                    {p.customName && p.customName.trim() && (
                                       <p className="text-xs text-slate-400 mt-0.5 italic">Original: {fileName}</p>
                                     )}
                                     <p className="text-xs text-slate-500 mt-0.5">
                                       {isPdf && hasImages 
-                                        ? `${p.pageCount || p.imageUrls?.length || 0} page(s) converted to images • Click to view`
+                                        ? `${p.pageCount || (Array.isArray(p.imageUrls) ? p.imageUrls.length : 0)} page(s) converted to images • Click to view`
                                         : "Click to view"}
                                     </p>
                                   </>
@@ -2432,13 +2458,17 @@ export default function MotherDashboard() {
                                     onClick={safeAsync(async () => {
                                       // Show images in a modal
                                       if (p.imageUrls && p.imageUrls.length > 0) {
-                                        const imageUrls = p.imageUrls || [];
-                                        const imagesHtml = imageUrls.map((url, idx) => 
-                                          `<div style="margin-bottom: 30px; text-align: center;">
-                                            <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${imageUrls.length}</h3>
-                                            <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
-                                          </div>`
-                                        ).join('');
+                                      const imageUrls = Array.isArray(p.imageUrls) ? p.imageUrls : [];
+                                      if (imageUrls.length === 0) {
+                                        setMessage("❌ No images available");
+                                        return;
+                                      }
+                                      const imagesHtml = imageUrls.map((url, idx) => 
+                                        `<div style="margin-bottom: 30px; text-align: center;">
+                                          <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${imageUrls.length}</h3>
+                                          <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+                                        </div>`
+                                      ).join('');
                                         const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
                                         if (newWindow) {
                                           newWindow.document.write(`
@@ -2466,7 +2496,7 @@ export default function MotherDashboard() {
                                     className="btn-primary text-sm px-3 sm:px-4 py-2.5 h-[44px] sm:h-[40px] flex items-center justify-center gap-1.5 flex-1 sm:flex-initial touch-manipulation"
                                   >
                                     <Icon name="view" size={16} />
-                                    <span className="sm:inline">Images ({p.imageUrls?.length || 0})</span>
+                                    <span className="sm:inline">Images ({Array.isArray(p.imageUrls) ? p.imageUrls.length : 0})</span>
                                   </button>
                                 )}
                                 <button
