@@ -58,12 +58,18 @@ export async function GET(req: NextRequest) {
   // Enrich items with imageUrls for PDFs and custom names
   const enriched = await Promise.all((items || []).map(async (obj) => {
     const key = obj.Key!;
-    const url = await signedUrl(key);
     
     // Skip page images in the main list (they'll be included as imageUrls of their PDF)
     if (key.match(/_page\d+\.(jpg|jpeg|png)$/i)) {
       return null; // Filter these out
     }
+    
+    // Skip metadata.json file - it's not a prescription
+    if (key.endsWith('metadata.json')) {
+      return null; // Filter out metadata file
+    }
+    
+    const url = await signedUrl(key);
     
     const result: any = {
       key,

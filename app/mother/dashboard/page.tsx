@@ -2327,7 +2327,7 @@ export default function MotherDashboard() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 {isRenaming ? (
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="w-full">
                                     <input
                                       type="text"
                                       value={renameValue}
@@ -2360,44 +2360,46 @@ export default function MotherDashboard() {
                                         }
                                       }}
                                       autoFocus
-                                      className="flex-1 min-w-[200px] px-2 py-1 border border-pink-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                      className="w-full px-3 py-2 border-2 border-pink-400 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 mb-2"
                                       placeholder="Enter new name..."
                                       maxLength={100}
                                     />
-                                    <button
-                                      onClick={safeAsync(async () => {
-                                        const encodedKey = encodeURIComponent(p.key);
-                                        const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
-                                          method: "PATCH",
-                                          headers: {
-                                            "Content-Type": "application/json",
-                                            ...authHeaders(),
-                                          },
-                                          body: JSON.stringify({ customName: renameValue }),
-                                        });
-                                        if (res.ok) {
-                                          setMessage("✅ Prescription renamed successfully");
-                                          fetchPrescriptions();
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={safeAsync(async () => {
+                                          const encodedKey = encodeURIComponent(p.key);
+                                          const res = await fetch(`/api/mother/prescriptions/${encodedKey}`, {
+                                            method: "PATCH",
+                                            headers: {
+                                              "Content-Type": "application/json",
+                                              ...authHeaders(),
+                                            },
+                                            body: JSON.stringify({ customName: renameValue }),
+                                          });
+                                          if (res.ok) {
+                                            setMessage("✅ Prescription renamed successfully");
+                                            fetchPrescriptions();
+                                            setRenamingPrescription(null);
+                                            setRenameValue("");
+                                          } else {
+                                            const data = await res.json().catch(() => ({}));
+                                            setMessage(`❌ ${data.error || "Failed to rename prescription"}`);
+                                          }
+                                        })}
+                                        className="btn-primary text-sm px-4 py-1.5 h-[36px] flex items-center justify-center"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() => {
                                           setRenamingPrescription(null);
                                           setRenameValue("");
-                                        } else {
-                                          const data = await res.json().catch(() => ({}));
-                                          setMessage(`❌ ${data.error || "Failed to rename prescription"}`);
-                                        }
-                                      })}
-                                      className="btn-primary text-xs px-2 py-1 h-[32px]"
-                                    >
-                                      Save
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setRenamingPrescription(null);
-                                        setRenameValue("");
-                                      }}
-                                      className="btn-secondary text-xs px-2 py-1 h-[32px]"
-                                    >
-                                      Cancel
-                                    </button>
+                                        }}
+                                        className="btn-secondary text-sm px-4 py-1.5 h-[36px] flex items-center justify-center"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <>
