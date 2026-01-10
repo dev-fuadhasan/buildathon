@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/auth";
-import { listObjects, signedUrl, uploadFile } from "@/lib/r2Client";
+import { listObjects, signedUrl, uploadFile, getJson, putJson } from "@/lib/r2Client";
 import { convertPdfToImages } from "@/lib/pdfToImages";
 import { v4 as uuid } from "uuid";
+
+// Helper function to get prescription metadata
+async function getPrescriptionMetadata(userId: string): Promise<Record<string, string>> {
+  const metadataKey = `prescriptions/${userId}/metadata.json`;
+  const metadata = await getJson<Record<string, string>>(metadataKey);
+  return metadata || {};
+}
+
+// Helper function to save prescription metadata
+async function savePrescriptionMetadata(userId: string, metadata: Record<string, string>) {
+  const metadataKey = `prescriptions/${userId}/metadata.json`;
+  await putJson(metadataKey, metadata);
+}
 
 export async function GET(req: NextRequest) {
   const user = await getUserFromRequest(req);
@@ -39,7 +52,10 @@ export async function GET(req: NextRequest) {
     });
   });
   
-  // Enrich items with imageUrls for PDFs
+  // Load custom names from metadata
+  const metadata = await getPrescriptionMetadata(user.id);
+  
+  // Enrich items with imageUrls for PDFs and custom names
   const enriched = await Promise.all((items || []).map(async (obj) => {
     const key = obj.Key!;
     const url = await signedUrl(key);
@@ -52,6 +68,7 @@ export async function GET(req: NextRequest) {
     const result: any = {
       key,
       url,
+      customName: metadata[key] || null, // Custom name if set
     };
     
     // If this is a PDF, add its converted images

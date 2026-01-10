@@ -61,6 +61,7 @@ type Prescription = {
   imageKeys?: string[]; // For PDFs: converted image keys
   pageCount?: number; // For PDFs: number of pages
   isPdf?: boolean; // Whether this is a PDF
+  customName?: string | null; // Custom display name set by user
 };
 type Comment = {
   id: string;
@@ -136,6 +137,8 @@ export default function MotherDashboard() {
   const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | "food" | null>(null);
   const [showCards, setShowCards] = useState(true);
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
+  const [renamingPrescription, setRenamingPrescription] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState<string>("");
   const [showCamera, setShowCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
