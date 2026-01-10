@@ -448,21 +448,21 @@ export async function POST(req: NextRequest) {
             console.log(`[Chat] Selected ${recentImages.length} most recent image(s) for AI analysis`);
             
             // Generate signed URLs for all images
-            allPrescriptionUrls = await Promise.all(
-              recentImages.map(async (obj) => {
-                try {
-                  const url = await signedUrl(obj.Key!);
-                  console.log(`[Chat] ✅ Generated signed URL for: ${obj.Key} -> ${url.substring(0, 100)}...`);
-                  return url;
-                } catch (urlError: any) {
-                  console.error(`[Chat] ❌ Failed to generate signed URL for ${obj.Key}:`, urlError.message);
-                  return null;
-                }
-              })
-            );
+            const urlPromises = recentImages.map(async (obj) => {
+              try {
+                const url = await signedUrl(obj.Key!);
+                console.log(`[Chat] ✅ Generated signed URL for: ${obj.Key} -> ${url.substring(0, 100)}...`);
+                return url;
+              } catch (urlError: any) {
+                console.error(`[Chat] ❌ Failed to generate signed URL for ${obj.Key}:`, urlError.message);
+                return null;
+              }
+            });
+            
+            const urlResults = await Promise.all(urlPromises);
             
             // Filter out any null URLs (failed to generate)
-            allPrescriptionUrls = allPrescriptionUrls.filter(url => url !== null) as string[];
+            allPrescriptionUrls = urlResults.filter((url): url is string => url !== null);
             
             console.log(`[Chat] ✅ Successfully loaded ${allPrescriptionUrls.length} prescription image URL(s) for AI analysis`);
             if (allPrescriptionUrls.length > 0) {
