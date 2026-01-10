@@ -308,6 +308,7 @@ export async function POST(req: NextRequest) {
     const isPersonal = await isPersonalQuestion(currentUserMessage);
     
     console.log(`[Question Classification] Type: ${questionClassification.primary}${questionClassification.secondary ? ` + ${questionClassification.secondary}` : ''}, Personal: ${isPersonal}`);
+    console.log(`[Question Classification] Question: "${currentUserMessage.substring(0, 100)}..."`);
     
     // STEP 2: Load ALL data types separately (only if personal question)
     let rawProfileData: string | undefined = undefined;
@@ -395,26 +396,35 @@ export async function POST(req: NextRequest) {
           try {
             const prefix = `prescriptions/${user!.id}/`;
             const objects = await listObjects(prefix);
-            // Filter out PDF files - use only image files (PNG/JPG) for Groq analysis
-            // This includes both direct image uploads and PDF-converted images
+            
+            // Filter out PDF files and metadata.json - use only image files (PNG/JPG) for Groq analysis
+            // This includes both direct image uploads and PDF-converted images (stored as prescription.pdf_page1.jpg)
             const imageObjects = (objects || []).filter(obj => {
               const key = obj.Key || "";
-              // Include PNG and JPG files, exclude PDF files
+              // Exclude metadata.json and PDF files
+              if (key.includes('metadata.json') || key.endsWith('.pdf')) {
+                return false;
+              }
+              // Include PNG and JPG files (including _page*.jpg from PDF conversions)
               return key.endsWith('.png') || key.endsWith('.jpg') || key.endsWith('.jpeg');
             });
             
-            // Limit to most recent 10 images (to handle multi-page PDFs)
+            // Limit to most recent 20 images (to handle multi-page PDFs - each PDF can have multiple pages)
             const recentImages = imageObjects
               .sort((a, b) => (b.LastModified?.getTime() || 0) - (a.LastModified?.getTime() || 0))
-              .slice(0, 10);
+              .slice(0, 20);
             
             allPrescriptionUrls = await Promise.all(
               recentImages.map(async (obj) => await signedUrl(obj.Key!))
             );
             
-            console.log(`[Chat] Loaded ${allPrescriptionUrls.length} prescription image(s) (PDFs filtered out)`);
+            console.log(`[Chat] Loaded ${allPrescriptionUrls.length} prescription image(s) (PDFs filtered out, includes converted PDF pages)`);
+            if (allPrescriptionUrls.length > 0) {
+              console.log(`[Chat] Sample prescription URLs: ${allPrescriptionUrls.slice(0, 3).map(url => url.substring(0, 80) + '...').join(', ')}`);
+            }
           } catch (err) {
             console.error("Failed to fetch prescriptions:", err);
+            console.error("Prescription fetch error details:", err);
           }
           
           // Add chat image if provided
@@ -448,6 +458,11 @@ export async function POST(req: NextRequest) {
     const doctorQAContext = filteredData.filteredDoctorQA;
     
     console.log(`[✅ FILTERED DATA] Profile: ${!!profileContext}, Prescriptions: ${prescriptionUrls.length}, Daily: ${!!dailyContext}, DoctorQA: ${!!doctorQAContext}`);
+    if (prescriptionUrls.length > 0) {
+      console.log(`[✅ PRESCRIPTIONS] Will send ${prescriptionUrls.length} prescription image(s) to AI for analysis`);
+    } else {
+      console.log(`[⚠️ PRESCRIPTIONS] No prescription images found - AI will not have access to user's prescriptions`);
+    }
     
     // Get AI response with ONLY relevant filtered data
     let reply: string;

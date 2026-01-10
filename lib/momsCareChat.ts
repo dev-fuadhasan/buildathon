@@ -247,7 +247,7 @@ export async function askMomsCare(
     console.log(`[AI Mode] HasImage: ${hasImage}, IsPersonal: ${isPersonal}, IsLoggedIn: ${isLoggedIn}, UseProfile: ${!!actualProfileContext}`);
     
     const imageInstruction = hasImage 
-      ? "\n\nIMAGE PROVIDED: The user has sent an image (prescription, medical report, or health-related photo). Analyze it carefully and provide specific guidance based on what you see in the image combined with their question/message."
+      ? `\n\nCRITICAL - PRESCRIPTION/REPORT IMAGES PROVIDED: The user has ${prescriptionUrls!.length} prescription/medical report image(s) attached. You MUST analyze these images carefully and provide specific, detailed guidance based on what you see in the images. If the user asks for a summary, analyze all images and provide a comprehensive summary. If they ask about medications, dosages, test results, or any medical information, extract and explain it from the images. DO NOT say you don't have access to their prescriptions - you DO have access through these images.`
       : "";
     
     // Language-aware messages
@@ -413,7 +413,7 @@ Provide this calculation FIRST, then add context.`;
         if (hasPrescriptionFolder && hasChatImageFolder) {
           imageContext = `\n\n[${prescriptionUrls.length} image(s) attached: prescriptions and/or health-related photos. Please analyze them carefully.]`;
         } else if (hasPrescriptionFolder) {
-          imageContext = `\n\n[${prescriptionUrls.length} prescription/medical report(s) attached. Please analyze and provide guidance.]`;
+          imageContext = `\n\n[${prescriptionUrls.length} prescription/medical report image(s) attached from user's uploaded files. These are the user's actual prescriptions and medical reports. You MUST analyze them carefully and provide specific guidance based on what you see. Extract medication names, dosages, test results, doctor's notes, dates, and any other relevant medical information. If the user asks for a summary, provide a comprehensive summary of all prescriptions/reports. DO NOT say you don't have access - you DO have access through these images.]`;
         } else if (hasChatImageFolder) {
           imageContext = `\n\n[Health-related image attached. Please analyze it in context of the question.]`;
         } else {

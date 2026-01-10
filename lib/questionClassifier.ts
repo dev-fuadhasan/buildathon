@@ -47,6 +47,11 @@ export function classifyQuestion(question: string): QuestionClassification {
     "tablet", "ট্যাবলেট",
     "capsule", "ক্যাপসুল",
     "doctor prescribe", "dakter lekha", "ডাক্তার",
+    "report", "রিপোর্ট", "medical report", "test report", "টেস্ট রিপোর্ট",
+    "summary", "সারাংশ", "summarize", "analyze", "বিশ্লেষণ",
+    "my prescription", "amar prescription", "আমার প্রেসক্রিপশন",
+    "my report", "amar report", "আমার রিপোর্ট",
+    "prescription summary", "report summary", "রিপোর্ট সারাংশ",
   ];
   
   for (const keyword of prescriptionKeywords) {
@@ -88,6 +93,20 @@ export function classifyQuestion(question: string): QuestionClassification {
   if (q.includes("checkup") || q.includes("চেকআপ") || q.includes("appointment") || 
       (q.includes("kokhon") && (q.includes("doctor") || q.includes("ডাক্তার")))) {
     return { primary: "profile", secondary: "general" };
+  }
+  
+  // Questions about "my prescription" or "my report" → prescriptions
+  if (q.includes("my prescription") || q.includes("amar prescription") || 
+      q.includes("my report") || q.includes("amar report") ||
+      (q.includes("my") && (q.includes("prescription") || q.includes("report"))) ||
+      (q.includes("amar") && (q.includes("prescription") || q.includes("report") || q.includes("রিপোর্ট") || q.includes("প্রেসক্রিপশন")))) {
+    return { primary: "prescriptions" };
+  }
+  
+  // Questions asking for summary/analysis of prescriptions/reports → prescriptions
+  if ((q.includes("summary") || q.includes("summarize") || q.includes("analyze") || q.includes("সারাংশ") || q.includes("বিশ্লেষণ")) &&
+      (q.includes("prescription") || q.includes("report") || q.includes("প্রেসক্রিপশন") || q.includes("রিপোর্ট"))) {
+    return { primary: "prescriptions" };
   }
   
   // Default: general health question
