@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: "MomsCare AI - 24/7 Pregnancy Support",
   description: "Get instant, personalized pregnancy guidance from AI — available anytime. Track your journey, upload prescriptions, and consult doctors when needed.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ec4899" />
       </head>
