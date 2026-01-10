@@ -420,7 +420,19 @@ export async function POST(req: NextRequest) {
             
             console.log(`[Chat] Loaded ${allPrescriptionUrls.length} prescription image(s) (PDFs filtered out, includes converted PDF pages)`);
             if (allPrescriptionUrls.length > 0) {
-              console.log(`[Chat] Sample prescription URLs: ${allPrescriptionUrls.slice(0, 3).map(url => url.substring(0, 80) + '...').join(', ')}`);
+              console.log(`[Chat] Sample prescription URLs:`);
+              allPrescriptionUrls.slice(0, 5).forEach((url, idx) => {
+                console.log(`[Chat]   ${idx + 1}. ${url.substring(0, 150)}...`);
+              });
+            } else {
+              console.log(`[Chat] ⚠️ No prescription images found! Checking R2 objects...`);
+              console.log(`[Chat] Total objects in prescriptions/${user!.id}/: ${objects?.length || 0}`);
+              if (objects && objects.length > 0) {
+                console.log(`[Chat] Sample object keys:`);
+                objects.slice(0, 10).forEach((obj, idx) => {
+                  console.log(`[Chat]   ${idx + 1}. ${obj.Key}`);
+                });
+              }
             }
           } catch (err) {
             console.error("Failed to fetch prescriptions:", err);
