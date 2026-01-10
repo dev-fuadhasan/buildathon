@@ -431,12 +431,13 @@ Provide this calculation FIRST, then add context.`;
           console.log(`[AI Message] Image ${idx + 1}: ${url.substring(0, 150)}...`);
         });
         
-        // CRITICAL: Groq Vision model only supports up to 5 images
-        // Limit to first 5 images to avoid API error
+        // CRITICAL: Groq Vision model only supports up to 5 images per request
+        // If more than 5 images, we'll process in batches (handled later)
+        // For now, prepare first 5 images for initial message structure
         const imagesToSend = prescriptionUrls.slice(0, 5);
         
         if (prescriptionUrls.length > 5) {
-          console.log(`[AI Message] ⚠️ Limiting images from ${prescriptionUrls.length} to 5 (Groq Vision API limit)`);
+          console.log(`[AI Message] Will process ${prescriptionUrls.length} images in batches of 5 (Groq Vision API limit)`);
         }
         
         formattedMessages.push({
