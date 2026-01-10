@@ -29,6 +29,7 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
   const [isSupported, setIsSupported] = useState(false);
   const [interimText, setInterimText] = useState("");
   const recognitionRef = useRef<any>(null);
+  const interimTextRef = useRef<string>("");
 
   const handleSend = async () => {
     const text = value.trim();
@@ -68,6 +69,7 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
     recognition.onstart = () => {
       setIsListening(true);
       setInterimText("");
+      interimTextRef.current = "";
     };
 
     recognition.onresult = (event: any) => {
@@ -83,6 +85,7 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
         }
       }
 
+      interimTextRef.current = interimTranscript;
       setInterimText(interimTranscript);
       
       if (finalTranscript) {
@@ -90,6 +93,7 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
           const newValue = prev + (prev ? " " : "") + finalTranscript.trim();
           return newValue;
         });
+        interimTextRef.current = "";
         setInterimText("");
       }
     };
@@ -166,15 +170,15 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
     setIsListening(false);
     
     // Add any remaining interim text
-    setInterimText((currentInterim) => {
-      if (currentInterim) {
-        setValue((prev) => {
-          const newValue = prev + (prev ? " " : "") + currentInterim.trim();
-          return newValue;
-        });
-      }
-      return "";
-    });
+    const currentInterim = interimTextRef.current;
+    if (currentInterim && currentInterim.trim()) {
+      setValue((prev) => {
+        const newValue = prev + (prev ? " " : "") + currentInterim.trim();
+        return newValue;
+      });
+    }
+    interimTextRef.current = "";
+    setInterimText("");
   };
 
   // Cleanup on unmount
