@@ -36,8 +36,15 @@ export async function GET(req: NextRequest) {
     const today = getCurrentDateInTimezone(timezone);
 
     // Get date from query params (defaults to today)
+    // After 12:00 AM in user's timezone, date automatically changes
     const { searchParams } = new URL(req.url);
-    const date = searchParams.get("date") || today;
+    let date = searchParams.get("date") || today;
+    
+    // If provided date is in the past relative to today (in user's timezone), use today instead
+    // This ensures that after midnight, the latest date is automatically used
+    if (date < today) {
+      date = today;
+    }
 
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -82,24 +89,25 @@ export async function GET(req: NextRequest) {
         chatHistory?.messages
       );
 
-      // Create new recommendation
-      const now = new Date().toISOString();
-      recommendation = {
-        id: uuid(),
-        motherId: user.id,
-        date: today,
-        breakfast: routineData.breakfast,
-        lunch: routineData.lunch,
-        dinner: routineData.dinner,
-        exercises: routineData.exercises,
-        waterIntake: routineData.waterIntake || "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.",
-        breakfastEaten: false,
-        lunchEaten: false,
-        dinnerEaten: false,
-        exercisesDone: false,
-        createdAt: now,
-        updatedAt: now,
-      };
+          // Create new recommendation
+          const now = new Date().toISOString();
+          recommendation = {
+            id: uuid(),
+            motherId: user.id,
+            date: today,
+            breakfast: routineData.breakfast,
+            lunch: routineData.lunch,
+            dinner: routineData.dinner,
+            exercises: routineData.exercises,
+            waterIntake: routineData.waterIntake || "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.",
+            exerciseVideos: routineData.exerciseVideos || undefined,
+            breakfastEaten: false,
+            lunchEaten: false,
+            dinnerEaten: false,
+            exercisesDone: false,
+            createdAt: now,
+            updatedAt: now,
+          };
 
       await saveFoodRecommendation(recommendation);
     }

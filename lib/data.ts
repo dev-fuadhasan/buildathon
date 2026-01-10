@@ -251,6 +251,16 @@ export type DailyRoutine = {
   dinner: string; // Food recommendation for dinner
   exercises: string; // Exercise recommendations
   waterIntake?: string; // Water drinking recommendations
+  exerciseVideos?: Array<{
+    videoId: string;
+    title: string;
+    description: string;
+    thumbnail: string;
+    channelTitle: string;
+    duration?: string;
+    viewCount?: string;
+    publishedAt?: string;
+  }>; // YouTube video recommendations for exercises
   breakfastEaten?: boolean; // Whether breakfast was eaten
   lunchEaten?: boolean; // Whether lunch was eaten
   dinnerEaten?: boolean; // Whether dinner was eaten

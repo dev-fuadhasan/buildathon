@@ -23,7 +23,23 @@ export async function generateDailyRoutineRecommendations(
   pastRecommendations?: DailyRoutine[],
   prescriptionUrls?: string[],
   chatHistory?: ChatMessage[]
-): Promise<{ breakfast: string; lunch: string; dinner: string; exercises: string; waterIntake?: string }> {
+): Promise<{ 
+  breakfast: string; 
+  lunch: string; 
+  dinner: string; 
+  exercises: string; 
+  waterIntake?: string;
+  exerciseVideos?: Array<{
+    videoId: string;
+    title: string;
+    description: string;
+    thumbnail: string;
+    channelTitle: string;
+    duration?: string;
+    viewCount?: string;
+    publishedAt?: string;
+  }>;
+}> {
   try {
     // Get current date to filter only recent entries (not old ones from weeks ago)
     const today = new Date().toISOString().split("T")[0];
@@ -135,34 +151,79 @@ Previous Pregnancies: ${mother.previousPregnancies || 0}
     }
 
     // Create prompt for daily routine recommendations
-    const prompt = `You are a medical expert specializing in pregnancy care, nutrition, and safe exercise for expectant mothers. Based on the expectant mother's complete profile, provide medically valid and personalized recommendations for food (breakfast, lunch, dinner), simple exercises, and water intake.
+    // CRITICAL: Analyze ALL available user data before generating recommendations
+    const prompt = `You are a medical expert specializing in pregnancy care, nutrition, and safe exercise for expectant mothers. 
+
+BEFORE generating recommendations, you MUST analyze ALL of the following user data:
+
+1. PROFILE ANALYSIS:
+${profileContext}
+
+2. LOCATION ANALYSIS (CRITICAL):
+   - Location: "${location}"
+   - You MUST analyze this location to determine:
+     * Country
+     * Division/State/Province
+     * City/Town
+     * Urban vs Rural setting
+     * Climate (tropical/temperate/cold)
+     * Cultural context
+   - Based on this analysis, suggest foods that are:
+     * Actually available in this specific location
+     * Culturally appropriate for this area
+     * Seasonally appropriate
+     * Suitable for urban vs rural settings
+   - For exercises, consider:
+     * Climate (hot/cold/tropical affects exercise choices)
+     * Available space (urban apartments vs rural open areas)
+     * Cultural norms and local exercise facilities
+   - DO NOT use generic or predefined food lists
+   - Analyze the location dynamically and suggest what's ACTUALLY available there
+
+3. PRESCRIPTIONS/REPORTS ANALYSIS:
+${prescriptionContext || "No prescriptions/reports available. No medical restrictions from documents."}
+   - If prescriptions exist, analyze them for any dietary restrictions or exercise limitations
+   - Consider any medical instructions from uploaded documents
+
+4. CHAT HISTORY ANALYSIS:
+${chatContext || "No recent chat history available."}
+   - Review recent conversations for:
+     * Health concerns mentioned
+     * Symptoms discussed
+     * Questions about food or exercise
+     * Any specific requests or preferences
+
+5. DAILY ENTRIES ANALYSIS:
+${entriesContext || "No recent journal entries available."}
+   - Review recent daily entries for:
+     * What foods were actually eaten
+     * How the mother is feeling
+     * Any symptoms or concerns
+     * Activity levels
+     * Energy levels
+     * Sleep patterns
+   - Use this to adjust recommendations based on actual daily patterns
+
+6. PAST RECOMMENDATIONS ANALYSIS:
+${pastRoutineContext || "No past recommendations available."}
+   - Review what was recommended before
+   - Ensure variety - don't repeat the same foods/exercises
+   - Build on what worked well
 
 CRITICAL MEDICAL GUIDELINES:
 1. ALLERGIES: The mother has allergies: ${mother.allergies || "None"}. DO NOT suggest ANY foods containing these allergens. This is a safety requirement.
 2. Medical Conditions: Consider ${mother.conditions || "None"} - ensure recommendations are safe for these conditions
 3. Medications: Consider interactions with ${mother.medications || "None"}
 4. Pregnancy Stage: Currently ${weeksPregnant || "N/A"} weeks pregnant (Trimester ${trimester || "N/A"}) - adjust recommendations accordingly
-5. LOCATION ANALYSIS: The mother's location is: "${location}". 
-   - Analyze this location to determine: country, division/state, city, and whether it's urban or rural
-   - Suggest foods that are: (a) locally available in this area, (b) culturally appropriate, (c) seasonally appropriate, (d) suitable for urban vs rural settings
-   - For exercises: consider climate, available space (urban apartments vs rural areas), cultural norms, and local exercise facilities
-   - DO NOT use predefined food lists - analyze the location dynamically and suggest what's actually available there
-   - If location is unclear, ask for clarification but still provide general safe recommendations
-6. Exercise Safety: Only suggest simple, safe exercises appropriate for pregnancy stage. Avoid high-impact, risky activities. Consider the location's climate, available space, and cultural context.
-7. Medical Validity: All recommendations must be medically sound and safe for pregnancy
-8. Variety: If past recommendations exist, ensure variety and avoid repetition
-9. WATER INTAKE: Include specific water drinking recommendations based on pregnancy stage, climate, and activity level
+5. Exercise Safety: Only suggest simple, safe exercises appropriate for pregnancy stage. Avoid high-impact, risky activities. Consider the location's climate, available space, and cultural context.
+6. Medical Validity: All recommendations must be medically sound and safe for pregnancy
+7. WATER INTAKE: Include specific water drinking recommendations based on pregnancy stage, climate, and activity level
 
-${profileContext}
-
-${prescriptionContext ? `${prescriptionContext}\n` : ""}
-
-Recent Journal Entries (only from last 14 days):
-${entriesContext || "No recent journal entries."}
-
-${chatContext ? `${chatContext}\n` : ""}
-
-${pastRoutineContext ? `Past Daily Routine Recommendations (avoid repeating similar items):\n${pastRoutineContext}\n\nIMPORTANT: Review past recommendations and ensure variety. Don't repeat the same foods or exercises frequently.` : ""}
+IMPORTANT: 
+- Analyze ALL the data above before generating recommendations
+- Location-based food suggestions are CRITICAL - suggest what's actually available in "${location}"
+- Consider all context: profile, location, prescriptions, chat, daily entries, past recommendations
+- Generate personalized, medically valid recommendations based on COMPLETE analysis
 
 Please provide recommendations in the following JSON format:
 {
@@ -202,7 +263,13 @@ Respond ONLY with valid JSON, no additional text.`;
     );
     
     // Try to parse JSON from response
-    let routineData: { breakfast: string; lunch: string; dinner: string; exercises: string; waterIntake?: string };
+    let routineData: { 
+      breakfast: string; 
+      lunch: string; 
+      dinner: string; 
+      exercises: string; 
+      waterIntake?: string;
+    };
     
     try {
       // Extract JSON from response (handle cases where AI adds extra text)
@@ -232,7 +299,26 @@ Respond ONLY with valid JSON, no additional text.`;
       };
     }
 
-    return routineData;
+    // Search for YouTube exercise videos based on recommended exercises
+    let exerciseVideos: any[] = [];
+    try {
+      const { searchExerciseVideos } = await import("./youtubeClient");
+      console.log(`[Food Recommendation] Searching YouTube videos for exercises: "${routineData.exercises}"`);
+      exerciseVideos = await searchExerciseVideos(routineData.exercises, 3);
+      if (exerciseVideos.length > 0) {
+        console.log(`[Food Recommendation] ✅ Found ${exerciseVideos.length} exercise video(s)`);
+      } else {
+        console.log(`[Food Recommendation] ⚠️ No exercise videos found`);
+      }
+    } catch (videoError: any) {
+      console.error(`[Food Recommendation] Error searching for exercise videos:`, videoError.message);
+      // Continue without videos - not critical
+    }
+
+    return {
+      ...routineData,
+      exerciseVideos: exerciseVideos.length > 0 ? exerciseVideos : undefined,
+    };
   } catch (error: any) {
     console.error("Error generating daily routine recommendations:", error);
     // Return default recommendations on error (safe for pregnancy)

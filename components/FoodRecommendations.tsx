@@ -40,6 +40,16 @@ type DailyRoutine = {
     overallStatus: "good" | "moderate" | "poor";
     createdAt: string;
   };
+  exerciseVideos?: Array<{
+    videoId: string;
+    title: string;
+    description: string;
+    thumbnail: string;
+    channelTitle: string;
+    duration?: string;
+    viewCount?: string;
+    publishedAt?: string;
+  }>;
 };
 
 type Props = {
@@ -56,9 +66,22 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
+    // Get current date - will be updated when API responds with timezone-aware date
     const today = new Date().toISOString().split("T")[0];
     setSelectedDate(today);
     fetchRecommendation(today);
+    
+    // Update date every minute to catch midnight transitions
+    // The API will return the correct date based on user's timezone
+    const interval = setInterval(() => {
+      const newDate = new Date().toISOString().split("T")[0];
+      if (newDate !== selectedDate) {
+        setSelectedDate(newDate);
+        fetchRecommendation(newDate);
+      }
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
   }, []);
 
   const authHeaders = () => (token ? { Authorization: `Bearer ${token}` } : undefined);
@@ -376,6 +399,56 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                   isExercise={true}
                 />
               </div>
+              
+              {/* YouTube Exercise Videos */}
+              {recommendation.exerciseVideos && recommendation.exerciseVideos.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-md font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <Icon name="view" size={18} />
+                    Recommended Exercise Videos
+                  </h4>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {recommendation.exerciseVideos.map((video, idx) => (
+                      <a
+                        key={video.videoId}
+                        href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
+                      >
+                        <div className="relative aspect-video bg-neutral-100">
+                          <img
+                            src={video.thumbnail}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
+                            }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
+                            <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                              <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h5 className="font-semibold text-slate-800 text-sm mb-2 line-clamp-2 group-hover:text-pink-600 transition-colors">
+                            {video.title}
+                          </h5>
+                          <p className="text-xs text-slate-500 mb-2">{video.channelTitle}</p>
+                          {video.viewCount && (
+                            <p className="text-xs text-slate-400">
+                              {parseInt(video.viewCount).toLocaleString()} views
+                            </p>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {recommendation.waterIntake && (

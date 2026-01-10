@@ -42,17 +42,41 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Find answers stored as "DAILY_ENTRY_ANSWER_0:", "DAILY_ENTRY_ANSWER_1:", etc.
+    // Find answers stored in single file format: DAILY_ENTRY_ANSWERS:{"0":"answer1","1":"answer2",...}
     const answers: string[] = [];
-    dateEntries.forEach(entry => {
-      const match = entry.entry.match(/^DAILY_ENTRY_ANSWER_(\d+):(.+)$/);
-      if (match) {
-        const index = parseInt(match[1]);
-        const answer = match[2];
-        answers[index] = answer;
+    const answersEntry = dateEntries.find(e => e.entry.startsWith("DAILY_ENTRY_ANSWERS:"));
+    if (answersEntry) {
+      try {
+        const jsonStr = answersEntry.entry.replace("DAILY_ENTRY_ANSWERS:", "");
+        const answersObj = JSON.parse(jsonStr);
+        Object.keys(answersObj).forEach(key => {
+          const index = parseInt(key);
+          if (!isNaN(index)) {
+            answers[index] = answersObj[key];
+          }
+        });
+      } catch (err) {
+        console.error("Error parsing daily entry answers:", err);
+        // Fallback: try old format for backward compatibility
+        dateEntries.forEach(entry => {
+          const match = entry.entry.match(/^DAILY_ENTRY_ANSWER_(\d+):(.+)$/);
+          if (match) {
+            const index = parseInt(match[1]);
+            answers[index] = match[2];
+          }
+        });
       }
-    });
-
+    } else {
+      // Fallback: try old format for backward compatibility
+      dateEntries.forEach(entry => {
+        const match = entry.entry.match(/^DAILY_ENTRY_ANSWER_(\d+):(.+)$/);
+        if (match) {
+          const index = parseInt(match[1]);
+          answers[index] = match[2];
+        }
+      });
+    }
+    
     const currentQuestionIndex = answers.length;
 
     // If all 5-6 questions are answered, mark as completed
@@ -236,18 +260,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Save answer in special format
-    const { saveDailyEntry } = await import("@/lib/data");
+    // Save all answers in ONE file per day
+    const { saveDailyEntry, listDailyEntries, getDailyEntry } = await import("@/lib/data");
     const { v4: uuid } = await import("uuid");
     
-    await saveDailyEntry({
-      id: uuid(),
-      motherId: user.id,
-      date,
-      entry: `DAILY_ENTRY_ANSWER_${questionIndex}:${answer.trim()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    // Get existing answers for this date
+    const allEntries = await listDailyEntries(user.id);
+    const dateEntries = allEntries.filter(e => e.date === date);
+    const answersEntry = dateEntries.find(e => e.entry.startsWith("DAILY_ENTRY_ANSWERS:"));
+    
+    let answers: Record<string, string> = {};
+    if (answersEntry) {
+      try {
+        const jsonStr = answersEntry.entry.replace("DAILY_ENTRY_ANSWERS:", "");
+        answers = JSON.parse(jsonStr);
+      } catch (err) {
+        console.error("Error parsing existing answers:", err);
+      }
+    }
+    
+    // Update the answer for this question index
+    answers[questionIndex.toString()] = answer.trim();
+    
+    // Save all answers in one file
+    if (answersEntry) {
+      // Update existing entry
+      await saveDailyEntry({
+        ...answersEntry,
+        entry: `DAILY_ENTRY_ANSWERS:${JSON.stringify(answers)}`,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      // Create new entry
+      await saveDailyEntry({
+        id: uuid(),
+        motherId: user.id,
+        date,
+        entry: `DAILY_ENTRY_ANSWERS:${JSON.stringify(answers)}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     // Check if this was the last question (index 5, meaning 6 questions total)
     if (questionIndex >= 5) {

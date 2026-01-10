@@ -245,11 +245,16 @@ export default function MotherDashboard() {
     updatePregnancyProgress(t);
     checkDailyTask(t);
     
-    // Set today's date and load questions
-    const today = new Date().toISOString().split("T")[0];
-    if (!selectedDate) {
-      setSelectedDate(today);
-      loadDailyEntryQuestions(today);
+    // Set today's date and load questions (only if token exists)
+    if (t) {
+      const today = new Date().toISOString().split("T")[0];
+      if (!selectedDate) {
+        setSelectedDate(today);
+        // Load questions after a small delay to ensure token is set
+        setTimeout(() => {
+          loadDailyEntryQuestions(today);
+        }, 500);
+      }
     }
     
     // Removed checkDailyQuestions - Daily Health Questions section removed
@@ -445,7 +450,7 @@ export default function MotherDashboard() {
   };
 
   const loadDailyEntryQuestions = async (date: string) => {
-    if (!date) return;
+    if (!date || !token) return; // Don't load if no token
     
     setLoadingQuestions(true);
     try {
@@ -467,17 +472,25 @@ export default function MotherDashboard() {
           setDailyQuestions(data.questions || []);
           setCurrentQuestionIndex(data.currentQuestionIndex || 0);
           
-          // Load existing answers for this date
+          // Load existing answers for this date (from single file format)
           const allEntries = await fetch("/api/mother/journal", { headers: authHeaders() }).then(r => r.json());
           const dateEntries = (allEntries.entries || []).filter((e: DailyEntry) => e.date === date);
           const answers: string[] = [];
-          dateEntries.forEach((entry: DailyEntry) => {
-            const match = entry.entry.match(/^DAILY_ENTRY_ANSWER_(\d+):(.+)$/);
-            if (match) {
-              const index = parseInt(match[1]);
-              answers[index] = match[2];
+          const answersEntry = dateEntries.find((e: DailyEntry) => e.entry.startsWith("DAILY_ENTRY_ANSWERS:"));
+          if (answersEntry) {
+            try {
+              const jsonStr = answersEntry.entry.replace("DAILY_ENTRY_ANSWERS:", "");
+              const answersObj = JSON.parse(jsonStr);
+              Object.keys(answersObj).forEach(key => {
+                const index = parseInt(key);
+                if (!isNaN(index)) {
+                  answers[index] = answersObj[key];
+                }
+              });
+            } catch (err) {
+              console.error("Error parsing answers:", err);
             }
-          });
+          }
           setQuestionAnswers(answers);
           
           // Set current answer if exists

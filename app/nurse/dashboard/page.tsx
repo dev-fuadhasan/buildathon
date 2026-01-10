@@ -38,18 +38,21 @@ export default function NurseDashboard() {
   const prioritySectionRef = useRef<HTMLDivElement | null>(null);
   const patientsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Determine status for priority badges
-  const getStatus = (patient: PatientData) => {
-    const hasHighRisk =
-      patient.medicalHistory?.toLowerCase().includes("diabetes") ||
-      patient.medicalHistory?.toLowerCase().includes("hypertension") ||
-      patient.medicalHistory?.toLowerCase().includes("heart") ||
-      (patient.allergies && patient.allergies.length > 0);
-
-    if (hasHighRisk) return { label: "High Risk", variant: "error" as const };
-    const hasFiles = (patient.prescriptions?.length || 0) + (patient.reports?.length || 0) > 0;
-    if (hasFiles) return { label: "Active", variant: "info" as const };
-    return { label: "Normal", variant: "success" as const };
+  // Determine status for priority badges based on priority score
+  const getStatus = (patient: PatientData, priorityScore?: number) => {
+    // Use priority score if available, otherwise calculate from medical history
+    const score = priorityScore !== undefined ? priorityScore : 0;
+    
+    // Determine status based on priority score
+    if (score >= 50) {
+      return { label: "High Risk", variant: "error" as const };
+    } else if (score >= 20) {
+      return { label: "Medium Risk", variant: "warning" as const };
+    } else {
+      const hasFiles = (patient.prescriptions?.length || 0) + (patient.reports?.length || 0) > 0;
+      if (hasFiles) return { label: "Active", variant: "info" as const };
+      return { label: "Normal", variant: "success" as const };
+    }
   };
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -650,7 +653,7 @@ export default function NurseDashboard() {
                                 Priority: {Math.round(item.priorityScore)}%
                               </Badge>
                               {(() => {
-                                const status = getStatus(item.patient);
+                                const status = getStatus(item.patient, item.priorityScore);
                                 return <Badge variant={status.variant} size="sm">{status.label}</Badge>;
                               })()}
                             </div>
