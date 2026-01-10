@@ -6,6 +6,7 @@ import CommentSection from "@/components/CommentSection";
 import MessagePopup from "@/components/MessagePopup";
 import DailyQuestionPopup from "@/components/DailyQuestionPopup";
 import FoodRecommendations from "@/components/FoodRecommendations";
+import GenerateReportModal from "@/components/GenerateReportModal";
 import Icon from "@/components/Icon";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -138,6 +139,8 @@ export default function MotherDashboard() {
   const [doctorArea, setDoctorArea] = useState<string>("");
   const [doctorLoading, setDoctorLoading] = useState(false);
   const [doctorError, setDoctorError] = useState("");
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
   type Doctor = {
     name: string;
     qualifications?: string;
@@ -715,6 +718,226 @@ export default function MotherDashboard() {
     }
   };
 
+  const generateReport = async (type: "overall" | "dateRange", startDate?: string, endDate?: string) => {
+    setGeneratingReport(true);
+    try {
+      const res = await fetch("/api/mother/generate-report", {
+        method: "POST",
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ type, startDate, endDate }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.report) {
+        // Generate and download PDF
+        await generatePDF(data.report);
+        setShowReportModal(false);
+        setMessage("✅ Report generated and downloaded successfully!");
+      } else {
+        setMessage(`❌ ${data.error || "Failed to generate report"}`);
+      }
+    } catch (err) {
+      console.error("Error generating report:", err);
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const generatePDF = async (reportData: any) => {
+    // Dynamic import of jsPDF
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    let yPos = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - 2 * margin;
+
+    // Helper function to add text with word wrap
+    const addText = (text: string, fontSize: number, isBold: boolean = false, color: string = "#000000") => {
+      if (!text || text === "N/A" || text === "None") return;
+      
+      doc.setFontSize(fontSize);
+      doc.setTextColor(color);
+      if (isBold) {
+        doc.setFont(undefined, "bold");
+      } else {
+        doc.setFont(undefined, "normal");
+      }
+      
+      const lines = doc.splitTextToSize(String(text), contentWidth);
+      if (yPos + lines.length * (fontSize * 0.4) > doc.internal.pageSize.getHeight() - 20) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * (fontSize * 0.4) + 5;
+    };
+    
+    // Helper to add section header
+    const addSectionHeader = (title: string) => {
+      if (yPos > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+      yPos += 5;
+      addText(title, 14, true, "#059669");
+      yPos += 2;
+    };
+
+    // Title
+    doc.setFillColor(30, 64, 175);
+    doc.rect(margin, yPos - 5, contentWidth, 15, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont(undefined, "bold");
+    doc.text("COMPREHENSIVE MEDICAL REPORT", pageWidth / 2, yPos + 5, { align: "center" });
+    yPos += 15;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    doc.text(`Generated on: ${new Date(reportData.generatedAt).toLocaleString()}`, margin, yPos);
+    if (reportData.dateRange) {
+      doc.text(`Report Period: ${reportData.dateRange.startDate} to ${reportData.dateRange.endDate}`, margin, yPos + 5);
+    } else {
+      doc.text("Report Type: Overall Medical History", margin, yPos + 5);
+    }
+    yPos += 15;
+
+    // Patient Information
+    addSectionHeader("PATIENT INFORMATION");
+    if (reportData.patientInfo.name) addText(`Name: ${reportData.patientInfo.name}`, 11);
+    if (reportData.patientInfo.age) addText(`Age: ${reportData.patientInfo.age} years`, 11);
+    if (reportData.patientInfo.email) addText(`Email: ${reportData.patientInfo.email}`, 11);
+    if (reportData.patientInfo.phone) addText(`Phone: ${reportData.patientInfo.phone}`, 11);
+    if (reportData.patientInfo.address) addText(`Address: ${reportData.patientInfo.address}`, 11);
+    if (reportData.patientInfo.bloodGroup) addText(`Blood Group: ${reportData.patientInfo.bloodGroup}`, 11);
+    if (reportData.patientInfo.emergencyContact) {
+      addText(`Emergency Contact: ${reportData.patientInfo.emergencyContact} (${reportData.patientInfo.emergencyPhone || "N/A"})`, 11);
+    }
+
+    // Pregnancy Information
+    addSectionHeader("PREGNANCY INFORMATION");
+    if (reportData.pregnancyInfo.daysPregnant && reportData.pregnancyInfo.daysPregnant !== "N/A") {
+      addText(`Days Pregnant: ${reportData.pregnancyInfo.daysPregnant}`, 11);
+    }
+    if (reportData.pregnancyInfo.weeksPregnant && reportData.pregnancyInfo.weeksPregnant !== "N/A") {
+      addText(`Weeks Pregnant: ${reportData.pregnancyInfo.weeksPregnant}`, 11);
+    }
+    if (reportData.pregnancyInfo.monthsPregnant && reportData.pregnancyInfo.monthsPregnant !== "N/A") {
+      addText(`Months Pregnant: ${reportData.pregnancyInfo.monthsPregnant}`, 11);
+    }
+    if (reportData.pregnancyInfo.trimester && reportData.pregnancyInfo.trimester !== "N/A") {
+      addText(`Trimester: ${reportData.pregnancyInfo.trimester}`, 11);
+    }
+    if (reportData.pregnancyInfo.dueDate && reportData.pregnancyInfo.dueDate !== "N/A") {
+      addText(`Due Date: ${reportData.pregnancyInfo.dueDate}`, 11);
+    }
+    if (reportData.pregnancyInfo.previousPregnancies !== undefined) {
+      addText(`Previous Pregnancies: ${reportData.pregnancyInfo.previousPregnancies}`, 11);
+    }
+
+    // Medical Information
+    addSectionHeader("MEDICAL INFORMATION");
+    if (reportData.medicalInfo.conditions && reportData.medicalInfo.conditions !== "None") {
+      addText(`Medical Conditions: ${reportData.medicalInfo.conditions}`, 11);
+    }
+    if (reportData.medicalInfo.medications && reportData.medicalInfo.medications !== "None") {
+      addText(`Current Medications: ${reportData.medicalInfo.medications}`, 11);
+    }
+    if (reportData.medicalInfo.allergies && reportData.medicalInfo.allergies !== "None") {
+      addText(`Allergies: ${reportData.medicalInfo.allergies}`, 11, false, "#dc2626");
+    }
+
+    // Statistics
+    addSectionHeader("SUMMARY STATISTICS");
+    addText(`Total Daily Entries: ${reportData.statistics.totalDailyEntries}`, 11);
+    addText(`Total Daily Routines: ${reportData.statistics.totalRoutines}`, 11);
+    addText(`Completed Meals: ${reportData.statistics.completedMeals}`, 11);
+    addText(`Completed Exercises: ${reportData.statistics.completedExercises}`, 11);
+    addText(`Total Questions Asked: ${reportData.statistics.totalQuestions}`, 11);
+    addText(`Answered Questions: ${reportData.statistics.answeredQuestions}`, 11);
+
+    // Daily Entries
+    if (reportData.dailyEntries.length > 0) {
+      addSectionHeader("DAILY JOURNAL ENTRIES");
+      reportData.dailyEntries.slice(0, 15).forEach((entry: any) => {
+        addText(`Date: ${entry.date}`, 10, true);
+        addText(entry.entry, 10);
+        yPos += 3;
+      });
+      if (reportData.dailyEntries.length > 15) {
+        addText(`... and ${reportData.dailyEntries.length - 15} more entries`, 9, false, "#666666");
+      }
+    }
+
+    // Daily Routines
+    if (reportData.dailyRoutines.length > 0) {
+      addSectionHeader("DAILY ROUTINE TRACKING");
+      reportData.dailyRoutines.slice(0, 10).forEach((routine: any) => {
+        addText(`Date: ${routine.date}`, 10, true);
+        addText(`Breakfast: ${routine.breakfast} ${routine.breakfastEaten ? "✓" : "✗"}`, 9);
+        addText(`Lunch: ${routine.lunch} ${routine.lunchEaten ? "✓" : "✗"}`, 9);
+        addText(`Dinner: ${routine.dinner} ${routine.dinnerEaten ? "✓" : "✗"}`, 9);
+        addText(`Exercises: ${routine.exercises} ${routine.exercisesDone ? "✓" : "✗"}`, 9);
+        yPos += 3;
+      });
+      if (reportData.dailyRoutines.length > 10) {
+        addText(`... and ${reportData.dailyRoutines.length - 10} more routine entries`, 9, false, "#666666");
+      }
+    }
+
+    // Questions and Answers
+    if (reportData.questionsAndAnswers.length > 0) {
+      addSectionHeader("QUESTIONS & ANSWERS WITH DOCTORS");
+      reportData.questionsAndAnswers.slice(0, 10).forEach((qa: any) => {
+        addText(`Q: ${qa.question}`, 10, true);
+        addText(`A: ${qa.answer}`, 10);
+        yPos += 3;
+      });
+      if (reportData.questionsAndAnswers.length > 10) {
+        addText(`... and ${reportData.questionsAndAnswers.length - 10} more Q&As`, 9, false, "#666666");
+      }
+    }
+
+    // Prescriptions
+    if (reportData.prescriptions.length > 0) {
+      addSectionHeader("PRESCRIPTIONS & REPORTS");
+      addText(`Total Files: ${reportData.prescriptions.length}`, 10);
+      reportData.prescriptions.forEach((prescription: any) => {
+        addText(`- ${prescription.fileName}`, 10);
+      });
+    }
+
+    // Footer
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor("#666666");
+      doc.text(
+        `Page ${i} of ${totalPages} - Generated by MomsCare`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    // Save PDF
+    const fileName = `Medical_Report_${reportData.patientInfo.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+    doc.save(fileName);
+  };
+
 
   const saveDailyEntry = async () => {
     if (!selectedDate || !newEntryText.trim()) {
@@ -1071,6 +1294,14 @@ export default function MotherDashboard() {
       action: () => navigateToTab("find-doctor"),
       accent: "from-rose-500 to-orange-500",
     },
+    {
+      id: "generate-report",
+      title: "Generate Report",
+      description: "Create a comprehensive medical report for your doctor.",
+      icon: "prescription",
+      action: () => setShowReportModal(true),
+      accent: "from-blue-500 to-cyan-500",
+    },
   ];
 
   // Calculate days left to due date
@@ -1081,6 +1312,14 @@ export default function MotherDashboard() {
 
   return (
     <Layout>
+      {showReportModal && (
+        <GenerateReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onGenerate={generateReport}
+          generating={generatingReport}
+        />
+      )}
       {showQuestionPopup && token && (
         <DailyQuestionPopup
           token={token}
