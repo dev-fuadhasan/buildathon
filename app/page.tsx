@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -332,8 +333,13 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">M</span>
+                <div className="relative w-10 h-10 flex-shrink-0">
+                  <Image
+                    src="/mainlogo.png"
+                    alt="MomsCare Logo"
+                    fill
+                    className="object-contain"
+                  />
                 </div>
                 <span className="text-2xl font-bold text-white">MomsCare AI</span>
               </div>

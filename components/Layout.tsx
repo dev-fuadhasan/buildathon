@@ -2,6 +2,7 @@
 
 import { PropsWithChildren, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -365,8 +366,14 @@ export default function Layout({ children }: Props) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between h-16 md:h-18">
             <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                <span className="text-white font-bold text-base sm:text-lg">M</span>
+              <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                <Image
+                  src="/mainlogo.png"
+                  alt="MomsCare Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
               <span className="text-xl sm:text-2xl font-bold gradient-text">MomsCare</span>
             </Link>
