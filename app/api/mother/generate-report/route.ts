@@ -111,16 +111,30 @@ export async function POST(req: NextRequest) {
     }
 
     // Get prescriptions
+    // Filter out PDF files - use only image files for AI analysis (includes PDF-converted images)
     let prescriptions: Array<{ key: string; url: string; fileName: string }> = [];
+    let prescriptionUrlsForAnalysis: string[] = [];
     try {
       const prefix = `prescriptions/${user.id}/`;
       const objects = await listObjects(prefix);
+      
+      // Get all prescriptions (for display)
       prescriptions = await Promise.all(
         (objects || []).map(async (obj) => ({
           key: obj.Key!,
           url: await signedUrl(obj.Key!),
           fileName: obj.Key!.split("/").pop() || "prescription",
         }))
+      );
+      
+      // Filter to only image files for AI analysis (exclude PDFs)
+      const imageObjects = (objects || []).filter(obj => {
+        const key = obj.Key || "";
+        return key.endsWith('.png') || key.endsWith('.jpg') || key.endsWith('.jpeg');
+      });
+      
+      prescriptionUrlsForAnalysis = await Promise.all(
+        imageObjects.map(async (obj) => await signedUrl(obj.Key!))
       );
     } catch (err) {
       console.error("Error fetching prescriptions:", err);
@@ -132,8 +146,9 @@ export async function POST(req: NextRequest) {
     const monthsPregnant = daysPregnant ? Math.floor(daysPregnant / 30) : undefined;
 
     // Generate AI analyses (run in parallel for efficiency)
+    // Use filtered image URLs (PDFs excluded) for AI analysis
     const [prescriptionAnalysis, qaAnalysis, entriesAnalysis, chatAnalysis, routinesAnalysis] = await Promise.all([
-      analyzePrescriptionsAndReports(mother, prescriptions.map(p => p.url)),
+      analyzePrescriptionsAndReports(mother, prescriptionUrlsForAnalysis),
       analyzeQuestionsAndAnswers(mother, filteredQuestions.map(q => ({
         question: q.question,
         answer: q.answer,

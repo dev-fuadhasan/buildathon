@@ -391,12 +391,28 @@ export async function POST(req: NextRequest) {
           }
           
           // Load prescriptions
+          // Note: PDFs are converted to images, so we filter out PDF files and use image files instead
           try {
             const prefix = `prescriptions/${user!.id}/`;
             const objects = await listObjects(prefix);
+            // Filter out PDF files - use only image files (PNG/JPG) for Groq analysis
+            // This includes both direct image uploads and PDF-converted images
+            const imageObjects = (objects || []).filter(obj => {
+              const key = obj.Key || "";
+              // Include PNG and JPG files, exclude PDF files
+              return key.endsWith('.png') || key.endsWith('.jpg') || key.endsWith('.jpeg');
+            });
+            
+            // Limit to most recent 10 images (to handle multi-page PDFs)
+            const recentImages = imageObjects
+              .sort((a, b) => (b.LastModified?.getTime() || 0) - (a.LastModified?.getTime() || 0))
+              .slice(0, 10);
+            
             allPrescriptionUrls = await Promise.all(
-              (objects || []).slice(0, 3).map(async (obj) => await signedUrl(obj.Key!))
+              recentImages.map(async (obj) => await signedUrl(obj.Key!))
             );
+            
+            console.log(`[Chat] Loaded ${allPrescriptionUrls.length} prescription image(s) (PDFs filtered out)`);
           } catch (err) {
             console.error("Failed to fetch prescriptions:", err);
           }
