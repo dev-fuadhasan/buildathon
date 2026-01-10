@@ -32,14 +32,10 @@ if (typeof window === "undefined") {
   }
 }
 
-import * as pdfjsLib from "pdfjs-dist";
 import { createCanvas } from "canvas";
 
-// Set up the worker for pdfjs-dist
-if (typeof window === "undefined") {
-  // Empty string disables worker and uses main thread (better for serverless)
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-}
+// Note: pdfjs-dist is imported dynamically to use legacy build
+// GlobalWorkerOptions is set on the dynamically imported module, not here
 
 export interface PDFPageImage {
   pageNumber: number;
@@ -71,16 +67,44 @@ export async function convertPdfToImages(
       pdfjsLib = await import("pdfjs-dist/build/pdf.mjs" as any);
     }
     
-    // Set up worker (disable for serverless)
+    // Set up worker (disable for serverless) - MUST be set on the dynamically imported module
     if (typeof window === "undefined") {
+      // The dynamically imported module needs GlobalWorkerOptions set
+      // Try multiple ways to set it based on module structure
+      if (!pdfjsLib.GlobalWorkerOptions) {
+        // Create GlobalWorkerOptions if it doesn't exist
+        pdfjsLib.GlobalWorkerOptions = {};
+      }
+      
+      // Set worker source to empty string to disable worker (use main thread)
       pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+      
+      // Also try setting it on the default export if it exists
+      if (pdfjsLib.default && !pdfjsLib.default.GlobalWorkerOptions) {
+        pdfjsLib.default.GlobalWorkerOptions = { workerSrc: "" };
+      }
+      
+      console.log(`[PDF Conversion] Worker disabled: GlobalWorkerOptions.workerSrc = "${pdfjsLib.GlobalWorkerOptions.workerSrc}"`);
     }
     
     // Load the PDF document - use Uint8Array instead of Buffer
-    const loadingTask = pdfjsLib.getDocument({
+    // Use disableWorker option if available (for some pdfjs-dist versions)
+    const getDocumentOptions: any = {
       data: uint8Array,
       useSystemFonts: true,
-    });
+    };
+    
+    // Try to disable worker in options (some versions support this)
+    if (typeof window === "undefined") {
+      // Check if disableWorker option is supported
+      try {
+        getDocumentOptions.disableWorker = true;
+      } catch {
+        // If not supported, rely on GlobalWorkerOptions.workerSrc = ""
+      }
+    }
+    
+    const loadingTask = pdfjsLib.getDocument(getDocumentOptions);
 
     const pdfDocument = await loadingTask.promise;
     const numPages = pdfDocument.numPages;
