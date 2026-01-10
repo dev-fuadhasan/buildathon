@@ -9,6 +9,13 @@ import {
   getChatHistory,
 } from "@/lib/data";
 import { listObjects, signedUrl } from "@/lib/r2Client";
+import {
+  analyzePrescriptionsAndReports,
+  analyzeQuestionsAndAnswers,
+  analyzeDailyEntries,
+  analyzeChatHistory,
+  analyzeDailyRoutines,
+} from "@/lib/reportAnalysisAI";
 
 /**
  * POST: Generate comprehensive medical report
@@ -119,13 +126,25 @@ export async function POST(req: NextRequest) {
       console.error("Error fetching prescriptions:", err);
     }
 
-    // Calculate pregnancy info
+    // Calculate pregnancy info (simplified - only show date or month)
     const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
     const weeksPregnant = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
     const monthsPregnant = daysPregnant ? Math.floor(daysPregnant / 30) : undefined;
-    const trimester = daysPregnant ? Math.floor(daysPregnant / 90) + 1 : (weeksPregnant ? Math.floor(weeksPregnant / 13) + 1 : undefined);
 
-    // Build comprehensive report data
+    // Generate AI analyses (run in parallel for efficiency)
+    const [prescriptionAnalysis, qaAnalysis, entriesAnalysis, chatAnalysis, routinesAnalysis] = await Promise.all([
+      analyzePrescriptionsAndReports(mother, prescriptions.map(p => p.url)),
+      analyzeQuestionsAndAnswers(mother, filteredQuestions.map(q => ({
+        question: q.question,
+        answer: q.answer,
+        createdAt: q.createdAt,
+      }))),
+      analyzeDailyEntries(mother, dailyEntries),
+      analyzeChatHistory(mother, filteredChatHistory),
+      analyzeDailyRoutines(mother, routines),
+    ]);
+
+    // Build comprehensive report data with AI-generated analyses
     const reportData = {
       generatedAt: new Date().toISOString(),
       reportType: type,
@@ -143,12 +162,10 @@ export async function POST(req: NextRequest) {
         emergencyPhone: mother.emergencyPhone || "N/A",
       },
 
-      // Pregnancy Information
+      // Pregnancy Information (simplified)
       pregnancyInfo: {
-        daysPregnant: daysPregnant || "N/A",
         weeksPregnant: weeksPregnant || "N/A",
         monthsPregnant: monthsPregnant || "N/A",
-        trimester: trimester || "N/A",
         dueDate: mother.dueDate || "N/A",
         previousPregnancies: mother.previousPregnancies || 0,
       },
@@ -160,61 +177,22 @@ export async function POST(req: NextRequest) {
         allergies: mother.allergies || "None",
       },
 
-      // Daily Entries
-      dailyEntries: dailyEntries
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .map(entry => ({
-          date: entry.date,
-          entry: entry.entry,
-          createdAt: entry.createdAt,
-        })),
+      // AI-Generated Professional Analyses
+      analyses: {
+        prescriptionsAndReports: prescriptionAnalysis,
+        questionsAndAnswers: qaAnalysis,
+        dailyEntries: entriesAnalysis,
+        chatHistory: chatAnalysis,
+        dailyRoutines: routinesAnalysis,
+      },
 
-      // Daily Routines
-      dailyRoutines: routines
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .map(routine => ({
-          date: routine.date,
-          breakfast: routine.breakfast,
-          lunch: routine.lunch,
-          dinner: routine.dinner,
-          exercises: routine.exercises,
-          breakfastEaten: routine.breakfastEaten || false,
-          lunchEaten: routine.lunchEaten || false,
-          dinnerEaten: routine.dinnerEaten || false,
-          exercisesDone: routine.exercisesDone || false,
-          dailyReport: routine.dailyReport,
-        })),
-
-      // Questions and Answers
-      questionsAndAnswers: filteredQuestions
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(q => ({
-          question: q.question,
-          answer: q.answer || "Not yet answered",
-          createdAt: q.createdAt,
-          answeredAt: q.answeredAt,
-        })),
-
-      // Prescriptions
+      // Prescriptions (for reference)
       prescriptions: prescriptions.map(p => ({
         fileName: p.fileName,
         url: p.url,
       })),
 
-      // Chat History Summary
-      chatHistorySummary: filteredChatHistory.length > 0 ? {
-        totalMessages: filteredChatHistory.length,
-        lastMessageDate: filteredChatHistory[filteredChatHistory.length - 1]?.timestamp || "N/A",
-      } : null,
-
-      // Notifications Summary
-      notificationsSummary: {
-        total: notifications.length,
-        morningRecommendations: notifications.filter(n => n.type === "morning_recommendation").length,
-        eveningRecommendations: notifications.filter(n => n.type === "evening_recommendation").length,
-      },
-
-      // Statistics
+      // Statistics (for reference)
       statistics: {
         totalDailyEntries: dailyEntries.length,
         totalRoutines: routines.length,
@@ -224,6 +202,7 @@ export async function POST(req: NextRequest) {
         completedExercises: routines.filter(r => r.exercisesDone).length,
         totalQuestions: filteredQuestions.length,
         answeredQuestions: filteredQuestions.filter(q => q.answer).length,
+        totalPrescriptions: prescriptions.length,
       },
     };
 

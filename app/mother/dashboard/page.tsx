@@ -748,194 +748,260 @@ export default function MotherDashboard() {
   };
 
   const generatePDF = async (reportData: any) => {
-    // Dynamic import of jsPDF
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    let yPos = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const contentWidth = pageWidth - 2 * margin;
-
-    // Helper function to add text with word wrap
-    const addText = (text: string, fontSize: number, isBold: boolean = false, color: string = "#000000") => {
-      if (!text || text === "N/A" || text === "None") return;
-      
-      doc.setFontSize(fontSize);
-      doc.setTextColor(color);
-      if (isBold) {
-        doc.setFont("helvetica", "bold");
-      } else {
-        doc.setFont("helvetica", "normal");
-      }
-      
-      const lines = doc.splitTextToSize(String(text), contentWidth);
-      if (yPos + lines.length * (fontSize * 0.4) > doc.internal.pageSize.getHeight() - 20) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      doc.text(lines, margin, yPos);
-      yPos += lines.length * (fontSize * 0.4) + 5;
-    };
+    // Use html2pdf for better Bangla text support
+    const html2pdf = (await import("html2pdf.js")).default;
     
-    // Helper to add section header
-    const addSectionHeader = (title: string) => {
-      if (yPos > doc.internal.pageSize.getHeight() - 30) {
-        doc.addPage();
-        yPos = 20;
-      }
-      yPos += 5;
-      addText(title, 14, true, "#059669");
-      yPos += 2;
+    // Create HTML content for the report
+    const htmlContent = generateReportHTML(reportData);
+    
+    // Create a temporary element to render HTML
+    const element = document.createElement("div");
+    element.innerHTML = htmlContent;
+    element.style.position = "absolute";
+    element.style.left = "-9999px";
+    document.body.appendChild(element);
+    
+    try {
+      const opt = {
+        margin: [15, 15, 15, 15] as [number, number, number, number],
+        filename: `Medical_Report_${reportData.patientInfo.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
+      };
+      
+      await html2pdf().set(opt).from(element).save();
+    } finally {
+      document.body.removeChild(element);
+    }
+  };
+
+  const generateReportHTML = (reportData: any): string => {
+    const formatDate = (dateStr: string) => {
+      return new Date(dateStr).toLocaleString();
     };
 
-    // Title
-    doc.setFillColor(30, 64, 175);
-    doc.rect(margin, yPos - 5, contentWidth, 15, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("COMPREHENSIVE MEDICAL REPORT", pageWidth / 2, yPos + 5, { align: "center" });
-    yPos += 15;
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generated on: ${new Date(reportData.generatedAt).toLocaleString()}`, margin, yPos);
-    if (reportData.dateRange) {
-      doc.text(`Report Period: ${reportData.dateRange.startDate} to ${reportData.dateRange.endDate}`, margin, yPos + 5);
-    } else {
-      doc.text("Report Type: Overall Medical History", margin, yPos + 5);
-    }
-    yPos += 15;
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text: string) => {
+      if (!text) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
 
-    // Patient Information
-    addSectionHeader("PATIENT INFORMATION");
-    if (reportData.patientInfo.name) addText(`Name: ${reportData.patientInfo.name}`, 11);
-    if (reportData.patientInfo.age) addText(`Age: ${reportData.patientInfo.age} years`, 11);
-    if (reportData.patientInfo.email) addText(`Email: ${reportData.patientInfo.email}`, 11);
-    if (reportData.patientInfo.phone) addText(`Phone: ${reportData.patientInfo.phone}`, 11);
-    if (reportData.patientInfo.address) addText(`Address: ${reportData.patientInfo.address}`, 11);
-    if (reportData.patientInfo.bloodGroup) addText(`Blood Group: ${reportData.patientInfo.bloodGroup}`, 11);
-    if (reportData.patientInfo.emergencyContact) {
-      addText(`Emergency Contact: ${reportData.patientInfo.emergencyContact} (${reportData.patientInfo.emergencyPhone || "N/A"})`, 11);
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #333;
+      padding: 20px;
+      background: white;
     }
+    .header {
+      background: #1e40af;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    .header h1 {
+      font-size: 20pt;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .header-info {
+      font-size: 9pt;
+      opacity: 0.9;
+    }
+    .section {
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+    }
+    .section-title {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #059669;
+      margin-bottom: 12px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #059669;
+    }
+    .info-row {
+      margin-bottom: 8px;
+      padding: 5px 0;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #555;
+      display: inline-block;
+      min-width: 150px;
+    }
+    .info-value {
+      color: #333;
+    }
+    .analysis {
+      background: #f8fafc;
+      padding: 15px;
+      border-left: 4px solid #3b82f6;
+      margin: 15px 0;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-size: 10pt;
+      line-height: 1.8;
+    }
+    .allergy {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .stat-item {
+      background: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #1e40af;
+    }
+    .stat-label {
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 5px;
+    }
+    @media print {
+      body { padding: 10px; }
+      .section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>COMPREHENSIVE MEDICAL REPORT</h1>
+    <div class="header-info">
+      Generated on: ${formatDate(reportData.generatedAt)}<br>
+      ${reportData.dateRange ? `Report Period: ${reportData.dateRange.startDate} to ${reportData.dateRange.endDate}` : "Report Type: Overall Medical History"}
+    </div>
+  </div>
 
-    // Pregnancy Information
-    addSectionHeader("PREGNANCY INFORMATION");
-    if (reportData.pregnancyInfo.daysPregnant && reportData.pregnancyInfo.daysPregnant !== "N/A") {
-      addText(`Days Pregnant: ${reportData.pregnancyInfo.daysPregnant}`, 11);
-    }
-    if (reportData.pregnancyInfo.weeksPregnant && reportData.pregnancyInfo.weeksPregnant !== "N/A") {
-      addText(`Weeks Pregnant: ${reportData.pregnancyInfo.weeksPregnant}`, 11);
-    }
-    if (reportData.pregnancyInfo.monthsPregnant && reportData.pregnancyInfo.monthsPregnant !== "N/A") {
-      addText(`Months Pregnant: ${reportData.pregnancyInfo.monthsPregnant}`, 11);
-    }
-    if (reportData.pregnancyInfo.trimester && reportData.pregnancyInfo.trimester !== "N/A") {
-      addText(`Trimester: ${reportData.pregnancyInfo.trimester}`, 11);
-    }
-    if (reportData.pregnancyInfo.dueDate && reportData.pregnancyInfo.dueDate !== "N/A") {
-      addText(`Due Date: ${reportData.pregnancyInfo.dueDate}`, 11);
-    }
-    if (reportData.pregnancyInfo.previousPregnancies !== undefined) {
-      addText(`Previous Pregnancies: ${reportData.pregnancyInfo.previousPregnancies}`, 11);
-    }
+  <div class="section">
+    <div class="section-title">PATIENT INFORMATION</div>
+    ${reportData.patientInfo.name ? `<div class="info-row"><span class="info-label">Name:</span><span class="info-value">${escapeHtml(reportData.patientInfo.name)}</span></div>` : ""}
+    ${reportData.patientInfo.age ? `<div class="info-row"><span class="info-label">Age:</span><span class="info-value">${escapeHtml(String(reportData.patientInfo.age))} years</span></div>` : ""}
+    ${reportData.patientInfo.email ? `<div class="info-row"><span class="info-label">Email:</span><span class="info-value">${escapeHtml(reportData.patientInfo.email)}</span></div>` : ""}
+    ${reportData.patientInfo.phone ? `<div class="info-row"><span class="info-label">Phone:</span><span class="info-value">${escapeHtml(reportData.patientInfo.phone)}</span></div>` : ""}
+    ${reportData.patientInfo.address ? `<div class="info-row"><span class="info-label">Address:</span><span class="info-value">${escapeHtml(reportData.patientInfo.address)}</span></div>` : ""}
+    ${reportData.patientInfo.bloodGroup ? `<div class="info-row"><span class="info-label">Blood Group:</span><span class="info-value">${escapeHtml(reportData.patientInfo.bloodGroup)}</span></div>` : ""}
+    ${reportData.patientInfo.emergencyContact ? `<div class="info-row"><span class="info-label">Emergency Contact:</span><span class="info-value">${escapeHtml(reportData.patientInfo.emergencyContact)} (${escapeHtml(reportData.patientInfo.emergencyPhone || "N/A")})</span></div>` : ""}
+  </div>
 
-    // Medical Information
-    addSectionHeader("MEDICAL INFORMATION");
-    if (reportData.medicalInfo.conditions && reportData.medicalInfo.conditions !== "None") {
-      addText(`Medical Conditions: ${reportData.medicalInfo.conditions}`, 11);
-    }
-    if (reportData.medicalInfo.medications && reportData.medicalInfo.medications !== "None") {
-      addText(`Current Medications: ${reportData.medicalInfo.medications}`, 11);
-    }
-    if (reportData.medicalInfo.allergies && reportData.medicalInfo.allergies !== "None") {
-      addText(`Allergies: ${reportData.medicalInfo.allergies}`, 11, false, "#dc2626");
-    }
+  <div class="section">
+    <div class="section-title">PREGNANCY INFORMATION</div>
+    ${reportData.pregnancyInfo.monthsPregnant && reportData.pregnancyInfo.monthsPregnant !== "N/A" 
+      ? `<div class="info-row"><span class="info-label">Pregnancy Duration:</span><span class="info-value">${reportData.pregnancyInfo.monthsPregnant} months (${reportData.pregnancyInfo.weeksPregnant || "N/A"} weeks)</span></div>`
+      : reportData.pregnancyInfo.weeksPregnant && reportData.pregnancyInfo.weeksPregnant !== "N/A"
+      ? `<div class="info-row"><span class="info-label">Pregnancy Duration:</span><span class="info-value">${reportData.pregnancyInfo.weeksPregnant} weeks</span></div>`
+      : ""}
+    ${reportData.pregnancyInfo.dueDate && reportData.pregnancyInfo.dueDate !== "N/A" ? `<div class="info-row"><span class="info-label">Due Date:</span><span class="info-value">${reportData.pregnancyInfo.dueDate}</span></div>` : ""}
+    ${reportData.pregnancyInfo.previousPregnancies !== undefined ? `<div class="info-row"><span class="info-label">Previous Pregnancies:</span><span class="info-value">${reportData.pregnancyInfo.previousPregnancies}</span></div>` : ""}
+  </div>
 
-    // Statistics
-    addSectionHeader("SUMMARY STATISTICS");
-    addText(`Total Daily Entries: ${reportData.statistics.totalDailyEntries}`, 11);
-    addText(`Total Daily Routines: ${reportData.statistics.totalRoutines}`, 11);
-    addText(`Completed Meals: ${reportData.statistics.completedMeals}`, 11);
-    addText(`Completed Exercises: ${reportData.statistics.completedExercises}`, 11);
-    addText(`Total Questions Asked: ${reportData.statistics.totalQuestions}`, 11);
-    addText(`Answered Questions: ${reportData.statistics.answeredQuestions}`, 11);
+  <div class="section">
+    <div class="section-title">MEDICAL INFORMATION</div>
+    ${reportData.medicalInfo.conditions && reportData.medicalInfo.conditions !== "None" ? `<div class="info-row"><span class="info-label">Medical Conditions:</span><span class="info-value">${escapeHtml(reportData.medicalInfo.conditions)}</span></div>` : ""}
+    ${reportData.medicalInfo.medications && reportData.medicalInfo.medications !== "None" ? `<div class="info-row"><span class="info-label">Current Medications:</span><span class="info-value">${escapeHtml(reportData.medicalInfo.medications)}</span></div>` : ""}
+    ${reportData.medicalInfo.allergies && reportData.medicalInfo.allergies !== "None" ? `<div class="info-row"><span class="info-label">Allergies:</span><span class="info-value allergy">${escapeHtml(reportData.medicalInfo.allergies)}</span></div>` : ""}
+  </div>
 
-    // Daily Entries
-    if (reportData.dailyEntries.length > 0) {
-      addSectionHeader("DAILY JOURNAL ENTRIES");
-      reportData.dailyEntries.slice(0, 15).forEach((entry: any) => {
-        addText(`Date: ${entry.date}`, 10, true);
-        addText(entry.entry, 10);
-        yPos += 3;
-      });
-      if (reportData.dailyEntries.length > 15) {
-        addText(`... and ${reportData.dailyEntries.length - 15} more entries`, 9, false, "#666666");
-      }
-    }
+  ${reportData.analyses ? `
+    ${reportData.analyses.prescriptionsAndReports ? `
+    <div class="section">
+      <div class="section-title">PRESCRIPTIONS & REPORTS ANALYSIS</div>
+      <div class="analysis">${escapeHtml(reportData.analyses.prescriptionsAndReports)}</div>
+    </div>
+    ` : ""}
 
-    // Daily Routines
-    if (reportData.dailyRoutines.length > 0) {
-      addSectionHeader("DAILY ROUTINE TRACKING");
-      reportData.dailyRoutines.slice(0, 10).forEach((routine: any) => {
-        addText(`Date: ${routine.date}`, 10, true);
-        addText(`Breakfast: ${routine.breakfast} ${routine.breakfastEaten ? "✓" : "✗"}`, 9);
-        addText(`Lunch: ${routine.lunch} ${routine.lunchEaten ? "✓" : "✗"}`, 9);
-        addText(`Dinner: ${routine.dinner} ${routine.dinnerEaten ? "✓" : "✗"}`, 9);
-        addText(`Exercises: ${routine.exercises} ${routine.exercisesDone ? "✓" : "✗"}`, 9);
-        yPos += 3;
-      });
-      if (reportData.dailyRoutines.length > 10) {
-        addText(`... and ${reportData.dailyRoutines.length - 10} more routine entries`, 9, false, "#666666");
-      }
-    }
+    ${reportData.analyses.questionsAndAnswers ? `
+    <div class="section">
+      <div class="section-title">DOCTOR CONSULTATIONS SUMMARY</div>
+      <div class="analysis">${escapeHtml(reportData.analyses.questionsAndAnswers)}</div>
+    </div>
+    ` : ""}
 
-    // Questions and Answers
-    if (reportData.questionsAndAnswers.length > 0) {
-      addSectionHeader("QUESTIONS & ANSWERS WITH DOCTORS");
-      reportData.questionsAndAnswers.slice(0, 10).forEach((qa: any) => {
-        addText(`Q: ${qa.question}`, 10, true);
-        addText(`A: ${qa.answer}`, 10);
-        yPos += 3;
-      });
-      if (reportData.questionsAndAnswers.length > 10) {
-        addText(`... and ${reportData.questionsAndAnswers.length - 10} more Q&As`, 9, false, "#666666");
-      }
-    }
+    ${reportData.analyses.dailyEntries ? `
+    <div class="section">
+      <div class="section-title">DAILY JOURNAL ANALYSIS</div>
+      <div class="analysis">${escapeHtml(reportData.analyses.dailyEntries)}</div>
+    </div>
+    ` : ""}
 
-    // Prescriptions
-    if (reportData.prescriptions.length > 0) {
-      addSectionHeader("PRESCRIPTIONS & REPORTS");
-      addText(`Total Files: ${reportData.prescriptions.length}`, 10);
-      reportData.prescriptions.forEach((prescription: any) => {
-        addText(`- ${prescription.fileName}`, 10);
-      });
-    }
+    ${reportData.analyses.chatHistory ? `
+    <div class="section">
+      <div class="section-title">HEALTH CONVERSATION ANALYSIS</div>
+      <div class="analysis">${escapeHtml(reportData.analyses.chatHistory)}</div>
+    </div>
+    ` : ""}
 
-    // Footer
-    const totalPages = doc.internal.pages.length - 1;
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor("#666666");
-      doc.text(
-        `Page ${i} of ${totalPages} - Generated by MomsCare`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
-    }
+    ${reportData.analyses.dailyRoutines ? `
+    <div class="section">
+      <div class="section-title">NUTRITION & EXERCISE ANALYSIS</div>
+      <div class="analysis">${escapeHtml(reportData.analyses.dailyRoutines)}</div>
+    </div>
+    ` : ""}
+  ` : ""}
 
-    // Save PDF
-    const fileName = `Medical_Report_${reportData.patientInfo.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
-    doc.save(fileName);
+  <div class="section">
+    <div class="section-title">DATA SUMMARY</div>
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-value">${reportData.statistics.totalDailyEntries}</div>
+        <div class="stat-label">Daily Entries</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${reportData.statistics.totalRoutines}</div>
+        <div class="stat-label">Routines Tracked</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${reportData.statistics.totalQuestions}</div>
+        <div class="stat-label">Questions Asked</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${reportData.statistics.totalPrescriptions || 0}</div>
+        <div class="stat-label">Prescriptions</div>
+      </div>
+    </div>
+  </div>
+
+  ${reportData.prescriptions && reportData.prescriptions.length > 0 ? `
+  <div class="section">
+    <div class="section-title">PRESCRIPTIONS & REPORTS (${reportData.prescriptions.length} file(s))</div>
+    ${reportData.prescriptions.map((p: any) => `<div class="info-row">• ${p.fileName}</div>`).join("")}
+  </div>
+  ` : ""}
+
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 9pt;">
+    Generated by MomsCare - Comprehensive Pregnancy Care Platform
+  </div>
+</body>
+</html>
+    `;
   };
 
 
