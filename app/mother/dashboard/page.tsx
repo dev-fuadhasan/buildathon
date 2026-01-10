@@ -2344,9 +2344,10 @@ export default function MotherDashboard() {
                                   onClick={safeAsync(async () => {
                                     // Show images in a modal
                                     if (p.imageUrls && p.imageUrls.length > 0) {
-                                      const imagesHtml = p.imageUrls.map((url, idx) => 
+                                      const imageUrls = p.imageUrls || [];
+                                      const imagesHtml = imageUrls.map((url, idx) => 
                                         `<div style="margin-bottom: 30px; text-align: center;">
-                                          <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${p.imageUrls.length}</h3>
+                                          <h3 style="margin-bottom: 10px; color: #333; font-size: 18px;">Page ${idx + 1} of ${imageUrls.length}</h3>
                                           <img src="${url}" style="max-width: 100%; border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
                                         </div>`
                                       ).join('');
@@ -2365,7 +2366,7 @@ export default function MotherDashboard() {
                                             </head>
                                             <body>
                                               <h1>${fileName}</h1>
-                                              <p><strong>${p.imageUrls.length} page(s)</strong> converted to images</p>
+                                              <p><strong>${imageUrls.length} page(s)</strong> converted to images</p>
                                               ${imagesHtml}
                                             </body>
                                           </html>
