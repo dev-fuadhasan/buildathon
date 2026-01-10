@@ -129,6 +129,9 @@ export default function MotherDashboard() {
   const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | "food" | null>(null);
   const [showCards, setShowCards] = useState(true);
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
   const [newEntryText, setNewEntryText] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -1289,6 +1292,10 @@ export default function MotherDashboard() {
       return;
     }
     
+    await handleFileUpload(file);
+  };
+
+  const handleFileUpload = async (file: File) => {
     const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
     if (!validTypes.includes(file.type)) {
       setMessage("❌ Please upload PDF, PNG, or JPG files only");
@@ -1320,8 +1327,12 @@ export default function MotherDashboard() {
       }
       if (res.ok) {
         setMessage(`✅ ${t.mother.prescriptionUploaded}`);
-        fileInput.value = "";
+        const fileInput = document.querySelector('input[name="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = "";
         fetchPrescriptions();
+        // Reset camera state
+        setShowCamera(false);
+        setCapturedImage(null);
       } else {
         setMessage(`❌ ${data.error || "Upload failed. Please try again."}`);
       }
@@ -1330,6 +1341,57 @@ export default function MotherDashboard() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' } // Prefer back camera
+      });
+      setCameraStream(stream);
+      setShowCamera(true);
+      setCapturedImage(null);
+    } catch (err: any) {
+      console.error("Camera error:", err);
+      setMessage(`❌ ${err.message || "Failed to access camera. Please check permissions."}`);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+    setCapturedImage(null);
+  };
+
+  const capturePhoto = () => {
+    const video = document.getElementById("camera-video") as HTMLVideoElement;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0);
+      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      setCapturedImage(imageDataUrl);
+    }
+  };
+
+  const uploadCapturedImage = async () => {
+    if (!capturedImage) return;
+    
+    // Convert data URL to File
+    const response = await fetch(capturedImage);
+    const blob = await response.blob();
+    const file = new File([blob], `prescription_${Date.now()}.jpg`, { type: "image/jpeg" });
+    
+    // Stop camera
+    stopCamera();
+    
+    // Upload the file
+    await handleFileUpload(file);
   };
 
   const submitQuestion = async () => {
@@ -2017,6 +2079,43 @@ export default function MotherDashboard() {
                         Supported formats: PDF, PNG, JPG (Max 10MB)
                       </p>
                     </div>
+                    
+                    {/* Upload Options */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <label className="flex flex-col items-center justify-center p-4 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors">
+                        <Icon name="upload" size={24} className="text-pink-600 mb-2" />
+                        <span className="text-sm font-medium text-neutral-700">Choose File</span>
+                        <input
+                          type="file"
+                          name="file"
+                          className="hidden"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          disabled={uploading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              // Auto-submit on file selection
+                              const form = e.target.closest('form');
+                              if (form) {
+                                form.requestSubmit();
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        disabled={uploading || showCamera}
+                        className="flex flex-col items-center justify-center p-4 border-2 border-pink-300 rounded-lg cursor-pointer hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-600 mb-2">
+                          <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z" fill="currentColor"/>
+                        </svg>
+                        <span className="text-sm font-medium text-neutral-700">Take Photo</span>
+                      </button>
+                    </div>
+                    
                     <div>
                       <input
                         type="file"
@@ -2051,6 +2150,105 @@ export default function MotherDashboard() {
                     </button>
                   </form>
                 </div>
+
+                {/* Camera Modal */}
+                {showCamera && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-xl font-bold text-neutral-900">Take Prescription Photo</h3>
+                          <button
+                            onClick={stopCamera}
+                            className="text-neutral-500 hover:text-neutral-700"
+                          >
+                            <Icon name="close" size={24} />
+                          </button>
+                        </div>
+                        
+                        {!capturedImage ? (
+                          <div className="space-y-4">
+                            <div className="relative bg-black rounded-lg overflow-hidden">
+                              <video
+                                id="camera-video"
+                                autoPlay
+                                playsInline
+                                className="w-full h-auto max-h-[60vh]"
+                                ref={(video) => {
+                                  if (video && cameraStream) {
+                                    video.srcObject = cameraStream;
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={capturePhoto}
+                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 text-lg font-semibold"
+                              >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z" fill="currentColor"/>
+                                </svg>
+                                Capture Photo
+                              </button>
+                              <button
+                                onClick={stopCamera}
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="relative bg-black rounded-lg overflow-hidden">
+                              <img
+                                src={capturedImage}
+                                alt="Captured prescription"
+                                className="w-full h-auto max-h-[60vh] mx-auto"
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={uploadCapturedImage}
+                                disabled={uploading}
+                                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3 text-lg font-semibold disabled:opacity-50"
+                              >
+                                {uploading ? (
+                                  <>
+                                    <Icon name="pending" size={20} />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Icon name="upload" size={20} />
+                                    Upload Photo
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setCapturedImage(null);
+                                }}
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                                disabled={uploading}
+                              >
+                                Retake
+                              </button>
+                              <button
+                                onClick={stopCamera}
+                                className="btn-secondary flex items-center justify-center gap-2 py-3 px-6"
+                                disabled={uploading}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="text-xl font-bold mb-4 text-neutral-900 flex items-center gap-2">
