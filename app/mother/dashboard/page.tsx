@@ -1303,7 +1303,27 @@ export default function MotherDashboard() {
     if (!profile) return;
     setLoading(true);
     setMessage("");
+    
+    // Validate required fields
+    if (!profile.name || profile.name.trim() === "") {
+      setMessage("❌ Name is required");
+      setLoading(false);
+      return;
+    }
+    
     try {
+      console.log("[Profile Save] Sending profile update:", {
+        name: profile.name,
+        age: profile.age,
+        phone: profile.phone,
+        area: profile.area,
+        bloodGroup: profile.bloodGroup,
+        daysPregnant: profile.daysPregnant,
+        conditions: profile.conditions,
+        allergies: profile.allergies,
+        medications: profile.medications,
+      });
+      
       const res = await fetch("/api/mother/profile", {
         method: "PUT",
         headers: {
@@ -1312,6 +1332,7 @@ export default function MotherDashboard() {
         },
         body: JSON.stringify(profile),
       });
+      
       let data: any = {};
       try {
         const text = await res.text();
@@ -1319,14 +1340,31 @@ export default function MotherDashboard() {
       } catch {
         // If parsing fails, use empty object
       }
+      
       if (!res.ok) {
-        setMessage(`❌ ${data.error || "Could not save profile"}`);
+        const errorMsg = data.error || "Could not save profile";
+        console.error("[Profile Save] ❌ Save failed:", errorMsg);
+        setMessage(`❌ ${errorMsg}`);
         return;
       }
-      setProfile(data.profile);
-      setMessage(`✅ ${t.mother.profileUpdated}`);
-    } catch (err) {
-      setMessage("❌ Network error. Please try again.");
+      
+      // Update local profile state with saved data
+      if (data.profile) {
+        setProfile(data.profile);
+        console.log("[Profile Save] ✅ Profile saved successfully");
+        setMessage(`✅ ${t.mother.profileUpdated || "Profile updated successfully"}`);
+        
+        // Refresh profile data to ensure consistency
+        setTimeout(() => {
+          fetchProfile();
+        }, 500);
+      } else {
+        console.warn("[Profile Save] ⚠️ No profile data in response");
+        setMessage(`✅ ${t.mother.profileUpdated || "Profile updated successfully"}`);
+      }
+    } catch (err: any) {
+      console.error("[Profile Save] ❌ Network error:", err);
+      setMessage(`❌ Network error: ${err.message || "Please try again"}`);
     } finally {
       setLoading(false);
     }
