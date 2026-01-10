@@ -59,8 +59,14 @@ export async function convertPdfToImages(
   scale: number = 2.0
 ): Promise<PDFPageImage[]> {
   try {
-    // Use legacy build for Node.js compatibility (as recommended by pdfjs-dist)
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    // Try legacy build first, fallback to regular build
+    let pdfjsLib: any;
+    try {
+      pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs" as any);
+    } catch {
+      // Fallback to regular build
+      pdfjsLib = await import("pdfjs-dist/build/pdf.mjs" as any);
+    }
     
     // Set up worker (disable for serverless)
     if (typeof window === "undefined") {

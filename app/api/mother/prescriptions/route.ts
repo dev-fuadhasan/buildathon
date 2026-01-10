@@ -63,68 +63,77 @@ export async function POST(req: NextRequest) {
     const isPdf = file.type === "application/pdf";
 
     if (isPdf) {
-      // Convert PDF to images
-      console.log(`[Prescription Upload] Converting PDF to images: ${file.name}`);
-      const pdfImages = await convertPdfToImages(buffer, 2.0);
+      // Try to convert PDF to images, but fallback to uploading PDF as-is if conversion fails
+      console.log(`[Prescription Upload] Attempting to convert PDF to images: ${file.name}`);
+      try {
+        const pdfImages = await convertPdfToImages(buffer, 2.0);
 
-      if (pdfImages.length === 0) {
-        return NextResponse.json(
-          { error: "Failed to extract pages from PDF" },
-          { status: 500 }
-        );
-      }
+        if (pdfImages.length === 0) {
+          console.warn(`[Prescription Upload] PDF conversion returned 0 pages, uploading PDF as-is`);
+          throw new Error("No pages extracted from PDF");
+        }
 
-      // Upload original PDF (optional - for reference)
-      const pdfKey = `${baseKey}`;
-      await uploadFile({
-        key: pdfKey,
-        body: buffer,
-        contentType: "application/pdf",
-      });
-
-      // Upload each page as an image
-      const imageUrls: string[] = [];
-      const imageKeys: string[] = [];
-
-      for (let i = 0; i < pdfImages.length; i++) {
-        const image = pdfImages[i];
-        const imageKey = `${baseKey}_page${image.pageNumber}.png`;
-        
+        // Upload original PDF (optional - for reference)
+        const pdfKey = `${baseKey}`;
         await uploadFile({
-          key: imageKey,
-          body: image.imageBuffer,
-          contentType: "image/png",
+          key: pdfKey,
+          body: buffer,
+          contentType: "application/pdf",
         });
 
-        const imageUrl = await signedUrl(imageKey);
-        imageUrls.push(imageUrl);
-        imageKeys.push(imageKey);
+        // Upload each page as an image
+        const imageUrls: string[] = [];
+        const imageKeys: string[] = [];
+
+        for (let i = 0; i < pdfImages.length; i++) {
+          const image = pdfImages[i];
+          const imageKey = `${baseKey}_page${image.pageNumber}.png`;
+          
+          await uploadFile({
+            key: imageKey,
+            body: image.imageBuffer,
+            contentType: "image/png",
+          });
+
+          const imageUrl = await signedUrl(imageKey);
+          imageUrls.push(imageUrl);
+          imageKeys.push(imageKey);
+        }
+
+        console.log(`[Prescription Upload] ✅ Converted ${pdfImages.length} page(s) to images`);
+
+        // Return the image URLs (these will be used for Groq analysis)
+        // Also return the PDF key for reference
+        return NextResponse.json({
+          key: pdfKey,
+          url: await signedUrl(pdfKey), // Original PDF URL
+          imageUrls, // Array of image URLs for analysis
+          imageKeys, // Array of image keys
+          pageCount: pdfImages.length,
+          isPdf: true,
+        });
+      } catch (conversionError: any) {
+        console.error(`[Prescription Upload] PDF conversion failed: ${conversionError.message}`);
+        console.log(`[Prescription Upload] Falling back to uploading PDF as-is`);
+        // Fall through to regular PDF upload below
       }
-
-      console.log(`[Prescription Upload] ✅ Converted ${pdfImages.length} page(s) to images`);
-
-      // Return the image URLs (these will be used for Groq analysis)
-      // Also return the PDF key for reference
-      return NextResponse.json({
-        key: pdfKey,
-        url: await signedUrl(pdfKey), // Original PDF URL
-        imageUrls, // Array of image URLs for analysis
-        imageKeys, // Array of image keys
-        pageCount: pdfImages.length,
-        isPdf: true,
-      });
-    } else {
-      // Regular image file - upload as-is
-      const key = baseKey;
-      await uploadFile({
-        key,
-        body: buffer,
-        contentType: file.type || "application/octet-stream",
-      });
-
-      const url = await signedUrl(key);
-      return NextResponse.json({ key, url, isPdf: false });
     }
+    
+    // Regular file upload (for images or PDFs that failed conversion)
+    const key = baseKey;
+    await uploadFile({
+      key,
+      body: buffer,
+      contentType: file.type || "application/octet-stream",
+    });
+
+    const url = await signedUrl(key);
+    return NextResponse.json({ 
+      key, 
+      url, 
+      isPdf: isPdf,
+      note: isPdf ? "PDF uploaded as-is (conversion unavailable)" : undefined
+    });
   } catch (error: any) {
     console.error("Prescription upload error:", error);
     return NextResponse.json(
