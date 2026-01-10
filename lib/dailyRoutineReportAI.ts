@@ -70,29 +70,42 @@ ${exercisesDone ? `✅ Exercises: ${routine.exercises}` : "❌ Exercises: Not do
 What was not completed:
 ${notEatenMeals.length > 0 ? notEatenMeals.map(m => `❌ ${m}`).join("\n") : "All meals were eaten"}
 
-Based on this information, provide a comprehensive medical analysis in JSON format:
+CRITICAL FORMAT REQUIREMENTS:
+Focus on FUTURE BENEFITS and POTENTIAL NEGATIVE CONSEQUENCES, not just what was eaten/done.
+
+For FOOD ANALYSIS:
+- "benefits": For each meal that was EATEN, explain: "Because you ate [specific food items], you will get these benefits in the future: [list specific future benefits like 'improved fetal brain development', 'reduced risk of anemia', 'better energy levels', 'stronger bones for baby', etc.]"
+- "negativeImpacts": For each meal that was NOT EATEN, explain: "If you don't eat [specific food items], these negative things can happen: [list specific potential negative consequences like 'increased risk of birth defects', 'lower energy levels', 'weaker immune system', 'slower fetal growth', etc.]"
+
+For EXERCISE ANALYSIS:
+- If exercises were DONE: "benefits": "Because you did [specific exercises], you will get these benefits in the future: [list specific future benefits like 'easier labor and delivery', 'faster postpartum recovery', 'reduced back pain', 'better sleep quality', 'improved mood', etc.]"
+- If exercises were NOT DONE: "negativeImpacts": "If you don't do [specific exercises], these negative things can happen: [list specific potential negative consequences like 'increased risk of gestational diabetes', 'more difficult labor', 'slower recovery after birth', 'higher risk of blood clots', 'poorer sleep quality', etc.]"
+
+Provide analysis in JSON format:
 {
   "foodAnalysis": {
     "eaten": [${eatenMeals.length > 0 ? `"${eatenMeals.join('", "')}"` : ""}],
     "notEaten": [${notEatenMeals.length > 0 ? `"${notEatenMeals.map(m => m.replace(/"/g, "'")).join('", "')}"` : ""}],
-    "benefits": ["List specific medical benefits from the meals that were eaten, considering pregnancy stage and health profile"],
-    "negativeImpacts": ["List specific potential negative impacts from meals not eaten, considering pregnancy nutritional needs"],
+    "benefits": ["Because you ate [specific foods], you will get [specific future benefit 1]", "Because you ate [specific foods], you will get [specific future benefit 2]", ...],
+    "negativeImpacts": ["If you don't eat [specific foods], [specific negative consequence 1] can happen", "If you don't eat [specific foods], [specific negative consequence 2] can happen", ...],
     "status": "good" | "moderate" | "poor"
   },
   "exerciseAnalysis": {
     "done": ${exercisesDone},
-    ${exercisesDone ? `"benefits": ["List specific medical benefits from doing the exercises during pregnancy"]` : `"negativeImpacts": ["List specific potential negative impacts from not doing exercises during pregnancy"]`},
+    ${exercisesDone ? `"benefits": ["Because you did [specific exercises], you will get [specific future benefit 1]", "Because you did [specific exercises], you will get [specific future benefit 2]", ...]` : `"negativeImpacts": ["If you don't do [specific exercises], [specific negative consequence 1] can happen", "If you don't do [specific exercises], [specific negative consequence 2] can happen", ...]`},
     "status": "good" | "moderate" | "poor"
   },
   "overallStatus": "good" | "moderate" | "poor"
 }
 
 IMPORTANT:
-- Be medically accurate and specific
+- Focus on FUTURE outcomes, not just current status
+- Be medically accurate and specific about benefits and consequences
 - Consider the pregnancy stage (${weeksPregnant || "N/A"} weeks)
 - Consider medical conditions and allergies
 - Use red/yellow/green status indicators (good=green, moderate=yellow, poor=red)
-- Provide actionable insights
+- Make benefits and negative impacts specific and actionable
+- Format: "Because you [action], you will get [benefit]" OR "If you don't [action], [consequence] can happen"
 
 Respond ONLY with valid JSON, no additional text.`;
 

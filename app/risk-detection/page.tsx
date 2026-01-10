@@ -447,6 +447,35 @@ export default function RiskDetectionPage() {
               </div>
             </div>
 
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <button
+                onClick={() => {
+                  if (currentIndex > 0) {
+                    setCurrentIndex(currentIndex - 1);
+                  }
+                }}
+                disabled={currentIndex === 0 || saving}
+                className="btn-secondary text-sm py-2 px-4 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>←</span>
+                <span>{lang === "bn" ? "পিছনে" : "Back"}</span>
+              </button>
+              <button
+                onClick={() => {
+                  const currentAnswer = answers.find(a => a.questionId === currentQuestion.id);
+                  if (currentAnswer && currentIndex < selectedQuestions.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                  }
+                }}
+                disabled={!answers.find(a => a.questionId === currentQuestion.id) || currentIndex >= selectedQuestions.length - 1 || saving}
+                className="btn-secondary text-sm py-2 px-4 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>{lang === "bn" ? "পরবর্তী" : "Next"}</span>
+                <span>→</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleAnswer("yes")}

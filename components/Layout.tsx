@@ -114,7 +114,7 @@ export default function Layout({ children }: Props) {
                 : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
             }`}
           >
-            {t.mother.dashboard}
+            Nurse Dashboard
           </Link>
           <Link
             href="/nurse/dashboard"

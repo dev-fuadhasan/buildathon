@@ -647,7 +647,7 @@ export default function NurseDashboard() {
                           <div className="flex items-center justify-between gap-2 mt-1.5 flex-wrap">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="priority" size="sm">
-                                Score: {item.priorityScore.toFixed(1)}
+                                Priority: {Math.round(item.priorityScore)}%
                               </Badge>
                               {(() => {
                                 const status = getStatus(item.patient);

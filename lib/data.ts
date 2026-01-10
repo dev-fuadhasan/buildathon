@@ -8,6 +8,7 @@ export type MotherProfile = {
   age?: number;
   phone?: string;
   address?: string;
+  area?: string; // Area/location where the mother lives
   bloodGroup?: string;
   weeksPregnant?: number; // Kept for backward compatibility
   daysPregnant?: number; // New: Days since LMP (Last Menstrual Period)
@@ -249,6 +250,7 @@ export type DailyRoutine = {
   lunch: string; // Food recommendation for lunch
   dinner: string; // Food recommendation for dinner
   exercises: string; // Exercise recommendations
+  waterIntake?: string; // Water drinking recommendations
   breakfastEaten?: boolean; // Whether breakfast was eaten
   lunchEaten?: boolean; // Whether lunch was eaten
   dinnerEaten?: boolean; // Whether dinner was eaten

@@ -57,8 +57,21 @@ export async function PUT(req: NextRequest) {
     console.log(`[Profile Update] Saving profile for user ${user.id}`);
     console.log(`[Profile Update] Fields being updated:`, Object.keys(body).join(', '));
 
-  await saveMother(updated);
-  const { passwordHash, ...safe } = updated;
-  return NextResponse.json({ profile: safe });
+  try {
+    await saveMother(updated);
+    const { passwordHash, ...safe } = updated;
+    console.log(`[Profile Update] ✅ Profile saved successfully for user ${user.id}`);
+    return NextResponse.json({ profile: safe });
+  } catch (error: any) {
+    console.error(`[Profile Update] ❌ Failed to save profile for user ${user.id}:`, error);
+    console.error(`[Profile Update] Error details:`, {
+      message: error.message,
+      stack: error.stack,
+    });
+    return NextResponse.json(
+      { error: error.message || "Failed to save profile. Please try again." },
+      { status: 500 }
+    );
+  }
 }
 

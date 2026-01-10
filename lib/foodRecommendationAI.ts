@@ -23,7 +23,7 @@ export async function generateDailyRoutineRecommendations(
   pastRecommendations?: DailyRoutine[],
   prescriptionUrls?: string[],
   chatHistory?: ChatMessage[]
-): Promise<{ breakfast: string; lunch: string; dinner: string; exercises: string }> {
+): Promise<{ breakfast: string; lunch: string; dinner: string; exercises: string; waterIntake?: string }> {
   try {
     // Get current date to filter only recent entries (not old ones from weeks ago)
     const today = new Date().toISOString().split("T")[0];
@@ -48,8 +48,18 @@ export async function generateDailyRoutineRecommendations(
     const weeksPregnant = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
     const trimester = daysPregnant ? Math.floor(daysPregnant / 90) + 1 : (weeksPregnant ? Math.floor(weeksPregnant / 13) + 1 : undefined);
 
-    // Get location from address
-    const location = mother.address || "Unknown";
+    // Get location from address and area - combine both for better context
+    // AI will analyze the location to determine country, division/state, city, and urban/rural
+    const addressParts = [];
+    if (mother.address && mother.address.trim()) {
+      addressParts.push(mother.address.trim());
+    }
+    if (mother.area && mother.area.trim()) {
+      addressParts.push(mother.area.trim());
+    }
+    const location = addressParts.length > 0 
+      ? addressParts.join(", ") 
+      : "Location not specified";
     
     // Get chat history if not provided
     let chatContext = "";
@@ -100,7 +110,7 @@ Medical Conditions: ${mother.conditions || "None"}
 Medications: ${mother.medications || "None"}
 Allergies: ${mother.allergies || "None"} - CRITICAL: DO NOT suggest any foods containing these allergens
 Blood Group: ${mother.bloodGroup || "N/A"}
-Location: ${location} - Consider location-based food availability and cultural preferences
+Location: ${location} - Analyze this location to determine country, division/state, city, urban/rural setting. Suggest foods that are locally available, culturally appropriate, and suitable for this specific location.
 Previous Pregnancies: ${mother.previousPregnancies || 0}
 `;
 
@@ -125,17 +135,23 @@ Previous Pregnancies: ${mother.previousPregnancies || 0}
     }
 
     // Create prompt for daily routine recommendations
-    const prompt = `You are a medical expert specializing in pregnancy care, nutrition, and safe exercise for expectant mothers. Based on the expectant mother's complete profile, provide medically valid and personalized recommendations for food (breakfast, lunch, dinner) and simple exercises.
+    const prompt = `You are a medical expert specializing in pregnancy care, nutrition, and safe exercise for expectant mothers. Based on the expectant mother's complete profile, provide medically valid and personalized recommendations for food (breakfast, lunch, dinner), simple exercises, and water intake.
 
 CRITICAL MEDICAL GUIDELINES:
 1. ALLERGIES: The mother has allergies: ${mother.allergies || "None"}. DO NOT suggest ANY foods containing these allergens. This is a safety requirement.
 2. Medical Conditions: Consider ${mother.conditions || "None"} - ensure recommendations are safe for these conditions
 3. Medications: Consider interactions with ${mother.medications || "None"}
 4. Pregnancy Stage: Currently ${weeksPregnant || "N/A"} weeks pregnant (Trimester ${trimester || "N/A"}) - adjust recommendations accordingly
-5. Location: Mother is in ${location} - suggest foods available in this location and culturally appropriate
-6. Exercise Safety: Only suggest simple, safe exercises appropriate for pregnancy stage. Avoid high-impact, risky activities
+5. LOCATION ANALYSIS: The mother's location is: "${location}". 
+   - Analyze this location to determine: country, division/state, city, and whether it's urban or rural
+   - Suggest foods that are: (a) locally available in this area, (b) culturally appropriate, (c) seasonally appropriate, (d) suitable for urban vs rural settings
+   - For exercises: consider climate, available space (urban apartments vs rural areas), cultural norms, and local exercise facilities
+   - DO NOT use predefined food lists - analyze the location dynamically and suggest what's actually available there
+   - If location is unclear, ask for clarification but still provide general safe recommendations
+6. Exercise Safety: Only suggest simple, safe exercises appropriate for pregnancy stage. Avoid high-impact, risky activities. Consider the location's climate, available space, and cultural context.
 7. Medical Validity: All recommendations must be medically sound and safe for pregnancy
 8. Variety: If past recommendations exist, ensure variety and avoid repetition
+9. WATER INTAKE: Include specific water drinking recommendations based on pregnancy stage, climate, and activity level
 
 ${profileContext}
 
@@ -150,11 +166,19 @@ ${pastRoutineContext ? `Past Daily Routine Recommendations (avoid repeating simi
 
 Please provide recommendations in the following JSON format:
 {
-  "breakfast": "Specific breakfast recommendation with details, considering allergies, location, and medical conditions",
-  "lunch": "Specific lunch recommendation with details, considering allergies, location, and medical conditions",
-  "dinner": "Specific dinner recommendation with details, considering allergies, location, and medical conditions",
-  "exercises": "Simple, safe exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy (e.g., '15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises')"
+  "breakfast": "Specific breakfast recommendation with details, considering allergies, location (${location}), and medical conditions. Suggest foods that are locally available in this area.",
+  "lunch": "Specific lunch recommendation with details, considering allergies, location (${location}), and medical conditions. Suggest foods that are locally available in this area.",
+  "dinner": "Specific dinner recommendation with details, considering allergies, location (${location}), and medical conditions. Suggest foods that are locally available in this area.",
+  "exercises": "Simple, safe exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy, considering location (${location}), climate, available space, and cultural context. Examples: '15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises'",
+  "waterIntake": "Specific water drinking recommendations based on pregnancy stage (${weeksPregnant || "N/A"} weeks), location climate, and activity level. Include daily amount and timing suggestions (e.g., 'Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.')"
 }
+
+IMPORTANT LOCATION ANALYSIS:
+- Analyze the location "${location}" to identify: country, division/state, city, urban/rural setting
+- Suggest foods that are ACTUALLY available in this specific location - do not use generic lists
+- Consider cultural food preferences and local cuisine
+- For exercises, consider: climate (hot/cold/tropical), available space (urban apartment vs rural open space), cultural norms, local facilities
+- If location is unclear or generic, provide general safe recommendations but note that location-specific suggestions would be better with more details
 
 Respond ONLY with valid JSON, no additional text.`;
 
@@ -178,7 +202,7 @@ Respond ONLY with valid JSON, no additional text.`;
     );
     
     // Try to parse JSON from response
-    let routineData: { breakfast: string; lunch: string; dinner: string; exercises: string };
+    let routineData: { breakfast: string; lunch: string; dinner: string; exercises: string; waterIntake?: string };
     
     try {
       // Extract JSON from response (handle cases where AI adds extra text)
@@ -188,6 +212,10 @@ Respond ONLY with valid JSON, no additional text.`;
         // Ensure exercises field exists
         if (!routineData.exercises) {
           routineData.exercises = "15-minute gentle walk, 10 minutes of prenatal yoga stretches";
+        }
+        // Ensure waterIntake field exists (add default if missing)
+        if (!routineData.waterIntake) {
+          routineData.waterIntake = `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.`;
         }
       } else {
         throw new Error("No JSON found in response");
@@ -199,7 +227,8 @@ Respond ONLY with valid JSON, no additional text.`;
         breakfast: "Oatmeal with fresh fruits and a glass of milk",
         lunch: "Grilled chicken/fish with steamed vegetables and brown rice",
         dinner: "Lentil soup with whole grain roti and fresh salad",
-        exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches"
+        exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches",
+        waterIntake: "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals."
       };
     }
 
@@ -211,7 +240,8 @@ Respond ONLY with valid JSON, no additional text.`;
       breakfast: "Oatmeal with fresh fruits and a glass of milk",
       lunch: "Grilled chicken/fish with steamed vegetables and brown rice",
       dinner: "Lentil soup with whole grain roti and fresh salad",
-      exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches"
+      exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches",
+      waterIntake: "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals."
     };
   }
 }

@@ -12,6 +12,7 @@ type DailyRoutine = {
   lunch: string;
   dinner: string;
   exercises: string;
+  waterIntake?: string;
   breakfastEaten?: boolean;
   lunchEaten?: boolean;
   dinnerEaten?: boolean;
@@ -377,6 +378,26 @@ export default function FoodRecommendations({ token, motherId }: Props) {
               </div>
             </div>
 
+            {recommendation.waterIntake && (
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                  <Icon name="health" size={20} />
+                  Water Intake Recommendations
+                </h3>
+                <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <Icon name="health" size={24} className="text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-slate-800 text-lg mb-2">Stay Hydrated 💧</h4>
+                      <p className="text-slate-700 leading-relaxed">{recommendation.waterIntake}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {recommendation.dailyReport && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -436,45 +457,31 @@ function DailyReportDisplay({ report }: { report: DailyRoutine["dailyReport"] })
           <h4 className="font-semibold text-slate-800">Food Analysis</h4>
         </div>
         
-        {report.foodAnalysis.eaten.length > 0 && (
+        {report.foodAnalysis.benefits.length > 0 && (
           <div className="mb-3">
-            <p className="text-sm font-medium text-slate-700 mb-2">✅ Meals Eaten:</p>
-            <ul className="text-sm text-slate-600 ml-4 list-disc">
-              {report.foodAnalysis.eaten.map((meal, idx) => (
-                <li key={idx}>{meal}</li>
+            <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+              <span>✅</span>
+              <span>Future Benefits from What You Ate:</span>
+            </p>
+            <ul className="text-sm text-green-700 ml-4 list-disc space-y-1">
+              {report.foodAnalysis.benefits.map((benefit, idx) => (
+                <li key={idx} className="leading-relaxed">{benefit}</li>
               ))}
             </ul>
-            {report.foodAnalysis.benefits.length > 0 && (
-              <div className="mt-2">
-                <p className="text-sm font-medium text-green-700 mb-1">Benefits:</p>
-                <ul className="text-sm text-green-600 ml-4 list-disc">
-                  {report.foodAnalysis.benefits.map((benefit, idx) => (
-                    <li key={idx}>{benefit}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         )}
 
-        {report.foodAnalysis.notEaten.length > 0 && (
+        {report.foodAnalysis.negativeImpacts.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-slate-700 mb-2">❌ Meals Not Eaten:</p>
-            <ul className="text-sm text-slate-600 ml-4 list-disc">
-              {report.foodAnalysis.notEaten.map((meal, idx) => (
-                <li key={idx}>{meal}</li>
+            <p className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>Potential Negative Consequences from What You Didn't Eat:</span>
+            </p>
+            <ul className="text-sm text-red-700 ml-4 list-disc space-y-1">
+              {report.foodAnalysis.negativeImpacts.map((impact, idx) => (
+                <li key={idx} className="leading-relaxed">{impact}</li>
               ))}
             </ul>
-            {report.foodAnalysis.negativeImpacts.length > 0 && (
-              <div className="mt-2">
-                <p className="text-sm font-medium text-red-700 mb-1">Potential Impacts:</p>
-                <ul className="text-sm text-red-600 ml-4 list-disc">
-                  {report.foodAnalysis.negativeImpacts.map((impact, idx) => (
-                    <li key={idx}>{impact}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -488,13 +495,15 @@ function DailyReportDisplay({ report }: { report: DailyRoutine["dailyReport"] })
         
         {report.exerciseAnalysis.done ? (
           <div>
-            <p className="text-sm font-medium text-green-700 mb-2">✅ Exercises Completed</p>
             {report.exerciseAnalysis.benefits && report.exerciseAnalysis.benefits.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-green-700 mb-1">Benefits:</p>
-                <ul className="text-sm text-green-600 ml-4 list-disc">
+                <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                  <span>✅</span>
+                  <span>Future Benefits from Exercises You Did:</span>
+                </p>
+                <ul className="text-sm text-green-700 ml-4 list-disc space-y-1">
                   {report.exerciseAnalysis.benefits.map((benefit, idx) => (
-                    <li key={idx}>{benefit}</li>
+                    <li key={idx} className="leading-relaxed">{benefit}</li>
                   ))}
                 </ul>
               </div>
@@ -502,13 +511,15 @@ function DailyReportDisplay({ report }: { report: DailyRoutine["dailyReport"] })
           </div>
         ) : (
           <div>
-            <p className="text-sm font-medium text-red-700 mb-2">❌ Exercises Not Completed</p>
             {report.exerciseAnalysis.negativeImpacts && report.exerciseAnalysis.negativeImpacts.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-red-700 mb-1">Potential Impacts:</p>
-                <ul className="text-sm text-red-600 ml-4 list-disc">
+                <p className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Potential Negative Consequences from Not Doing Exercises:</span>
+                </p>
+                <ul className="text-sm text-red-700 ml-4 list-disc space-y-1">
                   {report.exerciseAnalysis.negativeImpacts.map((impact, idx) => (
-                    <li key={idx}>{impact}</li>
+                    <li key={idx} className="leading-relaxed">{impact}</li>
                   ))}
                 </ul>
               </div>

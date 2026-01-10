@@ -41,8 +41,27 @@ export async function GET(req: NextRequest) {
       return calculateBasicPriority(patient);
     });
 
-    // Sort by priority score (highest first)
-    const sorted = patientsWithPriority.sort((a, b) => b.priorityScore - a.priorityScore);
+    // Sort by priority score (highest first) - High risk patients at top
+    // Also consider risk level: high > medium > low
+    const sorted = patientsWithPriority.sort((a, b) => {
+      // First sort by priority score (highest first)
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore;
+      }
+      // If scores are equal, sort by risk indicators (high risk first)
+      const aHasHighRisk = a.patient.medicalHistory?.toLowerCase().includes("diabetes") ||
+                          a.patient.medicalHistory?.toLowerCase().includes("hypertension") ||
+                          a.patient.medicalHistory?.toLowerCase().includes("heart");
+      const bHasHighRisk = b.patient.medicalHistory?.toLowerCase().includes("diabetes") ||
+                          b.patient.medicalHistory?.toLowerCase().includes("hypertension") ||
+                          b.patient.medicalHistory?.toLowerCase().includes("heart");
+      if (aHasHighRisk && !bHasHighRisk) return -1;
+      if (!aHasHighRisk && bHasHighRisk) return 1;
+      // Finally, sort by most recent update
+      const dateA = new Date(a.patient.updatedAt || a.patient.createdAt || 0).getTime();
+      const dateB = new Date(b.patient.updatedAt || b.patient.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
 
     return NextResponse.json({ priorityList: sorted });
   } catch (error: any) {

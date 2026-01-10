@@ -147,6 +147,13 @@ export default function MotherDashboard() {
   const [newEntryText, setNewEntryText] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  // Daily entry questions state
+  const [dailyQuestions, setDailyQuestions] = useState<string[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [questionAnswers, setQuestionAnswers] = useState<string[]>([]);
+  const [questionsCompleted, setQuestionsCompleted] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -237,6 +244,13 @@ export default function MotherDashboard() {
     fetchNotifications(t);
     updatePregnancyProgress(t);
     checkDailyTask(t);
+    
+    // Set today's date and load questions
+    const today = new Date().toISOString().split("T")[0];
+    if (!selectedDate) {
+      setSelectedDate(today);
+      loadDailyEntryQuestions(today);
+    }
     
     // Removed checkDailyQuestions - Daily Health Questions section removed
     
@@ -427,6 +441,114 @@ export default function MotherDashboard() {
       }
     } catch (err) {
       console.error("Failed to fetch daily entries:", err);
+    }
+  };
+
+  const loadDailyEntryQuestions = async (date: string) => {
+    if (!date) return;
+    
+    setLoadingQuestions(true);
+    try {
+      const res = await fetch(`/api/mother/daily-entry-questions?date=${date}`, {
+        headers: authHeaders(),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        
+        if (data.completed) {
+          setQuestionsCompleted(true);
+          setDailyQuestions([]);
+          setCurrentQuestionIndex(0);
+          setQuestionAnswers([]);
+          setCurrentAnswer("");
+        } else {
+          setQuestionsCompleted(false);
+          setDailyQuestions(data.questions || []);
+          setCurrentQuestionIndex(data.currentQuestionIndex || 0);
+          
+          // Load existing answers for this date
+          const allEntries = await fetch("/api/mother/journal", { headers: authHeaders() }).then(r => r.json());
+          const dateEntries = (allEntries.entries || []).filter((e: DailyEntry) => e.date === date);
+          const answers: string[] = [];
+          dateEntries.forEach((entry: DailyEntry) => {
+            const match = entry.entry.match(/^DAILY_ENTRY_ANSWER_(\d+):(.+)$/);
+            if (match) {
+              const index = parseInt(match[1]);
+              answers[index] = match[2];
+            }
+          });
+          setQuestionAnswers(answers);
+          
+          // Set current answer if exists
+          if (answers[data.currentQuestionIndex]) {
+            setCurrentAnswer(answers[data.currentQuestionIndex]);
+          } else {
+            setCurrentAnswer("");
+          }
+        }
+      } else {
+        const errorData = await res.json();
+        setMessage(`❌ ${errorData.error || "Failed to load questions"}`);
+      }
+    } catch (err) {
+      console.error("Failed to load daily entry questions:", err);
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const saveDailyEntryAnswer = async (questionIndex: number, answer: string) => {
+    if (!selectedDate || !answer.trim()) {
+      setMessage("Please provide an answer");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/mother/daily-entry-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          date: selectedDate,
+          questionIndex,
+          answer: answer.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        // Update local state
+        const updatedAnswers = [...questionAnswers];
+        updatedAnswers[questionIndex] = answer.trim();
+        setQuestionAnswers(updatedAnswers);
+        
+        // Check if this was the last question
+        if (questionIndex >= 5) {
+          setQuestionsCompleted(true);
+          setMessage("✅ All questions answered for today!");
+        } else {
+          // Move to next question
+          setCurrentQuestionIndex(questionIndex + 1);
+          setCurrentAnswer("");
+          // Load next batch of questions if needed
+          if (questionIndex + 1 >= dailyQuestions.length) {
+            await loadDailyEntryQuestions(selectedDate);
+          }
+        }
+        
+        fetchDailyEntries();
+      } else {
+        const data = await res.json();
+        setMessage(`❌ ${data.error || "Failed to save answer"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -2074,10 +2196,13 @@ export default function MotherDashboard() {
                   </label>
                   <textarea
                     className="input w-full h-20"
-                    placeholder={t.mother.enterAddress}
+                    placeholder="Example: House 123, Road 45, Area/Neighborhood, City, Division/State, Country (e.g., Dhaka, Bangladesh or New York, USA). Please include your area, city, division/state, and country for personalized food and exercise recommendations."
                     value={profile.address || ""}
                     onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    💡 Tip: Include your area, city, division/state, and country. This helps us suggest foods and exercises available in your location.
+                  </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
@@ -3118,6 +3243,24 @@ export default function MotherDashboard() {
                       high: "bg-red-100 text-red-700 border-red-200",
                     };
                     const riskLevel = riskAssessment.overallRisk as "low" | "medium" | "high";
+                    const riskPercentage = riskAssessment.riskScore;
+                    
+                    // Calculate contribution from each category
+                    const categoryContributions: Record<string, number> = {};
+                    riskAssessment.riskFactors.forEach((factor: any) => {
+                      const category = factor.category || "Other";
+                      if (!categoryContributions[category]) {
+                        categoryContributions[category] = 0;
+                      }
+                      // Estimate contribution based on severity
+                      let contribution = 0;
+                      if (factor.severity === "critical") contribution = 30;
+                      else if (factor.severity === "high") contribution = 20;
+                      else if (factor.severity === "medium") contribution = 10;
+                      else contribution = 5;
+                      categoryContributions[category] += contribution;
+                    });
+                    
                     return (
                       <div className={`rounded-lg border-2 p-4 ${riskColors[riskLevel]}`}>
                         <p className="text-sm font-medium mb-1 flex items-center gap-1">
@@ -3128,14 +3271,46 @@ export default function MotherDashboard() {
                           {riskAssessment.overallRisk} Risk
                         </p>
                         <p className="text-xs mt-1 opacity-90">
-                          Risk Score: {riskAssessment.riskScore}/100
+                          Risk Score: {riskAssessment.riskScore}/100 ({riskPercentage}%)
                         </p>
+                        
+                        {/* Risk Breakdown */}
+                        {Object.keys(categoryContributions).length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-current border-opacity-20">
+                            <p className="text-xs font-medium mb-2">Risk Breakdown:</p>
+                            <div className="space-y-1.5">
+                              {Object.entries(categoryContributions)
+                                .sort(([, a], [, b]) => b - a)
+                                .map(([category, contribution]) => {
+                                  const percentage = Math.min(Math.round((contribution / 100) * 100), 100);
+                                  return (
+                                    <div key={category} className="text-xs">
+                                      <div className="flex items-center justify-between mb-0.5">
+                                        <span className="font-medium">{category}:</span>
+                                        <span>{percentage}%</span>
+                                      </div>
+                                      <div className="w-full bg-current bg-opacity-20 rounded-full h-1.5">
+                                        <div
+                                          className="bg-current h-1.5 rounded-full transition-all"
+                                          style={{ width: `${percentage}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                            <p className="text-xs mt-2 pt-2 border-t border-current border-opacity-20 italic opacity-80">
+                              Overall: {riskPercentage}% ({riskAssessment.riskScore} points out of 100)
+                            </p>
+                          </div>
+                        )}
+                        
                         {riskAssessment.riskFactors.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                          <div className="mt-3 pt-3 border-t border-current border-opacity-20">
                             <p className="text-xs font-medium mb-1">Key Factors:</p>
                             <ul className="text-xs space-y-1">
                               {riskAssessment.riskFactors.slice(0, 3).map((factor: any, idx: number) => (
-                                <li key={idx}>• {factor.factor}</li>
+                                <li key={idx}>• {factor.factor} ({factor.severity})</li>
                               ))}
                             </ul>
                           </div>
@@ -3197,39 +3372,122 @@ export default function MotherDashboard() {
                     className="input w-full"
                     value={selectedDate}
                     onChange={(e) => {
-                      setSelectedDate(e.target.value);
+                      const newDate = e.target.value;
+                      setSelectedDate(newDate);
                       setNewEntryText("");
                       setEditingEntryId(null);
+                      setQuestionsCompleted(false);
+                      setDailyQuestions([]);
+                      setCurrentQuestionIndex(0);
+                      setQuestionAnswers([]);
+                      setCurrentAnswer("");
+                      // Load questions for the selected date
+                      if (newDate) {
+                        loadDailyEntryQuestions(newDate);
+                      }
                     }}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    How was your day? (You can write in English, Bangla, or Banglish)
-                  </label>
-                  <textarea
-                    className="input w-full h-64"
-                    placeholder="Write about your day, what you ate, how you're feeling, any symptoms, activities, etc..."
-                    value={newEntryText}
-                    onChange={(e) => setNewEntryText(e.target.value)}
-                  />
-                  <p className="text-xs text-slate-500 mt-1 flex items-start gap-2">
-                    <Icon name="info" size={16} className="mt-0.5" />
-                    <span>Tip: You can add multiple entries for the same day. Write freely about your day, meals, feelings, and any concerns. This helps AI provide better recommendations.</span>
-                  </p>
-                </div>
-                <button
-                  className="btn-primary w-full touch-manipulation min-h-[44px]"
-                  onClick={saveDailyEntry}
-                  disabled={loading || !newEntryText.trim()}
-                >
-                  {loading ? "Saving..." : (
-                    <span className="flex items-center gap-2 justify-center">
-                      <Icon name="save" size={18} />
-                      Add Daily Entry
-                    </span>
-                  )}
-                </button>
+
+                {!selectedDate ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>Please select a date to start your daily entry</p>
+                  </div>
+                ) : questionsCompleted ? (
+                  <div className="text-center py-8">
+                    <div className="mb-4">
+                      <Icon name="success" size={48} className="mx-auto mb-3 text-green-500" />
+                      <p className="text-lg font-semibold text-green-700 mb-2">All Questions Answered! ✅</p>
+                      <p className="text-sm text-slate-600">You have completed all questions for {selectedDate}</p>
+                    </div>
+                  </div>
+                ) : loadingQuestions ? (
+                  <div className="text-center py-8">
+                    <Icon name="pending" size={48} className="mx-auto mb-3 text-slate-300 animate-spin" />
+                    <p className="text-slate-500">Loading questions...</p>
+                  </div>
+                ) : dailyQuestions.length > 0 && currentQuestionIndex < dailyQuestions.length ? (
+                  <div className="space-y-4">
+                    {/* Progress */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-slate-700">
+                          Question {currentQuestionIndex + 1} of 6
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {Math.round(((currentQuestionIndex + 1) / 6) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${((currentQuestionIndex + 1) / 6) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Current Question */}
+                    <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl border-2 border-pink-200 p-6">
+                      <div className="mb-4">
+                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold mb-3">
+                          {currentQuestionIndex + 1}
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-800 leading-relaxed">
+                          {dailyQuestions[currentQuestionIndex]}
+                        </h3>
+                      </div>
+
+                      {/* Answer Input */}
+                      <div className="mb-4">
+                        <textarea
+                          className="input w-full h-32"
+                          placeholder="Type your answer here... (You can write in English, Bangla, or Banglish)"
+                          value={currentAnswer}
+                          onChange={(e) => setCurrentAnswer(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Navigation Buttons */}
+                      <div className="flex items-center justify-between gap-3">
+                        <button
+                          onClick={() => {
+                            if (currentQuestionIndex > 0) {
+                              setCurrentQuestionIndex(currentQuestionIndex - 1);
+                              setCurrentAnswer(questionAnswers[currentQuestionIndex - 1] || "");
+                            }
+                          }}
+                          disabled={currentQuestionIndex === 0 || loading}
+                          className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span>←</span>
+                          <span>Back</span>
+                        </button>
+
+                        <button
+                          onClick={() => saveDailyEntryAnswer(currentQuestionIndex, currentAnswer)}
+                          disabled={loading || !currentAnswer.trim()}
+                          className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {loading ? "Saving..." : (
+                            <>
+                              <span>Save & Next</span>
+                              <span>→</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-500 flex items-start gap-2">
+                      <Icon name="info" size={16} className="mt-0.5" />
+                      <span>AI generates personalized questions based on your pregnancy stage, health profile, and previous entries. Answer all 6 questions to complete your daily entry.</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No questions available for this date. Please try again.</p>
+                  </div>
+                )}
               </div>
             </DashboardCard>
 
