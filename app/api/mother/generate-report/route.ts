@@ -128,14 +128,28 @@ export async function POST(req: NextRequest) {
       );
       
       // Filter to only image files for AI analysis (exclude PDFs)
+      // Include both direct image uploads and PDF-converted images
       const imageObjects = (objects || []).filter(obj => {
         const key = obj.Key || "";
+        // Include PNG, JPG, JPEG files (both direct uploads and PDF conversions)
         return key.endsWith('.png') || key.endsWith('.jpg') || key.endsWith('.jpeg');
       });
       
+      console.log(`[Report Generation] Found ${imageObjects.length} image file(s) for analysis (out of ${objects.length} total files)`);
+      
       prescriptionUrlsForAnalysis = await Promise.all(
-        imageObjects.map(async (obj) => await signedUrl(obj.Key!))
+        imageObjects.map(async (obj) => {
+          const url = await signedUrl(obj.Key!);
+          console.log(`[Report Generation] Added image for analysis: ${obj.Key}`);
+          return url;
+        })
       );
+      
+      if (prescriptionUrlsForAnalysis.length === 0) {
+        console.warn(`[Report Generation] ⚠️ No image files found for prescription analysis. PDFs may not have been converted to images.`);
+      } else {
+        console.log(`[Report Generation] ✅ ${prescriptionUrlsForAnalysis.length} image URL(s) ready for AI analysis`);
+      }
     } catch (err) {
       console.error("Error fetching prescriptions:", err);
     }

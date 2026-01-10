@@ -103,8 +103,9 @@ export async function convertPdfToImages(
 
       await page.render(renderContext as any).promise;
 
-      // Convert canvas to PNG buffer
-      const imageBuffer = canvas.toBuffer("image/png");
+      // Convert canvas to JPEG buffer (smaller file size, better for storage)
+      // Quality: 0.9 (90%) for good balance between quality and file size
+      const imageBuffer = canvas.toBuffer("image/jpeg", { quality: 0.9 });
 
       images.push({
         pageNumber: pageNum,

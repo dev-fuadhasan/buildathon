@@ -63,60 +63,92 @@ export async function POST(req: NextRequest) {
     const isPdf = file.type === "application/pdf";
 
     if (isPdf) {
-      // Try to convert PDF to images, but fallback to uploading PDF as-is if conversion fails
-      console.log(`[Prescription Upload] Attempting to convert PDF to images: ${file.name}`);
+      // PDF conversion is REQUIRED - convert to images for AI analysis
+      console.log(`[Prescription Upload] Converting PDF to images: ${file.name} (${Math.round(buffer.length / 1024)}KB)`);
+      
+      let pdfImages;
       try {
-        const pdfImages = await convertPdfToImages(buffer, 2.0);
-
-        if (pdfImages.length === 0) {
-          console.warn(`[Prescription Upload] PDF conversion returned 0 pages, uploading PDF as-is`);
-          throw new Error("No pages extracted from PDF");
+        pdfImages = await convertPdfToImages(buffer, 2.0);
+        
+        if (!pdfImages || pdfImages.length === 0) {
+          throw new Error("PDF conversion returned 0 pages - conversion failed");
         }
+        
+        console.log(`[Prescription Upload] ✅ PDF conversion successful: ${pdfImages.length} page(s) extracted`);
+      } catch (conversionError: any) {
+        console.error(`[Prescription Upload] ❌ PDF conversion FAILED: ${conversionError.message}`);
+        console.error(`[Prescription Upload] Error stack:`, conversionError.stack);
+        return NextResponse.json(
+          { 
+            error: `PDF conversion failed: ${conversionError.message}. Please try uploading as images (PNG/JPG) instead, or contact support.`,
+            details: conversionError.message
+          },
+          { status: 500 }
+        );
+      }
 
-        // Upload original PDF (optional - for reference)
-        const pdfKey = `${baseKey}`;
+      // Upload original PDF (for reference/download)
+      const pdfKey = `${baseKey}`;
+      try {
         await uploadFile({
           key: pdfKey,
           body: buffer,
           contentType: "application/pdf",
         });
+        console.log(`[Prescription Upload] ✅ Original PDF uploaded: ${pdfKey}`);
+      } catch (pdfUploadError: any) {
+        console.error(`[Prescription Upload] ⚠️ Failed to upload original PDF: ${pdfUploadError.message}`);
+        // Continue with image uploads even if PDF upload fails
+      }
 
-        // Upload each page as an image
-        const imageUrls: string[] = [];
-        const imageKeys: string[] = [];
+      // Upload each page as an image - THIS IS CRITICAL FOR AI ANALYSIS
+      const imageUrls: string[] = [];
+      const imageKeys: string[] = [];
 
-        for (let i = 0; i < pdfImages.length; i++) {
-          const image = pdfImages[i];
-          const imageKey = `${baseKey}_page${image.pageNumber}.png`;
-          
+      for (let i = 0; i < pdfImages.length; i++) {
+        const image = pdfImages[i];
+        // Use .jpg extension (images are already converted to JPEG format)
+        const imageKey = `${baseKey}_page${image.pageNumber}.jpg`;
+        
+        try {
           await uploadFile({
             key: imageKey,
-            body: image.imageBuffer,
-            contentType: "image/png",
+            body: image.imageBuffer, // Already JPEG format from conversion
+            contentType: "image/jpeg",
           });
 
           const imageUrl = await signedUrl(imageKey);
           imageUrls.push(imageUrl);
           imageKeys.push(imageKey);
+          
+          console.log(`[Prescription Upload] ✅ Page ${image.pageNumber}/${pdfImages.length} uploaded as image: ${imageKey} (${Math.round(image.imageBuffer.length / 1024)}KB)`);
+        } catch (imageUploadError: any) {
+          console.error(`[Prescription Upload] ❌ Failed to upload page ${image.pageNumber}: ${imageUploadError.message}`);
+          // Continue with other pages
         }
-
-        console.log(`[Prescription Upload] ✅ Converted ${pdfImages.length} page(s) to images`);
-
-        // Return the image URLs (these will be used for Groq analysis)
-        // Also return the PDF key for reference
-        return NextResponse.json({
-          key: pdfKey,
-          url: await signedUrl(pdfKey), // Original PDF URL
-          imageUrls, // Array of image URLs for analysis
-          imageKeys, // Array of image keys
-          pageCount: pdfImages.length,
-          isPdf: true,
-        });
-      } catch (conversionError: any) {
-        console.error(`[Prescription Upload] PDF conversion failed: ${conversionError.message}`);
-        console.log(`[Prescription Upload] Falling back to uploading PDF as-is`);
-        // Fall through to regular PDF upload below
       }
+
+      if (imageUrls.length === 0) {
+        return NextResponse.json(
+          { error: "Failed to upload any converted images. Please try again or contact support." },
+          { status: 500 }
+        );
+      }
+
+      console.log(`[Prescription Upload] ✅ Successfully uploaded ${imageUrls.length} image(s) from PDF`);
+
+      // Return the image URLs (these will be used for Groq analysis)
+      // Also return the PDF key for reference
+      return NextResponse.json({
+        key: pdfKey,
+        url: await signedUrl(pdfKey), // Original PDF URL
+        imageUrls, // Array of image URLs for analysis - CRITICAL
+        imageKeys, // Array of image keys - CRITICAL
+        pageCount: pdfImages.length,
+        imagesUploaded: imageUrls.length,
+        isPdf: true,
+        success: true,
+      });
     }
     
     // Regular file upload (for images or PDFs that failed conversion)
