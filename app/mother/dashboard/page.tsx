@@ -754,6 +754,10 @@ export default function MotherDashboard() {
   };
 
   const generatePDF = async (reportData: any) => {
+    let element: HTMLElement | null = null;
+    let styleElement: HTMLStyleElement | null = null;
+    let fontLink: HTMLLinkElement | null = null;
+    
     try {
       console.log("Generating PDF with data:", reportData);
       
@@ -766,7 +770,7 @@ export default function MotherDashboard() {
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
       
-      // Create HTML content for the report (just body content, no full HTML structure)
+      // Create HTML content for the report
       const bodyHTML = generateReportBodyHTML(reportData);
       console.log("Generated HTML length:", bodyHTML.length);
       
@@ -774,35 +778,51 @@ export default function MotherDashboard() {
         throw new Error("Generated HTML is empty");
       }
       
-      // Create a temporary container element
-      const element = document.createElement("div");
-      element.id = "pdf-content";
-      
-      // Load fonts first
-      const fontLink = document.createElement("link");
-      fontLink.rel = "stylesheet";
-      fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap";
-      document.head.appendChild(fontLink);
+      // Load fonts first (check if already loaded)
+      const existingFontLink = document.querySelector('link[href*="Noto+Sans+Bengali"]');
+      if (!existingFontLink) {
+        fontLink = document.createElement("link");
+        fontLink.rel = "stylesheet";
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&family=Inter:wght@400;600;700&display=swap";
+        document.head.appendChild(fontLink);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
       
       // Wait for fonts to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
       
-      // Inject styles
-      const styleElement = document.createElement("style");
+      // Create a temporary container element with proper styling
+      element = document.createElement("div");
+      element.id = "pdf-content-wrapper";
+      
+      // Inject comprehensive styles
+      styleElement = document.createElement("style");
+      styleElement.id = "pdf-styles";
       styleElement.textContent = `
-        #pdf-content * { margin: 0; padding: 0; box-sizing: border-box; }
+        #pdf-content-wrapper {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 999999;
+          background: white;
+          overflow: auto;
+          padding: 20px;
+          box-sizing: border-box;
+        }
         #pdf-content {
+          max-width: 210mm;
+          margin: 0 auto;
+          background: white;
+          padding: 20px;
+          box-sizing: border-box;
           font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
           font-size: 11pt;
           line-height: 1.6;
           color: #333;
-          padding: 20px;
-          background: white;
-          width: 210mm;
-          min-height: 297mm;
         }
         #pdf-content .header {
           background: #1e40af;
@@ -816,10 +836,12 @@ export default function MotherDashboard() {
           font-size: 20pt;
           font-weight: 700;
           margin-bottom: 10px;
+          color: white;
         }
         #pdf-content .header-info {
           font-size: 9pt;
           opacity: 0.9;
+          color: white;
         }
         #pdf-content .section {
           margin-bottom: 25px;
@@ -855,6 +877,7 @@ export default function MotherDashboard() {
           white-space: pre-wrap;
           font-size: 10pt;
           line-height: 1.8;
+          color: #333;
         }
         #pdf-content .allergy {
           color: #dc2626;
@@ -885,40 +908,43 @@ export default function MotherDashboard() {
       `;
       document.head.appendChild(styleElement);
       
-      // Set innerHTML after styles are added
-      element.innerHTML = bodyHTML;
+      // Create inner content div
+      const contentDiv = document.createElement("div");
+      contentDiv.id = "pdf-content";
+      contentDiv.innerHTML = bodyHTML;
+      element.appendChild(contentDiv);
       
-      element.style.width = "210mm";
-      element.style.minHeight = "297mm";
-      element.style.backgroundColor = "white";
-      element.style.position = "absolute";
-      element.style.top = "0";
-      element.style.left = "0";
-      element.style.zIndex = "99999";
-      element.style.opacity = "1";
-      element.style.visibility = "visible";
-      element.style.pointerEvents = "none";
-      element.style.overflow = "visible";
+      // Append to body
       document.body.appendChild(element);
       
-      // Force a reflow to ensure element is rendered
+      // Force multiple reflows to ensure rendering
       element.offsetHeight;
+      contentDiv.offsetHeight;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
       
-      // Wait for fonts and images to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Wait for fonts to load
-      if (document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
-      }
-      
-      // Verify element has content
-      if (!element.innerHTML || element.innerHTML.trim().length === 0) {
+      // Verify element has content and is visible
+      if (!contentDiv.innerHTML || contentDiv.innerHTML.trim().length === 0) {
         throw new Error("Report content is empty");
       }
       
-      console.log("Element content length:", element.innerHTML.length);
-      console.log("Element computed style:", window.getComputedStyle(element));
+      const computedStyle = window.getComputedStyle(contentDiv);
+      console.log("Element content length:", contentDiv.innerHTML.length);
+      console.log("Element dimensions:", {
+        width: computedStyle.width,
+        height: computedStyle.height,
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        opacity: computedStyle.opacity
+      });
+      
+      // Verify element is actually visible
+      if (computedStyle.display === "none" || computedStyle.visibility === "hidden" || computedStyle.opacity === "0") {
+        throw new Error("Element is not visible");
+      }
       
       const opt = {
         margin: [15, 15, 15, 15] as [number, number, number, number],
@@ -927,25 +953,35 @@ export default function MotherDashboard() {
         html2canvas: { 
           scale: 2, 
           useCORS: true,
-          logging: true,
+          logging: false,
           letterRendering: true,
           allowTaint: false,
           backgroundColor: "#ffffff",
+          windowWidth: contentDiv.scrollWidth,
+          windowHeight: contentDiv.scrollHeight,
         },
         jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       };
       
-      console.log("Starting PDF generation...");
-      const worker = html2pdf().set(opt).from(element);
+      console.log("Starting PDF generation from content div...");
+      const worker = html2pdf().set(opt).from(contentDiv);
       await worker.save();
       console.log("PDF generation completed");
       
-      // Clean up
-      document.body.removeChild(element);
     } catch (error: any) {
       console.error("PDF generation error:", error);
-      alert(`Failed to generate PDF: ${error.message || "Unknown error"}. Please try again.`);
+      console.error("Error stack:", error.stack);
+      alert(`Failed to generate PDF: ${error.message || "Unknown error"}. Check console for details.`);
+    } finally {
+      // Clean up
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      if (styleElement && styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+      }
+      // Don't remove font link as it might be used elsewhere
     }
   };
 
@@ -1070,7 +1106,7 @@ export default function MotherDashboard() {
   ` : ""}
 
   <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 9pt;">
-    Generated by MomsCare - Comprehensive Pregnancy Care Platform
+    Generated by MomsCare AI - Comprehensive Pregnancy Care Platform
   </div>
     `;
   };
