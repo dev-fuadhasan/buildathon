@@ -333,7 +333,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center mb-4">
-                <div className="relative w-32 h-10 flex-shrink-0">
+                <div className="relative w-40 h-12 sm:w-48 sm:h-14 md:w-56 md:h-16 flex-shrink-0">
                   <Image
                     src="/mainlogo.png"
                     alt="MomsCare Logo"

@@ -366,7 +366,7 @@ export default function Layout({ children }: Props) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="flex items-center justify-between h-16 md:h-18">
             <Link href="/" className="flex items-center group">
-              <div className="relative w-24 h-8 sm:w-32 sm:h-10 flex-shrink-0">
+              <div className="relative w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 flex-shrink-0">
                 <Image
                   src="/mainlogo.png"
                   alt="MomsCare Logo"
