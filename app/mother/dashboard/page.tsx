@@ -339,12 +339,29 @@ export default function MotherDashboard() {
   };
 
   const fetchPrescriptions = async (t = token) => {
-    const res = await fetch("/api/mother/prescriptions", {
-      headers: authHeaders(t),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPrescriptions(data.items || []);
+    try {
+      const res = await fetch("/api/mother/prescriptions", {
+        headers: authHeaders(t),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Fetched prescriptions:", data.items?.length || 0, "items");
+        // Filter out page images (keep only main files - PDFs and direct image uploads)
+        // Page images are for AI analysis but shouldn't be shown in the list
+        const mainFiles = (data.items || []).filter((item: any) => {
+          const key = item.key || "";
+          // Exclude page images (files ending with _page1.jpg, _page2.jpg, etc.)
+          return !key.match(/_page\d+\.(jpg|jpeg|png)$/i);
+        });
+        console.log("Filtered prescriptions (excluding page images):", mainFiles.length, "items");
+        setPrescriptions(mainFiles);
+      } else {
+        console.error("Failed to fetch prescriptions:", res.status, res.statusText);
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Error details:", errorData);
+      }
+    } catch (err) {
+      console.error("Error fetching prescriptions:", err);
     }
   };
 
@@ -1320,22 +1337,33 @@ export default function MotherDashboard() {
       try {
         const text = await res.text();
         data = text ? JSON.parse(text) : {};
-      } catch {
-        // If parsing fails, use empty object
+      } catch (parseError) {
+        console.error("Failed to parse upload response:", parseError);
+        setMessage(`❌ Failed to parse server response. Please try again.`);
+        return;
       }
+      
       if (res.ok) {
+        console.log("Upload successful:", data);
         setMessage(`✅ ${t.mother.prescriptionUploaded}`);
         const fileInput = document.querySelector('input[name="file"]') as HTMLInputElement;
         if (fileInput) fileInput.value = "";
         setSelectedFile(null);
-        fetchPrescriptions();
+        
+        // Refresh prescriptions list after a short delay to ensure files are available
+        setTimeout(() => {
+          fetchPrescriptions();
+        }, 500);
+        
         // Reset camera state
         setShowCamera(false);
         setCapturedImage(null);
         // Clear message after 3 seconds
         setTimeout(() => setMessage(""), 3000);
       } else {
-        setMessage(`❌ ${data.error || "Upload failed. Please try again."}`);
+        console.error("Upload failed:", data);
+        const errorMsg = data.error || data.details || "Upload failed. Please try again.";
+        setMessage(`❌ ${errorMsg}`);
       }
     } catch (err) {
       setMessage("❌ Network error. Please check your connection and try again.");
