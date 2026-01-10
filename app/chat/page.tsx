@@ -362,14 +362,14 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] max-w-7xl mx-auto gap-0 sm:gap-2 px-0 sm:px-2 md:px-4">
+      <div className="flex h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] max-w-7xl mx-auto gap-0 sm:gap-2 px-0 sm:px-2 md:px-4">
         {/* Conversation History Sidebar - Only for logged-in mothers */}
         {isMother && (
           <>
             {/* Mobile Overlay */}
             {showSidebar && (
               <div
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
                 onClick={() => setShowSidebar(false)}
               />
             )}
@@ -377,32 +377,32 @@ export default function ChatPage() {
             {/* Sidebar */}
             <div className={`
               fixed lg:relative top-0 left-0 h-full lg:h-auto
-              w-64 sm:w-72 lg:w-80
+              w-[280px] sm:w-72 lg:w-80
               bg-white border-r border-slate-200 
               flex flex-col z-50
-              transform transition-transform duration-300
+              transform transition-transform duration-300 ease-in-out
+              shadow-xl lg:shadow-none
               ${showSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
               {/* Sidebar Header */}
-              <div className="p-3 sm:p-4 border-b border-slate-200 flex-shrink-0">
+              <div className="p-3 sm:p-4 border-b border-slate-200 flex-shrink-0 bg-gradient-to-r from-pink-50 to-rose-50">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-base sm:text-lg font-bold text-slate-800">
                     {lang === "bn" ? "চ্যাট ইতিহাস" : "Chat History"}
                   </h2>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg"
+                    className="lg:hidden p-2 hover:bg-slate-100 rounded-lg touch-manipulation"
+                    aria-label="Close sidebar"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <Icon name="close" size={20} />
                   </button>
                 </div>
                 
                 {/* New Chat Button */}
                 <button
                   onClick={startNewConversation}
-                  className="w-full btn-primary text-sm py-2 flex items-center justify-center gap-2"
+                  className="w-full btn-primary text-sm py-2.5 sm:py-2 flex items-center justify-center gap-2 touch-manipulation min-h-[44px]"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -412,7 +412,7 @@ export default function ChatPage() {
               </div>
               
               {/* Conversations List */}
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-1">
                 {conversations.length === 0 ? (
                   <div className="text-center py-8 text-slate-400 text-sm">
                     {lang === "bn" ? "কোন ইতিহাস নেই" : "No history yet"}
@@ -429,12 +429,12 @@ export default function ChatPage() {
                     >
                       <button
                         onClick={() => loadConversation(conv.id)}
-                        className="w-full text-left p-2.5 sm:p-3"
+                        className="w-full text-left p-3 sm:p-2.5 touch-manipulation"
                       >
-                        <div className="flex items-start gap-2">
-                          <Icon name="chat" size={16} className="flex-shrink-0 mt-0.5 text-pink-500" />
+                        <div className="flex items-start gap-2 sm:gap-2">
+                          <Icon name="chat" size={18} className="sm:w-4 sm:h-4 flex-shrink-0 mt-0.5 text-pink-500" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-slate-800 line-clamp-2 mb-1">
+                            <p className="text-sm sm:text-xs sm:text-sm font-medium text-slate-800 line-clamp-2 mb-1">
                               {conv.title}
                             </p>
                             <p className="text-xs text-slate-500">
@@ -453,12 +453,10 @@ export default function ChatPage() {
                           e.stopPropagation();
                           deleteConversation(conv.id);
                         }}
-                        className="absolute top-2 right-2 p-1.5 rounded-md bg-white/80 hover:bg-red-50 text-slate-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-2 right-2 p-2 sm:p-1.5 rounded-md bg-white/80 hover:bg-red-50 text-slate-400 hover:text-red-600 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                         title={lang === "bn" ? "মুছে ফেলুন" : "Delete"}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Icon name="delete" size={16} />
                       </button>
                     </div>
                   ))
@@ -469,52 +467,53 @@ export default function ChatPage() {
         )}
         
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 gap-1 sm:gap-1.5 px-1 sm:px-0">
+        <div className="flex-1 flex flex-col min-w-0 gap-2 sm:gap-1.5 px-2 sm:px-0">
           {/* Header - Compact Design */}
-          <div className="flex items-center justify-between flex-shrink-0 py-1">
-            <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center justify-between flex-shrink-0 py-2 sm:py-1">
+            <div className="flex items-center gap-2 sm:gap-1.5">
               {/* Mobile Menu Button - Only for logged-in mothers */}
               {isMother && (
                 <button
                   onClick={() => setShowSidebar(true)}
-                  className="lg:hidden p-1.5 hover:bg-slate-100 rounded-md transition-colors"
+                  className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors touch-manipulation"
+                  aria-label="Open chat history"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
               )}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent leading-none">
+              <div className="flex items-center gap-2 sm:gap-1.5">
+                <h1 className="text-base sm:text-base md:text-lg font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent leading-none">
                   MomsCare AI
                 </h1>
-                <span className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-200">
-                  <Icon name={isMother ? "ai" : "chat"} size={10} className="sm:w-3 sm:h-3" />
+                <span className="hidden sm:flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-200">
+                  <Icon name={isMother ? "ai" : "chat"} size={12} />
                   {isMother ? "Personalized" : "Public"}
                 </span>
               </div>
             </div>
             {!isMother && (
-              <Link href="/mother/login" className="btn-secondary text-[9px] sm:text-xs px-1.5 sm:px-3 py-0.5 sm:py-1 whitespace-nowrap text-center min-w-[40px] sm:min-w-[60px]">
+              <Link href="/mother/login" className="btn-secondary text-xs sm:text-xs px-3 sm:px-3 py-1.5 sm:py-1 whitespace-nowrap text-center touch-manipulation min-h-[36px] sm:min-h-[32px]">
                 Login
               </Link>
             )}
           </div>
 
           {/* Safety Disclaimer - Ultra Compact */}
-          <div className="rounded-md bg-yellow-50 border border-yellow-200 px-2 py-1 flex-shrink-0">
-            <p className="flex items-start gap-1 text-[10px] sm:text-xs text-yellow-900 leading-tight">
-              <Icon name="warning" size={12} className="mt-0.5 flex-shrink-0 opacity-70" />
-              <span>
+          <div className="rounded-lg sm:rounded-md bg-yellow-50 border border-yellow-200 px-3 sm:px-2 py-2 sm:py-1 flex-shrink-0">
+            <p className="flex items-start gap-2 sm:gap-1 text-xs sm:text-xs text-yellow-900 leading-relaxed sm:leading-tight">
+              <Icon name="warning" size={14} className="sm:w-3 sm:h-3 mt-0.5 flex-shrink-0 opacity-70" />
+              <span className="text-xs sm:text-[10px]">
                 <strong className="font-semibold">Note:</strong> AI provides general info only. For emergencies, contact your provider.
               </span>
             </p>
           </div>
 
           {/* Main Chat Container */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-lg sm:rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl sm:rounded-xl shadow-lg border border-slate-200 overflow-hidden">
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 space-y-2 sm:space-y-3 bg-gradient-to-b from-slate-50 to-white min-h-0">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-3 md:p-4 space-y-3 sm:space-y-2 bg-gradient-to-b from-slate-50 to-white min-h-0">
               {messages.map((msg, idx) => (
                 <ChatBubble 
                   key={idx} 
@@ -524,9 +523,9 @@ export default function ChatPage() {
                 />
               ))}
               {loading && (
-                <div className="flex items-center gap-3 text-slate-500">
-                  <div className="animate-pulse text-2xl">💭</div>
-                  <span className="text-sm font-medium">
+                <div className="flex items-center gap-3 text-slate-500 py-2">
+                  <div className="animate-pulse text-xl sm:text-2xl">💭</div>
+                  <span className="text-sm sm:text-sm font-medium">
                     {lang === "bn" ? "MomsCare চিন্তা করছে..." : "MomsCare is thinking..."}
                   </span>
                 </div>
@@ -546,16 +545,16 @@ export default function ChatPage() {
             )}
 
             {/* Input Section */}
-            <div className="border-t border-slate-200 bg-white p-2 sm:p-3 flex-shrink-0">
+            <div className="border-t border-slate-200 bg-white p-3 sm:p-2 md:p-3 flex-shrink-0">
               {/* Model download progress (visible to all users) */}
               {modelLoading && (
-                <div className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs text-gray-600">Model downloading (WASM)</p>
-                    <p className="text-xs text-gray-600">{modelProgress}%</p>
+                <div className="mb-2 sm:mb-2">
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-1">
+                    <p className="text-xs sm:text-xs text-gray-600">Model downloading (WASM)</p>
+                    <p className="text-xs sm:text-xs text-gray-600 font-medium">{modelProgress}%</p>
                   </div>
-                  <div className="w-full h-2 bg-gray-200 rounded overflow-hidden">
-                    <div className="h-2 bg-blue-500" style={{ width: `${modelProgress}%` }} />
+                  <div className="w-full h-2 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${modelProgress}%` }} />
                   </div>
                 </div>
               )}
@@ -569,7 +568,7 @@ export default function ChatPage() {
               />
               
               {isMother && (
-                <div className="mt-2 pt-2 border-t border-slate-100">
+                <div className="mt-2 sm:mt-2 pt-2 border-t border-slate-100">
                   <ChatPrescriptionUpload
                     onUpload={async (file) => {
                       setUploadMessage("");

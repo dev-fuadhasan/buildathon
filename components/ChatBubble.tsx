@@ -11,14 +11,14 @@ type Props = {
 export default function ChatBubble({ role, content, imageUrl }: Props) {
   const isUser = role === "user";
   return (
-    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} items-start mb-4`}>
+    <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"} items-start mb-3 sm:mb-4`}>
       {!isUser && (
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-pink-200">
+        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md sm:shadow-lg ring-2 ring-pink-200">
           AI
         </div>
       )}
       <div
-        className={`max-w-[80%] md:max-w-[70%] rounded-2xl shadow-lg transition-all ${
+        className={`max-w-[85%] sm:max-w-[80%] md:max-w-[70%] rounded-2xl sm:rounded-2xl shadow-md sm:shadow-lg transition-all ${
           isUser
             ? "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-br-sm"
             : "bg-white text-slate-800 border-2 border-slate-100 rounded-bl-sm"
@@ -27,7 +27,7 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
         {/* Image (if present) */}
         {imageUrl && (
           <div className="relative w-full rounded-t-2xl overflow-hidden bg-slate-50">
-            <div className="relative w-full h-48 sm:h-64">
+            <div className="relative w-full h-40 sm:h-48 md:h-64">
               <Image
                 src={imageUrl}
                 alt="Attached image"
@@ -46,7 +46,7 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
         
         {/* Text Content */}
         {content && (
-          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap ${imageUrl ? 'pt-2 sm:pt-3' : ''}`}>
+          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-sm sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap ${imageUrl ? 'pt-2 sm:pt-3' : ''}`}>
             <div className="prose prose-sm max-w-none">
               {content.split('\n').map((line, idx) => (
                 <p key={idx} className={idx > 0 ? 'mt-1.5 sm:mt-2' : ''}>{line || '\u00A0'}</p>
@@ -56,8 +56,8 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
         )}
       </div>
       {isUser && (
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-blue-200">
-          You
+        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md sm:shadow-lg ring-2 ring-blue-200">
+          <span className="text-[10px] sm:text-xs">You</span>
         </div>
       )}
     </div>

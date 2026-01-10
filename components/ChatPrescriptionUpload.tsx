@@ -48,12 +48,10 @@ export default function ChatPrescriptionUpload({ onUpload, disabled }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor="chat-prescription-input" className="text-xs font-medium text-slate-600 cursor-pointer hover:text-pink-600 transition-colors">
-        <span className="flex items-center gap-1">
-          <Icon name="prescription" size={16} />
-          {lang === "bn" ? "প্রেসক্রিপশন" : "Prescription"}
-        </span>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      <label htmlFor="chat-prescription-input" className="text-xs sm:text-xs font-medium text-slate-600 cursor-pointer hover:text-pink-600 transition-colors flex items-center gap-1.5 touch-manipulation min-h-[36px] sm:min-h-0">
+        <Icon name="prescription" size={16} className="sm:w-4 sm:h-4" />
+        <span>{lang === "bn" ? "প্রেসক্রিপশন" : "Prescription"}</span>
       </label>
       <input
         id="chat-prescription-input"
@@ -63,23 +61,23 @@ export default function ChatPrescriptionUpload({ onUpload, disabled }: Props) {
         disabled={uploading || disabled}
         className="hidden"
       />
-      <label htmlFor="chat-prescription-input" className="flex-1 text-xs text-slate-500 cursor-pointer hover:text-slate-700 transition-colors truncate">
+      <label htmlFor="chat-prescription-input" className="flex-1 text-xs text-slate-500 cursor-pointer hover:text-slate-700 transition-colors truncate px-2 py-1.5 sm:py-0 border border-slate-200 rounded-lg sm:border-0 sm:rounded-none touch-manipulation min-h-[36px] sm:min-h-0 flex items-center">
         {file ? file.name : (lang === "bn" ? "ফাইল নির্বাচন করুন" : "Choose file")}
       </label>
       {file && (
-        <>
-          <span className="text-xs text-slate-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 hidden sm:inline">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
           <button
             onClick={handleUpload}
             disabled={uploading || disabled}
-            className="btn-primary text-xs px-3 py-1.5 h-auto"
+            className="btn-primary text-xs px-3 sm:px-3 py-2 sm:py-1.5 h-auto touch-manipulation min-h-[36px] sm:min-h-0 flex-1 sm:flex-initial"
           >
             {uploading 
               ? (lang === "bn" ? "..." : "...")
               : (lang === "bn" ? "আপলোড" : "Upload")
             }
           </button>
-        </>
+        </div>
       )}
     </div>
   );

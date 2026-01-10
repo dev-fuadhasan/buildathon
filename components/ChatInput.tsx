@@ -256,20 +256,20 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
       )}
 
       {/* Input Row - Properly Aligned (All elements exactly 48px height) */}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 sm:gap-2 items-center">
         {/* Image Attachment Button - LEFT SIDE (48px) */}
         {onImageSelect && (
           <>
             <label 
               htmlFor="chat-image-input" 
-              className={`flex-shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation ${
+              className={`flex-shrink-0 w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation ${
                 disabled 
                   ? "border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50" 
                   : "border-slate-300 text-slate-600 hover:text-pink-600 hover:border-pink-400 hover:bg-pink-50 cursor-pointer active:scale-95"
               }`}
               title={lang === "bn" ? "ছবি যুক্ত করুন" : "Attach image"}
             >
-              <Icon name="add" size={22} />
+              <Icon name="add" size={20} className="sm:w-[22px] sm:h-[22px]" />
             </label>
             <input
               id="chat-image-input"
@@ -287,7 +287,7 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
           <button
             onClick={isListening ? stopListening : startListening}
             disabled={disabled || sending}
-            className={`flex-shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation ${
+            className={`flex-shrink-0 w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation ${
               disabled || sending
                 ? "border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50"
                 : isListening
@@ -302,11 +302,11 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             type="button"
           >
             {isListening ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse">
+              <svg width="20" height="20" className="sm:w-[22px] sm:h-[22px] animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2s-2 .9-2 2v8c0 1.1.9 2 2 2zm5-3c0 2.8-2.2 5-5 5s-5-2.2-5-5H5c0 3.3 2.7 6 6 6v2h2v-2c3.3 0 6-2.7 6-6h-2z"/>
               </svg>
             ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="20" height="20" className="sm:w-[22px] sm:h-[22px]" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2s-2 .9-2 2v8c0 1.1.9 2 2 2zm5-3c0 2.8-2.2 5-5 5s-5-2.2-5-5H5c0 3.3 2.7 6 6 6v2h2v-2c3.3 0 6-2.7 6-6h-2z"/>
               </svg>
             )}
@@ -314,9 +314,9 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
         )}
 
         {/* Text Input - CENTER (Fixed 48px height with auto-wrap) */}
-        <div className="flex-1 relative min-w-0 h-[48px] flex items-center">
+        <div className="flex-1 relative min-w-0 h-[44px] sm:h-[48px] flex items-center">
           <textarea
-            className="resize-none text-sm px-3 sm:px-4 w-full h-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="resize-none text-sm sm:text-sm px-3 sm:px-4 w-full h-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder={
               isListening
                 ? (lang === "bn" ? "শুনছি... কথা বলুন" : "Listening... speak now")
@@ -336,9 +336,9 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             disabled={sending || disabled}
             rows={2}
             style={{ 
-              height: '48px',
-              minHeight: '48px',
-              maxHeight: '48px',
+              height: '100%',
+              minHeight: '44px',
+              maxHeight: '44px',
               overflowY: 'auto',
               overflowX: 'hidden',
               paddingTop: '10px',
@@ -346,12 +346,13 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
               boxSizing: 'border-box',
               lineHeight: '1.4',
               wordWrap: 'break-word',
-              whiteSpace: 'pre-wrap'
+              whiteSpace: 'pre-wrap',
+              fontSize: '14px'
             }}
           />
           {/* Listening indicator */}
           {isListening && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <div className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
               <span className="text-xs text-red-600 font-medium hidden sm:inline">
                 {lang === "bn" ? "শুনছি" : "Listening"}
@@ -369,13 +370,16 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             handleSend();
           }}
           disabled={sending || disabled || (!value.trim() && !currentImage)}
-          className="flex-shrink-0 h-[48px] px-4 btn-primary flex items-center justify-center min-w-[80px] text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+          className="flex-shrink-0 h-[44px] sm:h-[48px] px-3 sm:px-4 btn-primary flex items-center justify-center min-w-[70px] sm:min-w-[80px] text-xs sm:text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
           title={lang === "bn" ? "পাঠান" : "Send"}
         >
           {sending ? (
-            <Icon name="pending" size={18} className="animate-spin brightness-0 invert" />
+            <Icon name="pending" size={16} className="sm:w-[18px] sm:h-[18px] animate-spin brightness-0 invert" />
           ) : (
-            <Icon name="upload" size={18} className="brightness-0 invert" />
+            <>
+              <span className="hidden sm:inline">Send</span>
+              <Icon name="upload" size={16} className="sm:w-[18px] sm:h-[18px] brightness-0 invert sm:ml-1" />
+            </>
           )}
         </button>
       </div>
