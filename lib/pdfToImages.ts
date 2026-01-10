@@ -59,6 +59,9 @@ export async function convertPdfToImages(
   scale: number = 2.0
 ): Promise<PDFPageImage[]> {
   try {
+    // Convert Buffer to Uint8Array (required by pdfjs-dist)
+    const uint8Array = new Uint8Array(pdfBuffer);
+    
     // Try legacy build first, fallback to regular build
     let pdfjsLib: any;
     try {
@@ -73,9 +76,9 @@ export async function convertPdfToImages(
       pdfjsLib.GlobalWorkerOptions.workerSrc = "";
     }
     
-    // Load the PDF document
+    // Load the PDF document - use Uint8Array instead of Buffer
     const loadingTask = pdfjsLib.getDocument({
-      data: pdfBuffer,
+      data: uint8Array,
       useSystemFonts: true,
     });
 
