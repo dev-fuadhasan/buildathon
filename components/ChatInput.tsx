@@ -28,8 +28,11 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [interimText, setInterimText] = useState("");
+  const [recognitionStatus, setRecognitionStatus] = useState<"idle" | "listening" | "processing">("idle");
   const recognitionRef = useRef<any>(null);
   const interimTextRef = useRef<string>("");
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const finalResultsRef = useRef<string[]>([]);
 
   const handleSend = async () => {
     const text = value.trim();
@@ -56,43 +59,142 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
     setIsSupported(!!SpeechRecognition);
   }, []);
 
-  // Initialize speech recognition
+  // Helper function to normalize and improve text
+  const normalizeText = (text: string, isFinal: boolean = false): string => {
+    if (!text) return "";
+    
+    // Remove extra whitespace
+    let normalized = text.trim().replace(/\s+/g, " ");
+    
+    // Auto-capitalize first letter of sentences
+    if (isFinal) {
+      // Capitalize first letter
+      normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      
+      // Ensure proper sentence endings
+      if (!/[.!?]$/.test(normalized)) {
+        normalized += ".";
+      }
+    }
+    
+    return normalized;
+  };
+
+  // Initialize speech recognition with enhanced settings
   const initializeSpeechRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
 
     const recognition = new SpeechRecognition();
+    
+    // Enhanced configuration for better accuracy
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = lang === "bn" ? "bn-BD" : "en-US";
+    recognition.maxAlternatives = 1; // Get best alternative
+    
+    // Better language settings with fallbacks
+    if (lang === "bn") {
+      recognition.lang = "bn-BD"; // Primary: Bengali (Bangladesh)
+      // Fallback languages can be set if needed
+    } else {
+      recognition.lang = "en-US"; // Primary: English (US)
+      // Can add en-GB, en-AU as fallbacks if needed
+    }
 
     recognition.onstart = () => {
       setIsListening(true);
+      setRecognitionStatus("listening");
       setInterimText("");
       interimTextRef.current = "";
+      finalResultsRef.current = [];
+      
+      // Clear any existing silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
     };
 
     recognition.onresult = (event: any) => {
       let interimTranscript = "";
       let finalTranscript = "";
+      let hasFinal = false;
 
+      // Process all results from the current index
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " ";
-        } else {
-          interimTranscript += transcript;
+        const result = event.results[i];
+        const transcript = result[0]?.transcript || "";
+        const confidence = result[0]?.confidence || 0;
+        
+        // Only process if confidence is reasonable (>= 0.3) or if it's final
+        if (result.isFinal || confidence >= 0.3) {
+          if (result.isFinal) {
+            const normalized = normalizeText(transcript, true);
+            if (normalized) {
+              finalTranscript += normalized + " ";
+              hasFinal = true;
+            }
+          } else {
+            // Interim result with good confidence
+            const normalized = normalizeText(transcript, false);
+            if (normalized) {
+              interimTranscript += normalized;
+            }
+          }
         }
       }
 
-      interimTextRef.current = interimTranscript;
-      setInterimText(interimTranscript);
+      // Update interim text for real-time display
+      if (interimTranscript) {
+        interimTextRef.current = interimTranscript;
+        setInterimText(interimTranscript);
+        setRecognitionStatus("processing");
+        
+        // Reset silence timeout when we get new interim results
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+        }
+        
+        // Auto-stop after 3 seconds of silence (no new interim results)
+        silenceTimeoutRef.current = setTimeout(() => {
+          if (isListening && interimTextRef.current) {
+            // Convert interim to final if user stopped speaking
+            const currentInterim = interimTextRef.current.trim();
+            if (currentInterim) {
+              setValue((prev) => {
+                const normalized = normalizeText(currentInterim, true);
+                const newValue = prev + (prev && !prev.endsWith(" ") ? " " : "") + normalized;
+                return newValue;
+              });
+            }
+            stopListening();
+          }
+        }, 3000);
+      }
       
-      if (finalTranscript) {
+      // Process final results
+      if (hasFinal && finalTranscript) {
+        setRecognitionStatus("listening");
+        
+        // Clear silence timeout since we got a final result
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+          silenceTimeoutRef.current = null;
+        }
+        
+        // Add final transcript to value
         setValue((prev) => {
-          const newValue = prev + (prev ? " " : "") + finalTranscript.trim();
+          const normalizedFinal = finalTranscript.trim();
+          // Ensure proper spacing
+          const separator = prev && !prev.endsWith(" ") && !prev.endsWith(".") ? " " : "";
+          const newValue = prev + separator + normalizedFinal;
           return newValue;
         });
+        
+        // Store final result
+        finalResultsRef.current.push(finalTranscript.trim());
+        
+        // Clear interim text
         interimTextRef.current = "";
         setInterimText("");
       }
@@ -100,31 +202,85 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
 
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
-      if (event.error === "no-speech" || event.error === "audio-capture") {
-        // These are common errors, just stop listening
-        stopListening();
-      } else {
-        alert(
-          lang === "bn" 
-            ? `ভয়েস রেকগনিশন ত্রুটি: ${event.error}` 
-            : `Speech recognition error: ${event.error}`
-        );
-        stopListening();
+      
+      // Clear silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+      
+      // Handle different error types professionally
+      switch (event.error) {
+        case "no-speech":
+          // No speech detected - silently stop (user might not have spoken yet)
+          setRecognitionStatus("idle");
+          stopListening();
+          break;
+          
+        case "audio-capture":
+          // Microphone not available
+          alert(
+            lang === "bn" 
+              ? "মাইক্রোফোন পাওয়া যায়নি। অনুগ্রহ করে মাইক্রোফোন অনুমতি দিন।" 
+              : "Microphone not available. Please allow microphone access."
+          );
+          stopListening();
+          break;
+          
+        case "not-allowed":
+          // Permission denied
+          alert(
+            lang === "bn" 
+              ? "মাইক্রোফোন অনুমতি প্রয়োজন। অনুগ্রহ করে ব্রাউজার সেটিংস থেকে অনুমতি দিন।" 
+              : "Microphone permission required. Please allow microphone access in browser settings."
+          );
+          stopListening();
+          break;
+          
+        case "network":
+          // Network error
+          alert(
+            lang === "bn" 
+              ? "নেটওয়ার্ক ত্রুটি। অনুগ্রহ করে ইন্টারনেট সংযোগ পরীক্ষা করুন।" 
+              : "Network error. Please check your internet connection."
+          );
+          stopListening();
+          break;
+          
+        case "aborted":
+          // Recognition aborted - silently stop
+          stopListening();
+          break;
+          
+        default:
+          // Other errors - show message but don't be too intrusive
+          console.warn("Speech recognition error:", event.error);
+          stopListening();
       }
     };
 
     recognition.onend = () => {
+      setRecognitionStatus("idle");
+      
+      // Clear silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+      
+      // Add any remaining interim text as final
+      const currentInterim = interimTextRef.current;
+      if (currentInterim && currentInterim.trim()) {
+        const normalized = normalizeText(currentInterim, true);
+        setValue((prev) => {
+          const separator = prev && !prev.endsWith(" ") && !prev.endsWith(".") ? " " : "";
+          return prev + separator + normalized;
+        });
+      }
+      
+      interimTextRef.current = "";
+      setInterimText("");
       setIsListening(false);
-      // Interim text will be added in onresult when final, or we'll add it here if recognition ends
-      setInterimText((currentInterim) => {
-        if (currentInterim) {
-          setValue((prev) => {
-            const newValue = prev + (prev ? " " : "") + currentInterim.trim();
-            return newValue;
-          });
-        }
-        return "";
-      });
     };
 
     return recognition;
@@ -142,23 +298,60 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
       return;
     }
 
-    try {
-      const recognition = initializeSpeechRecognition();
-      if (recognition) {
-        recognitionRef.current = recognition;
-        recognition.start();
+    // Request microphone permission if available (better UX)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          // Permission granted, start recognition
+          try {
+            const recognition = initializeSpeechRecognition();
+            if (recognition) {
+              recognitionRef.current = recognition;
+              recognition.start();
+            }
+          } catch (error) {
+            console.error("Failed to start speech recognition:", error);
+            alert(
+              lang === "bn" 
+                ? "ভয়েস রেকগনিশন শুরু করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।" 
+                : "Failed to start speech recognition. Please try again."
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Microphone permission denied:", err);
+          alert(
+            lang === "bn" 
+              ? "মাইক্রোফোন অনুমতি প্রয়োজন। অনুগ্রহ করে ব্রাউজার সেটিংস থেকে অনুমতি দিন।" 
+              : "Microphone permission required. Please allow microphone access in browser settings."
+          );
+        });
+    } else {
+      // Fallback for browsers without getUserMedia
+      try {
+        const recognition = initializeSpeechRecognition();
+        if (recognition) {
+          recognitionRef.current = recognition;
+          recognition.start();
+        }
+      } catch (error) {
+        console.error("Failed to start speech recognition:", error);
+        alert(
+          lang === "bn" 
+            ? "ভয়েস রেকগনিশন শুরু করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।" 
+            : "Failed to start speech recognition. Please try again."
+        );
       }
-    } catch (error) {
-      console.error("Failed to start speech recognition:", error);
-      alert(
-        lang === "bn" 
-          ? "ভয়েস রেকগনিশন শুরু করতে ব্যর্থ। অনুগ্রহ করে আবার চেষ্টা করুন।" 
-          : "Failed to start speech recognition. Please try again."
-      );
     }
   };
 
   const stopListening = () => {
+    // Clear silence timeout
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -167,23 +360,34 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
       }
       recognitionRef.current = null;
     }
+    
+    setRecognitionStatus("idle");
     setIsListening(false);
     
-    // Add any remaining interim text
+    // Add any remaining interim text with proper formatting
     const currentInterim = interimTextRef.current;
     if (currentInterim && currentInterim.trim()) {
+      const normalized = normalizeText(currentInterim, true);
       setValue((prev) => {
-        const newValue = prev + (prev ? " " : "") + currentInterim.trim();
-        return newValue;
+        const separator = prev && !prev.endsWith(" ") && !prev.endsWith(".") ? " " : "";
+        return prev + separator + normalized;
       });
     }
+    
     interimTextRef.current = "";
     setInterimText("");
+    finalResultsRef.current = [];
   };
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+      
+      // Stop recognition
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -287,11 +491,13 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
           <button
             onClick={isListening ? stopListening : startListening}
             disabled={disabled || sending}
-            className={`flex-shrink-0 w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation ${
+            className={`flex-shrink-0 w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] flex items-center justify-center rounded-lg border-2 transition-all touch-manipulation relative ${
               disabled || sending
                 ? "border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50"
                 : isListening
-                ? "border-red-400 text-red-600 bg-red-50 animate-pulse"
+                ? recognitionStatus === "processing"
+                  ? "border-green-400 text-green-600 bg-green-50 animate-pulse"
+                  : "border-red-400 text-red-600 bg-red-50 animate-pulse"
                 : "border-slate-300 text-slate-600 hover:text-pink-600 hover:border-pink-400 hover:bg-pink-50 cursor-pointer active:scale-95"
             }`}
             title={
@@ -319,7 +525,9 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
             className="resize-none text-sm sm:text-sm px-3 sm:px-4 w-full h-full rounded-xl border-2 border-neutral-200 bg-white shadow-sm transition-all duration-200 focus:border-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-100 hover:border-neutral-300 placeholder:text-neutral-400 disabled:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder={
               isListening
-                ? (lang === "bn" ? "শুনছি... কথা বলুন" : "Listening... speak now")
+                ? recognitionStatus === "processing"
+                  ? (lang === "bn" ? "প্রক্রিয়াকরণ হচ্ছে..." : "Processing your speech...")
+                  : (lang === "bn" ? "শুনছি... কথা বলুন" : "Listening... speak now")
                 : (lang === "bn" ? "বার্তা টাইপ করুন..." : "Type message...")
             }
             value={value + (isListening && interimText ? " " + interimText : "")}
@@ -350,12 +558,26 @@ export default function ChatInput({ onSend, disabled, onImageSelect, onImageRemo
               fontSize: '14px'
             }}
           />
-          {/* Listening indicator */}
+          {/* Enhanced Listening indicator */}
           {isListening && (
-            <div className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-red-600 font-medium hidden sm:inline">
-                {lang === "bn" ? "শুনছি" : "Listening"}
+            <div className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 sm:gap-2">
+              <div className="relative">
+                <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
+                  recognitionStatus === "processing" 
+                    ? "bg-green-500 animate-pulse" 
+                    : "bg-red-500 animate-pulse"
+                }`}></div>
+                {recognitionStatus === "processing" && (
+                  <div className="absolute inset-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-ping"></div>
+                )}
+              </div>
+              <span className={`text-xs font-medium hidden sm:inline ${
+                recognitionStatus === "processing" ? "text-green-600" : "text-red-600"
+              }`}>
+                {recognitionStatus === "processing" 
+                  ? (lang === "bn" ? "প্রক্রিয়াকরণ..." : "Processing...")
+                  : (lang === "bn" ? "শুনছি..." : "Listening...")
+                }
               </span>
             </div>
           )}
