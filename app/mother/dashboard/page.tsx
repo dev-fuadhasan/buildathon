@@ -1286,12 +1286,11 @@ export default function MotherDashboard() {
   const uploadPrescription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) {
-      setMessage("Please select a file");
+      setMessage("❌ Please select a file");
       return;
     }
     
     await handleFileUpload(selectedFile);
-    setSelectedFile(null);
   };
 
   const handleFileUpload = async (file: File) => {
@@ -1333,6 +1332,8 @@ export default function MotherDashboard() {
         // Reset camera state
         setShowCamera(false);
         setCapturedImage(null);
+        // Clear message after 3 seconds
+        setTimeout(() => setMessage(""), 3000);
       } else {
         setMessage(`❌ ${data.error || "Upload failed. Please try again."}`);
       }
@@ -2096,11 +2097,7 @@ export default function MotherDashboard() {
                             const file = e.target.files?.[0];
                             if (file) {
                               setSelectedFile(file);
-                              // Auto-submit on file selection
-                              const form = e.target.closest('form');
-                              if (form) {
-                                form.requestSubmit();
-                              }
+                              setMessage(`✅ File selected successfully: ${file.name}`);
                             }
                           }}
                         />
@@ -2117,6 +2114,34 @@ export default function MotherDashboard() {
                         <span className="text-sm font-medium text-neutral-700 text-center">Take Photo</span>
                       </button>
                     </div>
+                    
+                    {/* Selected File Display */}
+                    {selectedFile && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Icon name="prescription" size={20} className="text-green-600 flex-shrink-0" />
+                          <span className="text-sm font-medium text-green-800 truncate" title={selectedFile.name}>
+                            {selectedFile.name}
+                          </span>
+                          <span className="text-xs text-green-600 flex-shrink-0">
+                            ({(selectedFile.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setMessage("");
+                            const fileInput = document.querySelector('input[name="file"]') as HTMLInputElement;
+                            if (fileInput) fileInput.value = "";
+                          }}
+                          className="text-green-600 hover:text-green-800 p-1 flex-shrink-0"
+                          aria-label="Remove file"
+                        >
+                          <Icon name="close" size={18} />
+                        </button>
+                      </div>
+                    )}
                     
                     <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" disabled={uploading || !selectedFile}>
                       {uploading ? (
