@@ -82,7 +82,7 @@ export default function Home() {
     <Layout>
     <main className="min-h-screen">
       {/* Hero Section - Professional & Modern */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-pink-50 via-rose-100 to-pink-50 pt-20 pb-16 sm:pt-24 sm:pb-20 md:pt-32 md:pb-28 lg:pt-40 lg:pb-36">
+      <section className="relative overflow-hidden bg-gradient-to-br from-pink-50 via-rose-100 to-pink-50 pt-12 pb-16 sm:pt-16 sm:pb-20 md:pt-20 md:pb-24 lg:pt-24 lg:pb-32 min-h-[85vh] flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 86c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm66 3c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-46-73c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm0 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ec4899' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E")`,
@@ -94,9 +94,9 @@ export default function Home() {
         <div className="absolute top-0 -right-20 w-72 h-72 bg-rose-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-20 left-1/2 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
-            <div className="flex-1 space-y-8 text-center lg:text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
+            <div className="flex-1 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-md px-4 py-2 shadow-sm border border-pink-200">
                 <span className="flex h-2 w-2 rounded-full bg-pink-500 animate-pulse"></span>
                 <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-pink-600">
@@ -108,11 +108,11 @@ export default function Home() {
                 Your 24/7 AI Companion for a <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-rose-600">Healthy Pregnancy</span>
               </h1>
               
-              <p className="text-lg sm:text-xl text-neutral-600 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-medium">
+              <p className="text-lg sm:text-xl text-neutral-800 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-medium opacity-90">
                 Experience personalized care, expert guidance, and smart tools designed to support you every step of your journey—from conception to birth.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                 <button
                   onClick={handleMotherClick}
                   className="w-full sm:w-auto group relative inline-flex items-center justify-center gap-3 text-lg font-bold px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300"
@@ -124,51 +124,51 @@ export default function Home() {
                 
                 <Link
                   href="/chat"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 text-lg font-semibold px-8 py-4 bg-white text-neutral-800 rounded-2xl border-2 border-neutral-200 shadow-md hover:border-pink-300 hover:bg-pink-50/50 transition-all duration-300"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 text-lg font-semibold px-8 py-4 bg-white text-neutral-900 rounded-2xl border-2 border-neutral-200 shadow-md hover:border-pink-300 hover:bg-pink-50/50 transition-all duration-300"
                 >
                   <Icon name="chat" size={24} className="text-pink-500" />
                   <span className="whitespace-nowrap">Chat with AI</span>
                 </Link>
               </div>
               
-              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 pt-6 grayscale opacity-70">
-                <p className="text-sm font-semibold text-neutral-500 uppercase tracking-widest w-full lg:w-auto mb-2 lg:mb-0">Empowering Mothers Worldwide</p>
+              <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 pt-4">
+                <p className="text-sm font-bold text-neutral-600 uppercase tracking-widest w-full lg:w-auto mb-2 lg:mb-0">Empowering Mothers Worldwide</p>
                 <div className="flex gap-4">
                   <span className="h-8 w-px bg-neutral-300 hidden sm:block"></span>
-                  <p className="text-sm font-bold text-neutral-700">✓ Personalized</p>
-                  <p className="text-sm font-bold text-neutral-700">✓ Secure</p>
-                  <p className="text-sm font-bold text-neutral-700">✓ 24/7 Support</p>
+                  <p className="text-sm font-black text-neutral-800">✓ Personalized</p>
+                  <p className="text-sm font-black text-neutral-800">✓ Secure</p>
+                  <p className="text-sm font-black text-neutral-800">✓ 24/7 Support</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex-1 relative lg:max-w-xl">
+            <div className="flex-1 relative lg:max-w-md">
               <div className="relative z-10 animate-float">
                 <div className="absolute -inset-4 bg-gradient-to-br from-pink-400 to-rose-400 rounded-[2.5rem] transform rotate-3 opacity-10 blur-xl"></div>
-                <div className="relative bg-white rounded-[2.5rem] p-4 sm:p-6 shadow-2xl border border-pink-50">
-                  <Illustration name="pregnant-woman" width={500} height={500} className="rounded-2xl" />
+                <div className="relative bg-white rounded-[2.5rem] p-4 sm:p-5 shadow-2xl border border-pink-50">
+                  <Illustration name="pregnant-woman" width={400} height={400} className="rounded-2xl" />
                   
                   {/* Floating Action Cards */}
-                  <div className="absolute -left-4 sm:-left-12 top-1/4 bg-white p-4 rounded-2xl shadow-xl border border-pink-100 animate-float-slow">
+                  <div className="absolute -left-4 sm:-left-8 top-1/4 bg-white p-3 rounded-2xl shadow-xl border border-pink-100 animate-float-slow">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-green-600 text-xl font-bold">✓</span>
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-green-600 text-lg font-bold">✓</span>
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-neutral-900">Health Tracked</p>
-                        <p className="text-[10px] text-neutral-500">Updated just now</p>
+                        <p className="text-[10px] font-bold text-neutral-900 leading-tight">Health Tracked</p>
+                        <p className="text-[8px] text-neutral-500">Updated now</p>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="absolute -right-4 sm:-right-8 bottom-1/4 bg-white p-4 rounded-2xl shadow-xl border border-pink-100 animate-float-delayed">
+                  <div className="absolute -right-4 sm:-right-6 bottom-1/4 bg-white p-3 rounded-2xl shadow-xl border border-pink-100 animate-float-delayed">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
-                        <Icon name="chat" size={20} className="text-pink-600" />
+                      <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
+                        <Icon name="chat" size={16} className="text-pink-600" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-neutral-900">AI Assistant</p>
-                        <p className="text-[10px] text-neutral-500">Ready to help 24/7</p>
+                        <p className="text-[10px] font-bold text-neutral-900 leading-tight">AI Assistant</p>
+                        <p className="text-[8px] text-neutral-500">Ready to help</p>
                       </div>
                     </div>
                   </div>
