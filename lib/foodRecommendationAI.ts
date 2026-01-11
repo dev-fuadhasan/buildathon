@@ -264,30 +264,29 @@ CRITICAL MEDICAL GUIDELINES:
 
 IMPORTANT: 
 - Analyze ALL the data above before generating recommendations
-- Location-based food suggestions are CRITICAL - suggest what's actually available in the detected location, but DO NOT mention location names in the recommendation text
+- Location-based food suggestions are CRITICAL - suggest what's actually available based on detected location context, but DO NOT mention location names, city names, area names, or country names in the recommendation text itself
 - Consider all context: profile, location, prescriptions, chat, daily entries, past recommendations
 - Generate personalized, medically valid recommendations based on COMPLETE analysis
-- CRITICAL: Use location data to inform recommendations (what foods are available, what exercises are suitable), but keep the recommendation text clean without mentioning location, area, city, or country names
+- DO NOT include location names, area names, city names, or country names in the food or exercise recommendation text
 
 Please provide recommendations in the following JSON format:
 {
-  "breakfast": "Specific breakfast recommendation with details, considering allergies and medical conditions. DO NOT mention location, area, city, or country names in the recommendation text. Just suggest the foods naturally.",
-  "lunch": "Specific lunch recommendation with details, considering allergies and medical conditions. DO NOT mention location, area, city, or country names in the recommendation text. Just suggest the foods naturally.",
-  "dinner": "Specific dinner recommendation with details, considering allergies and medical conditions. DO NOT mention location, area, city, or country names in the recommendation text. Just suggest the foods naturally.",
-  "exercises": "Simple, safe exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy. DO NOT mention location, area, city, or country names in the recommendation text. Just suggest exercises naturally. Examples: '15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises'",
-  "waterIntake": "Specific water drinking recommendations based on pregnancy stage (${weeksPregnant || "N/A"} weeks) and activity level. Include daily amount and timing suggestions (e.g., 'Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.')"
+  "breakfast": "Specific breakfast recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
+  "lunch": "Specific lunch recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
+  "dinner": "Specific dinner recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
+  "exercises": "Simple, safe exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy, considering climate, available space, and cultural context. Examples: '15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises' (DO NOT mention location names or area names in the recommendation text).",
+  "waterIntake": "Specific water drinking recommendations based on pregnancy stage (${weeksPregnant || "N/A"} weeks), climate, and activity level. Include daily amount and timing suggestions (e.g., 'Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.')"
 }
 
-IMPORTANT LOCATION ANALYSIS (USE FOR CONTEXT ONLY - DO NOT MENTION IN RECOMMENDATIONS):
+IMPORTANT LOCATION ANALYSIS (USE FOR CONTEXT ONLY, DO NOT MENTION IN RECOMMENDATIONS):
 - Location detected: ${location}
 - Country: ${locationData?.country || "Unknown"} (${locationData?.countryCode || "N/A"})
-- Culture: ${locationData?.culture || "Global"} - suggest culturally appropriate foods (but don't mention culture name)
-- Climate: ${locationData?.climate || "temperate"} - adjust recommendations for climate (but don't mention climate name)
-- Setting: ${locationData?.urbanRural || "urban"} - consider available space and facilities (but don't mention setting)
-- Suggest foods that are ACTUALLY available in this location, but DO NOT mention the location name, city, region, or country in the recommendation text
-- Consider local cuisine, seasonal availability, and cultural preferences, but present recommendations naturally without location references
-- For exercises, adapt to climate and setting, but DO NOT mention location, area, city, or country names in the exercise recommendation text
-- CRITICAL: Use location data to inform your recommendations, but keep the recommendation text clean and natural without any location mentions
+- Culture: ${locationData?.culture || "Global"} - suggest culturally appropriate foods (but don't mention culture name in text)
+- Climate: ${locationData?.climate || "temperate"} - adjust recommendations for climate (but don't mention climate name in text)
+- Setting: ${locationData?.urbanRural || "urban"} - consider available space and facilities (but don't mention setting in text)
+- Suggest foods that are ACTUALLY available based on this location context, but DO NOT mention the location name in the recommendation
+- Consider local cuisine, seasonal availability, and cultural preferences - but describe foods naturally without location references
+- For exercises, adapt to climate and setting context, but DO NOT mention location or area names in the exercise text
 
 Respond ONLY with valid JSON, no additional text.`;
 

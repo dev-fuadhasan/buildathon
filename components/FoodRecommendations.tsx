@@ -113,7 +113,13 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   };
 
   const generateRecommendation = async () => {
+    // Prevent double-click/double-generation
+    if (generating || loading) {
+      return;
+    }
+    
     setGenerating(true);
+    setLoading(true);
     try {
       const res = await fetch("/api/mother/daily-routine", {
         method: "POST",
@@ -136,6 +142,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
       alert("Network error. Please try again.");
     } finally {
       setGenerating(false);
+      setLoading(false);
     }
   };
 
@@ -275,41 +282,56 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const exercisesDone = recommendation?.exercisesDone || false;
 
   return (
-    <DashboardCard
-      title={
-        <span className="flex items-center gap-2">
-          <Icon name="health" size={20} />
-          Daily Routine
-        </span>
-      }
-      action={
-        <div className="flex items-center gap-2">
-          {isToday && eatenCount > 0 && (
-            <span className="text-sm text-green-600 font-medium">
-              {eatenCount}/3 meals eaten today
-            </span>
-          )}
-          <button
-            onClick={generateRecommendation}
-            disabled={generating || loading}
-            className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
-          >
-            {generating ? (
-              <>
-                <Icon name="pending" size={16} />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Icon name="sync" size={16} />
-                Refresh
-              </>
-            )}
-          </button>
+    <>
+      {/* Fullscreen Loading Overlay */}
+      {(generating || loading) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <Icon name="pending" size={64} className="mx-auto mb-4 text-pink-500 animate-spin" />
+            <h3 className="text-xl font-semibold text-slate-800 mb-2">Generating Recommendations</h3>
+            <p className="text-slate-600">
+              Analyzing your health data, location, and preferences...
+            </p>
+            <p className="text-sm text-slate-500 mt-2">This may take a few moments</p>
+          </div>
         </div>
-      }
-    >
-      <div className="space-y-6">
+      )}
+      
+      <DashboardCard
+        title={
+          <span className="flex items-center gap-2">
+            <Icon name="health" size={20} />
+            Daily Routine
+          </span>
+        }
+        action={
+          <div className="flex items-center gap-2">
+            {isToday && eatenCount > 0 && (
+              <span className="text-sm text-green-600 font-medium">
+                {eatenCount}/3 meals eaten today
+              </span>
+            )}
+            <button
+              onClick={generateRecommendation}
+              disabled={generating || loading}
+              className="btn-secondary text-sm px-4 py-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? (
+                <>
+                  <Icon name="pending" size={16} />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Icon name="sync" size={16} />
+                  Refresh
+                </>
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Select Date
@@ -385,22 +407,32 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                         rel="noopener noreferrer"
                         className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
                       >
-                        <div className="relative aspect-video bg-neutral-100">
-                          <img
-                            src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
-                            alt={video.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              // Try YouTube thumbnail URL format if original fails
-                              if (!target.src.includes('youtube.com')) {
-                                target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
-                              } else {
+                        <div className="relative aspect-video bg-neutral-100 overflow-hidden">
+                          {video.thumbnail ? (
+                            <img
+                              src={video.thumbnail}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              onError={(e) => {
+                                // Fallback to YouTube thumbnail URL
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
+                              }}
+                            />
+                          ) : (
+                            <img
+                              src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              onError={(e) => {
+                                // Final fallback
+                                const target = e.target as HTMLImageElement;
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
-                              }
-                            }}
-                          />
+                              }}
+                            />
+                          )}
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
                             <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
                               <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
@@ -497,6 +529,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
         )}
       </div>
     </DashboardCard>
+    </>
   );
 }
 
