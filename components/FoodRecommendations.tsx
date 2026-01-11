@@ -444,19 +444,19 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                       >
                         <div className="relative aspect-video bg-neutral-100 overflow-hidden">
                           <img
-                            src={`https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`}
+                            src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
                             alt={video.title}
                             className="w-full h-full object-cover"
                             loading="lazy"
                             onError={(e) => {
                               // Try different YouTube thumbnail sizes
                               const target = e.target as HTMLImageElement;
-                              if (!target.src.includes('hqdefault')) {
-                                target.src = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
-                              } else if (!target.src.includes('mqdefault')) {
+                              if (!target.src.includes('mqdefault')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
                               } else if (!target.src.includes('sddefault')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/sddefault.jpg`;
+                              } else if (!target.src.includes('default')) {
+                                target.src = `https://img.youtube.com/vi/${video.videoId}/default.jpg`;
                               } else {
                                 // Final fallback - placeholder
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
