@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
 
 type Props = {
   role: "user" | "assistant";
@@ -44,14 +45,41 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
           </div>
         )}
         
-        {/* Text Content */}
+        {/* Text Content with Markdown Support */}
         {content && (
-          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-sm sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap ${imageUrl ? 'pt-2 sm:pt-3' : ''}`}>
-            <div className="prose prose-sm max-w-none">
-              {content.split('\n').map((line, idx) => (
-                <p key={idx} className={idx > 0 ? 'mt-1.5 sm:mt-2' : ''}>{line || '\u00A0'}</p>
-              ))}
-            </div>
+          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-sm sm:text-sm md:text-base leading-relaxed ${imageUrl ? 'pt-2 sm:pt-3' : ''} ${isUser ? 'text-white' : 'text-slate-800'}`}>
+            <ReactMarkdown
+              components={{
+                // Customize heading styles
+                h1: ({node, ...props}) => <h1 className={`text-xl font-bold mb-3 mt-2 first:mt-0 ${isUser ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                h2: ({node, ...props}) => <h2 className={`text-lg font-bold mb-2 mt-4 first:mt-0 ${isUser ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                h3: ({node, ...props}) => <h3 className={`text-base font-bold mb-2 mt-3 first:mt-0 ${isUser ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                h4: ({node, ...props}) => <h4 className={`text-sm font-bold mb-1.5 mt-2 first:mt-0 ${isUser ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                // Customize list styles
+                ul: ({node, ...props}) => <ul className={`list-disc list-outside mb-3 ml-4 space-y-1.5 ${isUser ? 'text-white' : 'text-slate-800'}`} {...props} />,
+                ol: ({node, ...props}) => <ol className={`list-decimal list-outside mb-3 ml-4 space-y-1.5 ${isUser ? 'text-white' : 'text-slate-800'}`} {...props} />,
+                li: ({node, ...props}) => <li className={`${isUser ? 'text-white' : 'text-slate-800'}`} {...props} />,
+                // Customize paragraph
+                p: ({node, ...props}) => <p className={`mb-2 last:mb-0 ${isUser ? 'text-white' : 'text-slate-800'}`} {...props} />,
+                // Customize strong/bold
+                strong: ({node, ...props}) => <strong className={`font-bold ${isUser ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                // Customize emphasis/italic
+                em: ({node, ...props}) => <em className={`italic ${isUser ? 'text-white' : 'text-slate-800'}`} {...props} />,
+                // Horizontal rule
+                hr: ({node, ...props}) => <hr className={`my-3 border-0 border-t ${isUser ? 'border-pink-400' : 'border-slate-300'}`} {...props} />,
+                // Code blocks
+                code: ({node, className, ...props}: any) => {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className={`px-1 py-0.5 rounded bg-opacity-20 ${isUser ? 'bg-white bg-opacity-20 text-white' : 'bg-slate-200 text-slate-900'} text-xs font-mono`} {...props} />
+                  ) : (
+                    <code className={`block p-2 rounded mb-2 text-xs font-mono overflow-x-auto ${isUser ? 'bg-white bg-opacity-10 text-white' : 'bg-slate-100 text-slate-900'}`} {...props} />
+                  );
+                },
+              }}
+            >
+              {content}
+            </ReactMarkdown>
           </div>
         )}
       </div>

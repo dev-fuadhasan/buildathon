@@ -318,25 +318,34 @@ export async function POST(req: NextRequest) {
     let allPrescriptionUrls: string[] = [];
     let weeksPregnant: number | undefined;
     
-    // Check if question mentions prescriptions/reports (needed for loading prescriptions)
+    // Check if user uploaded an image (chat-image from chat-images/ folder)
+    const isUploadedChatImage = imageUrl && (
+      imageUrl.includes('/chat-images/') || 
+      imageUrl.includes('chat-images%2F')
+    );
+    
+    // Check if question mentions prescriptions/reports (needed for loading stored prescriptions)
+    // Note: "analyze" is removed - AI will automatically detect what to do with uploaded images
     const questionLower = currentUserMessage.toLowerCase();
     const mentionsPrescriptions = questionLower.includes("prescription") || 
                                   questionLower.includes("report") ||
                                   questionLower.includes("প্রেসক্রিপশন") ||
-                                  questionLower.includes("রিপোর্ট") ||
-                                  questionLower.includes("summary") ||
-                                  questionLower.includes("summarize") ||
-                                  questionLower.includes("analyze");
+                                  questionLower.includes("রিপোর্ট");
     
-    // Load prescriptions if personal question OR if question mentions prescriptions
+    // Load stored prescriptions if personal question OR explicitly mentions prescriptions/reports
+    // BUT: If user uploaded an image, prioritize that image and let AI decide what to do
     const shouldLoadPrescriptions = isPersonal || mentionsPrescriptions;
     
-    if (isPersonal) {
+    if (isUploadedChatImage) {
+      console.log("[Data Loading] User uploaded image - AI will analyze question and image together");
+    } else if (isPersonal) {
       console.log("[Data Loading] Personal question - loading all data types...");
     } else if (mentionsPrescriptions) {
       console.log("[Data Loading] Question mentions prescriptions/reports - loading prescriptions even though not personal...");
     }
     
+    // Load data if needed
+    // If user uploaded image, we'll handle it separately to let AI decide
     if (shouldLoadPrescriptions || isPersonal) {
       
       try {
@@ -501,20 +510,40 @@ export async function POST(req: NextRequest) {
             });
           }
           
-          // Add chat image if provided
-          if (imageUrl) {
-            allPrescriptionUrls.push(imageUrl);
+          // Always add uploaded chat image if provided - AI will determine what to do with it
+          if (imageUrl && isUploadedChatImage) {
+            // Add uploaded image at the beginning so it's prioritized
+            allPrescriptionUrls.unshift(imageUrl);
+            console.log(`[Data Loading] Added uploaded image - AI will analyze question and image together`);
           }
         }
       } catch (err) {
         console.error("Failed to fetch mother data:", err);
       }
     } else {
-      // For GENERAL questions, only add chat image if provided
+      // For GENERAL questions, always add uploaded image if provided
       if (imageUrl) {
         allPrescriptionUrls = [imageUrl];
+        console.log("[Data Loading] General question with uploaded image - AI will analyze both");
+      } else {
+        console.log("[Data Loading] General question - skipping data load");
       }
-      console.log("[Data Loading] General question - skipping data load");
+    }
+    
+    // CRITICAL: Always ensure uploaded image is included if user uploaded one
+    // AI will automatically understand what to do with it based on the question
+    if (isUploadedChatImage && imageUrl) {
+      // Ensure uploaded image is in the list (at the beginning for priority)
+      if (!allPrescriptionUrls.includes(imageUrl)) {
+        allPrescriptionUrls.unshift(imageUrl);
+        console.log(`[✅ IMAGE PRIORITY] Added uploaded image - AI will analyze question and image together`);
+      } else if (allPrescriptionUrls[0] !== imageUrl) {
+        // Move uploaded image to front if it's not already there
+        allPrescriptionUrls = [imageUrl, ...allPrescriptionUrls.filter(url => url !== imageUrl)];
+        console.log(`[✅ IMAGE PRIORITY] Prioritized uploaded image - AI will analyze question and image together`);
+      } else {
+        console.log(`[✅ IMAGE ANALYSIS] User uploaded image - AI will analyze question and uploaded image`);
+      }
     }
     
     // STEP 3: Filter data based on question classification
@@ -527,11 +556,11 @@ export async function POST(req: NextRequest) {
     
     // CRITICAL FIX: If question mentions prescriptions/reports and we have prescription URLs,
     // ALWAYS include them (even if classifier said something else or question isn't personal)
-    // CRITICAL: Always include prescriptions if question mentions them AND user is logged in
+    // If user also uploaded an image, both will be included - AI will understand the context
     if (mentionsPrescriptions) {
       if (allPrescriptionUrls.length > 0) {
         filteredData.filteredPrescriptions = allPrescriptionUrls;
-        console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - forcing inclusion of ${allPrescriptionUrls.length} prescription image(s)`);
+        console.log(`[🔧 OVERRIDE] Question mentions prescriptions/reports - including ${allPrescriptionUrls.length} image(s) (stored + uploaded if any)`);
       } else {
         console.log(`[⚠️ OVERRIDE] Question mentions prescriptions but NO prescription images found!`);
         console.log(`[⚠️ DEBUG] This means user has no prescriptions uploaded or they failed to load.`);
