@@ -443,31 +443,26 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                         className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
                       >
                         <div className="relative aspect-video bg-neutral-100 overflow-hidden">
-                          {video.thumbnail ? (
-                            <img
-                              src={video.thumbnail}
-                              alt={video.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              onError={(e) => {
-                                // Fallback to YouTube thumbnail URL
-                                const target = e.target as HTMLImageElement;
+                          <img
+                            src={`https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Try different YouTube thumbnail sizes
+                              const target = e.target as HTMLImageElement;
+                              if (!target.src.includes('hqdefault')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
-                              }}
-                            />
-                          ) : (
-                            <img
-                              src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
-                              alt={video.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                              onError={(e) => {
-                                // Final fallback
-                                const target = e.target as HTMLImageElement;
+                              } else if (!target.src.includes('mqdefault')) {
+                                target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
+                              } else if (!target.src.includes('sddefault')) {
+                                target.src = `https://img.youtube.com/vi/${video.videoId}/sddefault.jpg`;
+                              } else {
+                                // Final fallback - placeholder
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
-                              }}
-                            />
-                          )}
+                              }
+                            }}
+                          />
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
                             <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
                               <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
