@@ -11,6 +11,151 @@ export type ChatMessage = {
   content: string;
 };
 
+// Helper function to detect question type for formatting
+function detectQuestionType(message: string): 'simple' | 'list' | 'how-to' | 'why' | 'what' | 'complex' {
+  const lower = message.toLowerCase();
+  
+  // List questions
+  if (/\b(which|what|ki ki|kon kon|list|name|examples|items?|things?)\b/.test(lower)) {
+    return 'list';
+  }
+  
+  // How-to questions
+  if (/\b(how|kivabe|way|steps?|process|method|procedure)\b/.test(lower)) {
+    return 'how-to';
+  }
+  
+  // Why questions
+  if (/\b(why|keno|reason|cause|because)\b/.test(lower)) {
+    return 'why';
+  }
+  
+  // What/definition questions
+  if (/\b(what is|what are|ki|definition|meaning|explain)\b/.test(lower)) {
+    return 'what';
+  }
+  
+  // Complex questions (multiple parts or long)
+  if (message.length > 100 || /\b(and|or|also|additionally|moreover)\b/.test(lower)) {
+    return 'complex';
+  }
+  
+  return 'simple';
+}
+
+// Format response as a list
+function formatAsList(text: string): string {
+  // Try to find numbered or bulleted items
+  if (/\d+\./.test(text) || /[-•]/.test(text)) {
+    return text; // Already has list format
+  }
+  
+  // Try to extract list items from sentences
+  const sentences = text.split(/([.!?]\s+)/);
+  const items: string[] = [];
+  let currentItem = '';
+  
+  for (let i = 0; i < sentences.length; i += 2) {
+    const sentence = sentences[i] + (sentences[i + 1] || '');
+    // If sentence contains list indicators or is short, treat as item
+    if (sentence.match(/\b(like|such as|including|for example|e\.g\.|namely)\b/i) || sentence.length < 100) {
+      if (currentItem) items.push(currentItem.trim());
+      currentItem = sentence.trim();
+    } else {
+      currentItem += sentence;
+    }
+  }
+  if (currentItem) items.push(currentItem.trim());
+  
+  if (items.length > 1) {
+    return `**Introduction:**\n${items[0]}\n\n**The List:**\n${items.slice(1).map((item, i) => `${i + 1}. ${item}`).join('\n')}`;
+  }
+  
+  return breakIntoSentences(text);
+}
+
+// Format response as step-by-step
+function formatAsSteps(text: string): string {
+  if (/Step \d+:|step \d+:/i.test(text)) {
+    return text; // Already formatted
+  }
+  
+  const sentences = text.split(/([.!?]\s+)/).filter(s => s.trim().length > 0);
+  const steps: string[] = [];
+  let currentStep = '';
+  
+  for (let i = 0; i < sentences.length; i += 2) {
+    const sentence = sentences[i] + (sentences[i + 1] || '');
+    // Short sentences or sentences with action words are likely steps
+    if (sentence.length < 150 || /\b(first|then|next|after|now|start|begin|continue|finally)\b/i.test(sentence)) {
+      if (currentStep) {
+        steps.push(currentStep.trim());
+        currentStep = sentence.trim();
+      } else {
+        currentStep = sentence.trim();
+      }
+    } else {
+      currentStep += ' ' + sentence;
+    }
+  }
+  if (currentStep) steps.push(currentStep.trim());
+  
+  if (steps.length > 1) {
+    return `**Overview:**\n${steps[0]}\n\n**Step-by-Step Instructions:**\n${steps.slice(1).map((step, i) => `Step ${i + 1}: ${step}`).join('\n\n')}`;
+  }
+  
+  return breakIntoSentences(text);
+}
+
+// Format response as sections
+function formatAsSections(text: string): string {
+  if (/\*\*[^*]+\*\*/.test(text)) {
+    return text; // Already has sections
+  }
+  
+  const sentences = text.split(/([.!?]\s+)/).filter(s => s.trim().length > 0);
+  const sections: string[] = [];
+  let currentSection = '';
+  
+  // Group sentences into logical sections (every 2-3 sentences)
+  for (let i = 0; i < sentences.length; i += 2) {
+    const sentence = sentences[i] + (sentences[i + 1] || '');
+    currentSection += sentence;
+    
+    // Create section every 2-3 sentences or at transition words
+    if ((sections.length === 0 && currentSection.length > 200) || 
+        (sections.length > 0 && (currentSection.length > 150 || /\b(however|moreover|additionally|also|furthermore|in addition|meanwhile|therefore|thus|hence|consequently|for example|for instance|specifically|in particular|in summary|to summarize|in conclusion|finally|lastly|first|second|third|next|then|after that|on the other hand|in contrast|similarly|likewise|as a result|as a consequence|in other words|that is)\b/i.test(currentSection)))) {
+      sections.push(currentSection.trim());
+      currentSection = '';
+    }
+  }
+  if (currentSection) sections.push(currentSection.trim());
+  
+  if (sections.length > 1) {
+    const sectionHeaders = ['Quick Answer', 'Detailed Explanation', 'Practical Recommendations', 'Important Notes'];
+    return sections.map((section, i) => {
+      const header = sectionHeaders[i] || `Section ${i + 1}`;
+      return `**${header}:**\n${section}`;
+    }).join('\n\n');
+  }
+  
+  return breakIntoSentences(text);
+}
+
+// Break text into sentences with proper spacing
+function breakIntoSentences(text: string): string {
+  // Break at sentence boundaries
+  let formatted = text.replace(/([.!?])\s+([A-Z\u0980-\u09FF])/g, (match, punct, letter) => {
+    // Always add line break for better readability
+    return `${punct}\n\n${letter}`;
+  });
+  
+  // Ensure no more than 2 consecutive newlines
+  formatted = formatted.replace(/\n{3,}/g, '\n\n');
+  
+  return formatted;
+}
+
 // In-memory cache for compact mother profiles (per motherId)
 // Not persisted; safe for short-lived performance boost
 const profileCache = new Map<string, {
@@ -292,41 +437,106 @@ Before answering ANY question, follow this thinking process:
    - Add relevant warnings or precautions
    - End with next steps or follow-up suggestions if helpful
 
-📋 RESPONSE STRUCTURE STANDARDS:
+📋 RESPONSE STRUCTURE STANDARDS - CRITICAL FORMATTING RULES:
 
-For ALL responses, use this professional structure:
+🚨 YOU MUST ALWAYS FORMAT RESPONSES WITH CLEAR STRUCTURE - NEVER WRITE AS ONE PARAGRAPH! 🚨
 
-**For Simple Questions:**
-- Direct answer (1-2 sentences)
-- Brief explanation with context
-- Actionable tip if applicable
+**MANDATORY FORMATTING REQUIREMENTS:**
+- ALWAYS use line breaks (\n\n) between major sections
+- ALWAYS use bullet points (-) or numbered lists (1. 2. 3.) for multiple items
+- ALWAYS break up long explanations into digestible sections
+- NEVER write everything as one continuous paragraph
+- Each major point should be on its own line or clearly separated
+- Use spacing to make the response easy to scan and read
+
+**For Simple Questions (1-2 sentence answers):**
+Format:
+[Direct answer in 1-2 sentences]
+
+[Brief explanation with context - separate paragraph]
+
+[Actionable tip if applicable - separate line]
 
 **For Complex Questions:**
-- Executive summary (2-3 sentences answering the core question)
-- Detailed explanation (organized with clear sections)
-- Practical recommendations (specific, actionable steps)
-- Important notes/warnings (if any)
-- When to consult a doctor (if applicable)
+Format:
+**Quick Answer:**
+[2-3 sentences answering the core question directly]
+
+**Detailed Explanation:**
+[First key point with explanation]
+[Second key point with explanation]
+[Third key point with explanation]
+
+**Practical Recommendations:**
+- [Specific actionable step 1]
+- [Specific actionable step 2]
+- [Specific actionable step 3]
+
+**Important Notes:**
+- [Warning or precaution if any]
+
+**When to Consult a Doctor:**
+- [Specific situations that require medical attention]
 
 **For List Questions:**
-- Clear introduction explaining the list
-- Numbered or bulleted list with SPECIFIC items (not categories)
-- Brief explanation for each item when helpful
-- Summary or categorization if the list is long
+Format:
+**Introduction:**
+[Brief explanation of what the list contains]
+
+**The List:**
+1. [First specific item with brief explanation]
+2. [Second specific item with brief explanation]
+3. [Third specific item with brief explanation]
+[Continue numbering...]
+
+**Summary:**
+[Brief categorization or key takeaway if helpful]
 
 **For How-To Questions:**
-- Overview of the process
-- Step-by-step instructions (numbered, clear)
-- Tips for success
-- Common mistakes to avoid
-- Safety considerations
+Format:
+**Overview:**
+[What this process accomplishes]
+
+**Step-by-Step Instructions:**
+Step 1: [Clear first step]
+Step 2: [Clear second step]
+Step 3: [Clear third step]
+[Continue with numbered steps...]
+
+**Tips for Success:**
+- [Tip 1]
+- [Tip 2]
+- [Tip 3]
+
+**Common Mistakes to Avoid:**
+- [Mistake 1 and why to avoid it]
+- [Mistake 2 and why to avoid it]
+
+**Safety Considerations:**
+- [Important safety note]
 
 **For Medical/Health Questions:**
-- Medical explanation (accurate, evidence-based)
-- Practical implications for the user
-- Personalized recommendations (if profile data available)
-- Red flags to watch for
-- When to seek immediate care
+Format:
+**Medical Explanation:**
+[Clear, evidence-based explanation in 2-3 sentences]
+
+**What This Means for You:**
+- [Practical implication 1]
+- [Practical implication 2]
+- [Practical implication 3]
+
+**Personalized Recommendations:**
+- [Recommendation 1 based on their data]
+- [Recommendation 2 based on their data]
+- [Recommendation 3 based on their data]
+
+**Red Flags to Watch For:**
+- [Warning sign 1 - when to be concerned]
+- [Warning sign 2 - when to be concerned]
+
+**When to Seek Immediate Care:**
+- [Specific emergency situation 1]
+- [Specific emergency situation 2]
 
 CRITICAL RULES:
 
@@ -769,24 +979,90 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
       throw new Error("No valid response from AI");
     }
 
-    // Enhanced response cleaning and quality improvement
+    // Enhanced response cleaning and STRUCTURED FORMATTING
     let cleanedReply = reply.trim();
     
     // Remove common AI artifacts and disclaimers
     cleanedReply = cleanedReply.replace(/^(I'm|I am|As an AI|As a language model|I'm an AI|As MomsCare AI).*?\.\s*/i, "");
     cleanedReply = cleanedReply.replace(/^(Note:|Please note:|Disclaimer:).*?\.\s*/gi, "");
     
-    // Remove excessive newlines (keep up to 2 for formatting)
+    // CRITICAL: Detect question type and format response accordingly
+    const questionType = detectQuestionType(lastUserMessage);
+    console.log(`[Response Formatting] Detected question type: ${questionType}`);
+    
+    // CRITICAL: Force proper paragraph breaks - break up single-paragraph responses
+    // First check if response is mostly one paragraph
+    const lineBreakCount = (cleanedReply.match(/\n/g) || []).length;
+    const avgLineLength = cleanedReply.length / Math.max(lineBreakCount + 1, 1);
+    const isMostlyOneParagraph = avgLineLength > 80 && lineBreakCount < 4;
+    
+    if (isMostlyOneParagraph) {
+      console.log("[Response Formatting] Detected single-paragraph response, applying intelligent formatting...");
+      
+      // For list questions, try to extract and format as list
+      if (questionType === 'list') {
+        // Try to find list items in the text
+        cleanedReply = formatAsList(cleanedReply);
+      }
+      // For how-to questions, format as steps
+      else if (questionType === 'how-to') {
+        cleanedReply = formatAsSteps(cleanedReply);
+      }
+      // For complex questions, break into sections
+      else if (questionType === 'complex') {
+        cleanedReply = formatAsSections(cleanedReply);
+      }
+      // Default: break at sentence boundaries
+      else {
+        cleanedReply = breakIntoSentences(cleanedReply);
+      }
+    }
+    
+    // Always ensure proper spacing between sentences in long paragraphs
+    cleanedReply = cleanedReply.replace(/([.!?])\s+([A-Z\u0980-\u09FF][^.!?]{100,})/g, '$1\n\n$2');
+    
+    // Force line breaks after numbered/bulleted items
+    cleanedReply = cleanedReply.replace(/(\d+\.\s+[^\n]+)([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    cleanedReply = cleanedReply.replace(/([-•]\s+[^\n]+)([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Force line breaks after bold headings (if detected)
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:?)\s*([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Force line breaks after "Step X:" patterns
+    cleanedReply = cleanedReply.replace(/(Step \d+:[^\n]+)\s+([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Break up very long lines (over 200 characters) at sentence boundaries
+    const lines = cleanedReply.split('\n');
+    const formattedLines: string[] = [];
+    for (const line of lines) {
+      if (line.length > 200 && !line.match(/^[\d\-•]/)) {
+        // Try to break at sentence boundaries
+        const sentences = line.split(/([.!?]\s+)/);
+        let currentLine = '';
+        for (let i = 0; i < sentences.length; i += 2) {
+          const sentence = sentences[i] + (sentences[i + 1] || '');
+          if ((currentLine + sentence).length > 200 && currentLine) {
+            formattedLines.push(currentLine.trim());
+            currentLine = sentence;
+          } else {
+            currentLine += sentence;
+          }
+        }
+        if (currentLine) formattedLines.push(currentLine.trim());
+      } else {
+        formattedLines.push(line);
+      }
+    }
+    cleanedReply = formattedLines.join('\n');
+    
+    // Remove excessive newlines (keep max 2 for formatting)
     cleanedReply = cleanedReply.replace(/\n{4,}/g, "\n\n");
     
-    // Remove EXACT duplicate consecutive sentences (light deduplication)
-    const lines = cleanedReply.split('\n');
+    // Remove EXACT duplicate consecutive sentences
     const dedupedLines: string[] = [];
     let lastLine = '';
-    
-    for (const line of lines) {
+    for (const line of cleanedReply.split('\n')) {
       const trimmedLine = line.trim();
-      // Only skip if EXACTLY the same as previous line
       if (trimmedLine !== lastLine && trimmedLine.length > 0) {
         dedupedLines.push(line);
         lastLine = trimmedLine;
@@ -794,29 +1070,49 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     }
     cleanedReply = dedupedLines.join('\n');
     
-    // Enhance structure: Ensure proper spacing between sections
-    cleanedReply = cleanedReply.replace(/\n{3,}/g, "\n\n"); // Max 2 newlines
+    // Ensure proper spacing: at least one line break between major sections
+    // Detect section breaks (numbered items, bold text, "Step", etc.)
+    cleanedReply = cleanedReply.replace(/(\n)(\d+\.\s+|[•-]\s+|\*\*[^*]+\*\*|Step \d+:|Quick Answer:|Detailed|Practical|Important|When to|Introduction:|The List:|Summary:|Overview:|Tips|Common|Safety|Medical|What This|Personalized|Red Flags|When to Seek)/g, '\n\n$2');
+    
+    // Force breaks before common section headers (even if not bold)
+    cleanedReply = cleanedReply.replace(/([.!?])\s+(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek)/gi, '$1\n\n**$2:**');
+    
+    // Ensure numbered lists have proper spacing
+    cleanedReply = cleanedReply.replace(/(\d+\.\s+[^\n]+)\n([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Ensure bullet points have proper spacing (escape dash properly)
+    cleanedReply = cleanedReply.replace(/([•-]\s+[^\n]+)\n([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
     
     // Fix common formatting issues
-    cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces before newlines
-    cleanedReply = cleanedReply.replace(/\n\s+/g, "\n"); // Remove leading spaces after newlines
+    cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces
+    cleanedReply = cleanedReply.replace(/\n\s+/g, "\n"); // Remove leading spaces
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
     cleanedReply = cleanedReply.replace(/\?\s*\?/g, "?"); // Remove double question marks
     cleanedReply = cleanedReply.replace(/!\s*!/g, "!"); // Remove double exclamation marks
     
-    // Ensure proper capitalization after periods
-    cleanedReply = cleanedReply.replace(/\.\s+([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+    // Ensure proper capitalization after periods (but preserve intentional lowercase)
+    cleanedReply = cleanedReply.replace(/\.\n\n([a-z])/g, (match, letter) => `.\n\n${letter.toUpperCase()}`);
     
     // Remove redundant phrases
     cleanedReply = cleanedReply.replace(/\b(please note that|it's important to note that|keep in mind that)\s+/gi, "");
     
+    // Final cleanup: ensure no single-line responses for complex questions
+    const lineCount = cleanedReply.split('\n').filter(l => l.trim().length > 0).length;
+    const isLongResponse = cleanedReply.length > 300;
+    if (isLongResponse && lineCount < 3) {
+      // Force breaks in long single-paragraph responses
+      cleanedReply = cleanedReply.replace(/([.!?])\s+([A-Z\u0980-\u09FF][^.!?]{50,})/g, '$1\n\n$2');
+    }
+    
     // Final trim
     cleanedReply = cleanedReply.trim();
     
-    // Quality check: Ensure response has meaningful content
+    // Quality check
     if (cleanedReply.length < 10) {
       console.warn("[Response Quality] Response too short, may need enhancement");
     }
+    
+    console.log(`[Response Formatting] Final response: ${cleanedReply.split('\n').length} lines, ${cleanedReply.length} characters`);
     
     // Log response language for verification
     const responseLanguage = detectLanguage(cleanedReply);
