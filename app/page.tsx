@@ -130,7 +130,7 @@ export default function Home() {
                   <span className="whitespace-nowrap">Chat with AI</span>
                 </Link>
               </div>
-              
+
               <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 pt-4">
                 <p className="text-sm font-bold text-neutral-600 uppercase tracking-widest w-full lg:w-auto mb-2 lg:mb-0">Empowering Mothers Worldwide</p>
                 <div className="flex gap-4">
@@ -246,24 +246,24 @@ export default function Home() {
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="secure" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold">Medical Grade Privacy</h4>
-              <p className="text-neutral-400">Your health data is encrypted at rest and in transit. We never share your personal information.</p>
+              <h4 className="text-2xl font-bold text-white">Medical Grade Privacy</h4>
+              <p className="text-neutral-300">Your health data is encrypted at rest and in transit. We never share your personal information.</p>
             </div>
             
             <div className="md:w-1/3 text-center md:text-left space-y-4">
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="doctor" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold">Expert-Reviewed AI</h4>
-              <p className="text-neutral-400">Our AI model is fine-tuned with verified pregnancy datasets and reviewed by healthcare professionals.</p>
+              <h4 className="text-2xl font-bold text-white">Expert-Reviewed AI</h4>
+              <p className="text-neutral-300">Our AI model is fine-tuned with verified pregnancy datasets and reviewed by healthcare professionals.</p>
             </div>
             
             <div className="md:w-1/3 text-center md:text-left space-y-4">
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="health" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold">Emergency Aware</h4>
-              <p className="text-neutral-400">The system intelligently recognizes emergency signs and directs you to immediate professional help.</p>
+              <h4 className="text-2xl font-bold text-white">Emergency Aware</h4>
+              <p className="text-neutral-300">The system intelligently recognizes emergency signs and directs you to immediate professional help.</p>
             </div>
           </div>
         </div>
@@ -285,25 +285,25 @@ export default function Home() {
               { 
                 title: "AI Health Assistant", 
                 desc: "Get instant, personalized pregnancy guidance powered by advanced AI—available anytime, anywhere.",
-                icon: "ai",
+                icon: "ai", 
                 badge: "AI Powered"
               },
               { 
                 title: "Smart Routine AI", 
                 desc: "Personalized meal plans and safe exercises tailored to your trimester, location, and health profile.",
-                icon: "food",
+                icon: "smart-routine-ai",
                 badge: "Personalized"
               },
               { 
                 title: "Smart Health Journal", 
                 desc: "Track symptoms, mood, sleep, and diet. Our AI analyzes your data to identify health patterns.",
-                icon: "journal",
+                icon: "smart-health-journal",
                 badge: "Smart Tracking"
               },
               { 
                 title: "Prescription & Report Vault", 
                 desc: "Securely store medical documents. Our AI analyzes reports to help you understand your health better.",
-                icon: "secure",
+                icon: "secure", 
                 badge: "Secure"
               },
               { 
@@ -353,7 +353,7 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 relative z-10">
               {[
                 { step: "01", title: "Quick Registration", desc: "Create your secure profile in seconds and tell us about your journey.", icon: "profile" },
-                { step: "02", title: "Smart Health Logging", desc: "Log your symptoms and journals. AI learns from your data to support you.", icon: "journal" },
+                { step: "02", title: "Smart Health Logging", desc: "Log your symptoms and journals. AI learns from your data to support you.", icon: "smart-health-logging" },
                 { step: "03", title: "Access AI & Experts", desc: "Get 24/7 AI chat, smart recommendations, and direct links to gynecologists.", icon: "chat" }
               ].map((item, idx) => (
                 <div key={idx} className="bg-white px-8 pb-10 pt-12 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-pink-900/5 text-center relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
@@ -463,8 +463,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-20">
             <h2 className="text-pink-500 font-bold tracking-widest uppercase text-sm mb-4">Join Our Community</h2>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black mb-6">Designed for Mothers, Supported by Professionals</h3>
-            <p className="text-lg text-neutral-400">Choose your path and start experiencing a new standard of pregnancy care today.</p>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">Designed for Mothers, Supported by Professionals</h3>
+            <p className="text-lg text-neutral-300">Choose your path and start experiencing a new standard of pregnancy care today.</p>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -477,7 +477,7 @@ export default function Home() {
                   <Icon name="mom" size={40} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black mb-4">For Mothers</h4>
+                  <h4 className="text-3xl font-black text-white mb-4">For Mothers</h4>
                   <p className="text-neutral-300 text-lg leading-relaxed">
                     Access all AI features, health tracking, and personalized recommendations for free. Start your healthy pregnancy journey now.
                   </p>
@@ -529,7 +529,7 @@ export default function Home() {
                   <Icon name="doctor" size={40} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black mb-4">For Health Workers</h4>
+                  <h4 className="text-3xl font-black text-white mb-4">For Health Workers</h4>
                   <p className="text-neutral-300 text-lg leading-relaxed">
                     Help mothers in your community, manage patient records, and provide expert consultations through our specialized dashboard.
                   </p>
@@ -581,12 +581,12 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-20 mb-16">
             <div className="lg:col-span-2 space-y-6">
               <div className="relative w-48 h-12">
-                <Image
-                  src="/mainlogo.png"
-                  alt="MomsCare Logo"
-                  fill
+                  <Image
+                    src="/mainlogo.png"
+                    alt="MomsCare Logo"
+                    fill
                   className="object-contain brightness-0 invert"
-                />
+                  />
               </div>
               <p className="text-lg leading-relaxed max-w-md">
                 24/7 AI-powered pregnancy support at your fingertips. Providing personalized guidance, health tracking, and expert access for mothers everywhere.

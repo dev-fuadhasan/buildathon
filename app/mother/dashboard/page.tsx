@@ -197,16 +197,16 @@ export default function MotherDashboard() {
     if (activeTab === "notifications" && shouldScrollToNotifications) {
       // Use requestAnimationFrame for smoother, faster scrolling
       requestAnimationFrame(() => {
-        const scrollToNotifications = () => {
-          const notificationsElement = document.getElementById("notifications-section");
-          if (notificationsElement) {
-            notificationsElement.scrollIntoView({ behavior: "smooth", block: "start" });
-            setShouldScrollToNotifications(false);
-          } else {
+      const scrollToNotifications = () => {
+        const notificationsElement = document.getElementById("notifications-section");
+        if (notificationsElement) {
+          notificationsElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          setShouldScrollToNotifications(false);
+        } else {
             // Retry if element not found yet (with shorter delay)
             setTimeout(scrollToNotifications, 50);
-          }
-        };
+        }
+      };
         scrollToNotifications();
       });
     }
@@ -1831,7 +1831,7 @@ export default function MotherDashboard() {
               {notificationsLoading ? (
                 <Icon name="sync" size={22} className="text-pink-600 animate-spin" />
               ) : (
-                <Icon name="notifications" size={22} className="text-pink-600" />
+              <Icon name="notifications" size={22} className="text-pink-600" />
               )}
               {!notificationsLoading && unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white" />
