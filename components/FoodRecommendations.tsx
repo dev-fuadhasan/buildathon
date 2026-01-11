@@ -442,7 +442,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                         rel="noopener noreferrer"
                         className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
                       >
-                        <div className="relative aspect-video bg-neutral-100 overflow-hidden">
+                        <div className="relative aspect-video bg-neutral-100 overflow-hidden" style={{ minHeight: '180px' }}>
                           <img
                             src={(() => {
                               // Priority 1: Use API thumbnail if available
@@ -462,6 +462,12 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                             })()}
                             alt={video.title}
                             className="w-full h-full object-cover"
+                            style={{ 
+                              display: 'block',
+                              position: 'relative',
+                              zIndex: 1,
+                              minHeight: '180px'
+                            }}
                             loading="lazy"
                             onError={(e) => {
                               // Try different YouTube thumbnail sizes
@@ -487,12 +493,22 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
                               }
                             }}
-                            onLoad={() => {
-                              console.log(`[Thumbnail] Successfully loaded thumbnail for ${video.videoId}`);
+                            onLoad={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              console.log(`[Thumbnail] Successfully loaded thumbnail for ${video.videoId}`, {
+                                src: target.src,
+                                naturalWidth: target.naturalWidth,
+                                naturalHeight: target.naturalHeight,
+                                clientWidth: target.clientWidth,
+                                clientHeight: target.clientHeight,
+                                display: window.getComputedStyle(target).display,
+                                visibility: window.getComputedStyle(target).visibility,
+                                opacity: window.getComputedStyle(target).opacity
+                              });
                             }}
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
-                            <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all pointer-events-none" style={{ zIndex: 2 }}>
+                            <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity pointer-events-auto">
                               <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
