@@ -1146,7 +1146,8 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*-\s+/gi, '**$1:**\n\n- ');
     
     // Fix headers without bold markers: "Detailed Explanation" → "**Detailed Explanation:**"
-    cleanedReply = cleanedReply.replace(/(^|\n)\s*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*([A-Z][a-z]|$)/gi, '$1\n\n**$2:**\n\n$3');
+    // Must check if it's at start of line and followed by text
+    cleanedReply = cleanedReply.replace(/(^|\n)(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)([A-Z][a-z])/gi, '$1\n\n**$2:**\n\n$3');
     
     // Fix "including- " → "including:\n\n- "
     cleanedReply = cleanedReply.replace(/(including|such as|for example|e\.g\.|namely)\s*-\s+/gi, '$1:\n\n- ');
