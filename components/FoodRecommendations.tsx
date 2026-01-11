@@ -442,7 +442,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                         rel="noopener noreferrer"
                         className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
                       >
-                        <div className="relative aspect-video bg-neutral-100 overflow-hidden" style={{ minHeight: '180px' }}>
+                        <div className="relative aspect-video bg-neutral-100 overflow-hidden" style={{ minHeight: '180px', position: 'relative' }}>
                           <img
                             src={(() => {
                               // Priority 1: Use API thumbnail if available
@@ -464,9 +464,13 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                             className="w-full h-full object-cover"
                             style={{ 
                               display: 'block',
-                              position: 'relative',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
                               zIndex: 1,
-                              minHeight: '180px'
+                              backgroundColor: 'transparent'
                             }}
                             loading="lazy"
                             onError={(e) => {
@@ -507,7 +511,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                               });
                             }}
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all pointer-events-none" style={{ zIndex: 2 }}>
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all pointer-events-none" style={{ zIndex: 10, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                             <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity pointer-events-auto">
                               <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />

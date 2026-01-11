@@ -265,12 +265,32 @@ ${pastRoutineContext || "No past recommendations available."}
 
 CRITICAL MEDICAL GUIDELINES:
 1. ALLERGIES - CRITICAL SAFETY REQUIREMENT: The mother has allergies: ${mother.allergies || "None"}. 
-   - DO NOT suggest the allergen itself (e.g., if allergic to peanuts, don't suggest peanuts)
-   - DO NOT suggest foods that CONTAIN the allergen as an ingredient (e.g., if allergic to peanuts, avoid: peanut butter, satay sauce, trail mix with peanuts, certain chocolates, certain baked goods, etc.)
-   - DO NOT suggest foods that are RELATED to the allergen (e.g., if allergic to peanuts, also avoid tree nuts like almonds, cashews, walnuts; if allergic to shellfish, avoid all seafood; if allergic to dairy, avoid milk, cheese, yogurt, butter, cream, etc.)
-   - DO NOT suggest foods that might have CROSS-CONTAMINATION risks (e.g., if allergic to gluten, avoid foods processed in facilities that also process wheat; if allergic to nuts, avoid foods that may contain traces of nuts)
-   - IDENTIFY and AVOID all variations, derivatives, and hidden sources of the allergen
+   
+   YOU MUST INTELLIGENTLY ANALYZE the allergen and identify ALL related foods WITHOUT using predefined lists. Use your knowledge of food relationships, categories, and ingredients.
+   
+   ANALYSIS PROCESS:
+   a) Identify the FOOD CATEGORY of the allergen (e.g., bread, dairy, nuts, seafood, grains, etc.)
+   b) Identify ALL foods in that same category (e.g., if allergic to "ruti" (roti/bread), avoid ALL bread types: porota/paratha, naan, pita, toast, etc.)
+   c) Identify foods that CONTAIN the allergen as an ingredient
+   d) Identify foods that are DERIVATIVES or VARIATIONS of the allergen
+   e) Identify foods with CROSS-CONTAMINATION risks
+   
+   EXAMPLES OF INTELLIGENT DETECTION (DO NOT hardcode these - use as examples of the thinking process):
+   - If allergic to "ruti" (roti/bread in Bangla): Avoid porota/paratha, naan, pita, toast, bread, roti, chapati, kulcha - ALL bread/flour-based items
+   - If allergic to "dudh" (milk in Bangla): Avoid all dairy - cheese, yogurt, butter, cream, paneer, ghee, ice cream, etc.
+   - If allergic to "badam" (almonds): Avoid all tree nuts - cashews, walnuts, pistachios, hazelnuts, etc.
+   - If allergic to "mach" (fish): Avoid all seafood - shrimp, crab, lobster, etc.
+   - If allergic to "dim" (eggs): Avoid all egg-containing foods - cakes, mayonnaise, pasta, etc.
+   
+   CRITICAL RULES:
+   - DO NOT suggest the allergen itself (in any language - English, Bangla, or Banglish)
+   - DO NOT suggest foods in the SAME CATEGORY as the allergen
+   - DO NOT suggest foods that CONTAIN the allergen as an ingredient
+   - DO NOT suggest foods that are DERIVATIVES or VARIATIONS of the allergen
+   - DO NOT suggest foods with CROSS-CONTAMINATION risks
+   - UNDERSTAND food relationships: bread types are related, dairy products are related, nuts are related, seafood is related, etc.
    - This is a SAFETY REQUIREMENT - be thorough and comprehensive in identifying all foods to avoid
+   - Use your knowledge to intelligently identify relationships - DO NOT rely on exact name matching only
 2. Medical Conditions: Consider ${mother.conditions || "None"} - ensure recommendations are safe for these conditions
 3. Medications: Consider interactions with ${mother.medications || "None"}
 4. Pregnancy Stage: Currently ${weeksPregnant || "N/A"} weeks pregnant (Trimester ${trimester || "N/A"}) - adjust recommendations accordingly
