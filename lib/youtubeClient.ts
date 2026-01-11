@@ -209,11 +209,41 @@ export async function searchExerciseVideos(
     const videos: YouTubeVideo[] = searchData.items.map((item: any, index: number) => {
       const details = detailsData.items?.[index];
       
+      // DEBUG: Log the raw API response structure
+      console.log(`[YouTube Debug] Raw API response for video ${index + 1}:`, {
+        videoId: item.id.videoId,
+        hasSnippet: !!item.snippet,
+        hasThumbnails: !!item.snippet?.thumbnails,
+        thumbnailsStructure: item.snippet?.thumbnails ? {
+          hasHigh: !!item.snippet.thumbnails.high,
+          hasMedium: !!item.snippet.thumbnails.medium,
+          hasDefault: !!item.snippet.thumbnails.default,
+          highUrl: item.snippet.thumbnails.high?.url,
+          mediumUrl: item.snippet.thumbnails.medium?.url,
+          defaultUrl: item.snippet.thumbnails.default?.url,
+        } : 'NO THUMBNAILS OBJECT'
+      });
+      
       // Get the best available thumbnail (prefer higher quality)
-      const thumbnail = item.snippet.thumbnails?.high?.url || 
-                       item.snippet.thumbnails?.medium?.url || 
-                       item.snippet.thumbnails?.default?.url || 
-                       '';
+      // Check both search API response and details API response
+      const searchThumbnail = item.snippet?.thumbnails?.high?.url || 
+                             item.snippet?.thumbnails?.medium?.url || 
+                             item.snippet?.thumbnails?.default?.url || 
+                             null;
+      
+      const detailsThumbnail = details?.snippet?.thumbnails?.high?.url ||
+                              details?.snippet?.thumbnails?.medium?.url ||
+                              details?.snippet?.thumbnails?.default?.url ||
+                              null;
+      
+      // Use search thumbnail first, fallback to details thumbnail
+      let thumbnail = searchThumbnail || detailsThumbnail || '';
+      
+      // CRITICAL FIX: Ensure HTTPS (YouTube API sometimes returns HTTP)
+      if (thumbnail && thumbnail.startsWith('http://')) {
+        thumbnail = thumbnail.replace('http://', 'https://');
+        console.log(`[YouTube] Converted HTTP to HTTPS: ${thumbnail}`);
+      }
       
       const videoData = {
         videoId: item.id.videoId,
@@ -226,10 +256,12 @@ export async function searchExerciseVideos(
         publishedAt: item.snippet.publishedAt,
       };
       
-      console.log(`[YouTube] Video ${index + 1}:`, {
+      console.log(`[YouTube] ✅ Final video data for ${videoData.videoId}:`, {
         videoId: videoData.videoId,
         hasThumbnail: !!videoData.thumbnail,
-        thumbnailUrl: videoData.thumbnail || 'MISSING'
+        thumbnailUrl: videoData.thumbnail || 'MISSING',
+        thumbnailLength: videoData.thumbnail?.length || 0,
+        isHttps: videoData.thumbnail?.startsWith('https://') || false
       });
       
       return videoData;

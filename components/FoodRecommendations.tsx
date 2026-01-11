@@ -442,25 +442,30 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                         rel="noopener noreferrer"
                         className="group rounded-xl border-2 border-neutral-200 bg-white overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all"
                       >
-                        <div className="relative aspect-video bg-neutral-100 overflow-hidden" style={{ minHeight: '180px', position: 'relative' }}>
+                        <div className="relative aspect-video bg-neutral-100 overflow-hidden" style={{ minHeight: '180px', position: 'relative', width: '100%' }}>
                           <img
                             src={(() => {
-                              // Priority 1: Use API thumbnail if available
+                              // Priority 1: Use API thumbnail if available (ensure HTTPS)
                               if (video.thumbnail && video.thumbnail.trim() !== '') {
-                                console.log(`[Thumbnail] Using API thumbnail for ${video.videoId}:`, video.thumbnail);
-                                return video.thumbnail;
+                                let thumbnailUrl = video.thumbnail.trim();
+                                // Ensure HTTPS
+                                if (thumbnailUrl.startsWith('http://')) {
+                                  thumbnailUrl = thumbnailUrl.replace('http://', 'https://');
+                                }
+                                console.log(`[Thumbnail Render] Using API thumbnail for ${video.videoId}:`, thumbnailUrl);
+                                return thumbnailUrl;
                               }
                               // Priority 2: Construct URL if videoId exists
                               if (video.videoId && video.videoId.trim() !== '') {
                                 const constructedUrl = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
-                                console.log(`[Thumbnail] Using constructed URL for ${video.videoId}:`, constructedUrl);
+                                console.log(`[Thumbnail Render] Using constructed URL for ${video.videoId}:`, constructedUrl);
                                 return constructedUrl;
                               }
                               // Priority 3: Placeholder
-                              console.warn(`[Thumbnail] No thumbnail or videoId for video:`, video);
+                              console.warn(`[Thumbnail Render] No thumbnail or videoId for video:`, video);
                               return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
                             })()}
-                            alt={video.title}
+                            alt={video.title || 'Exercise video'}
                             className="w-full h-full object-cover"
                             style={{ 
                               display: 'block',
@@ -469,46 +474,75 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                               left: 0,
                               width: '100%',
                               height: '100%',
+                              objectFit: 'cover',
                               zIndex: 1,
-                              backgroundColor: 'transparent'
+                              backgroundColor: 'transparent',
+                              minHeight: '180px'
                             }}
                             loading="lazy"
                             onError={(e) => {
                               // Try different YouTube thumbnail sizes
                               const target = e.target as HTMLImageElement;
-                              console.error(`[Thumbnail] Error loading image:`, target.src);
+                              const currentSrc = target.src;
+                              console.error(`[Thumbnail Error] Failed to load image for ${video.videoId}:`, {
+                                failedUrl: currentSrc,
+                                videoId: video.videoId,
+                                hasVideoId: !!video.videoId
+                              });
+                              
                               if (!video.videoId || video.videoId.trim() === '') {
                                 // No videoId, use placeholder
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
                                 return;
                               }
-                              if (!target.src.includes('mqdefault')) {
+                              
+                              // Try fallback thumbnail sizes in order
+                              if (!currentSrc.includes('mqdefault') && !currentSrc.includes('sddefault') && !currentSrc.includes('default.jpg')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
-                                console.log(`[Thumbnail] Trying mqdefault for ${video.videoId}`);
-                              } else if (!target.src.includes('sddefault')) {
+                                console.log(`[Thumbnail Fallback] Trying mqdefault for ${video.videoId}`);
+                              } else if (!currentSrc.includes('sddefault') && !currentSrc.includes('default.jpg')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/sddefault.jpg`;
-                                console.log(`[Thumbnail] Trying sddefault for ${video.videoId}`);
-                              } else if (!target.src.includes('default')) {
+                                console.log(`[Thumbnail Fallback] Trying sddefault for ${video.videoId}`);
+                              } else if (!currentSrc.includes('default.jpg')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/default.jpg`;
-                                console.log(`[Thumbnail] Trying default for ${video.videoId}`);
+                                console.log(`[Thumbnail Fallback] Trying default for ${video.videoId}`);
                               } else {
                                 // Final fallback - placeholder
-                                console.warn(`[Thumbnail] All attempts failed for ${video.videoId}, using placeholder`);
+                                console.warn(`[Thumbnail Fallback] All attempts failed for ${video.videoId}, using placeholder`);
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
+                                target.style.display = 'block';
                               }
                             }}
                             onLoad={(e) => {
                               const target = e.target as HTMLImageElement;
-                              console.log(`[Thumbnail] Successfully loaded thumbnail for ${video.videoId}`, {
+                              const computedStyle = window.getComputedStyle(target);
+                              console.log(`[Thumbnail Success] ✅ Loaded thumbnail for ${video.videoId}:`, {
                                 src: target.src,
                                 naturalWidth: target.naturalWidth,
                                 naturalHeight: target.naturalHeight,
                                 clientWidth: target.clientWidth,
                                 clientHeight: target.clientHeight,
-                                display: window.getComputedStyle(target).display,
-                                visibility: window.getComputedStyle(target).visibility,
-                                opacity: window.getComputedStyle(target).opacity
+                                offsetWidth: target.offsetWidth,
+                                offsetHeight: target.offsetHeight,
+                                display: computedStyle.display,
+                                visibility: computedStyle.visibility,
+                                opacity: computedStyle.opacity,
+                                position: computedStyle.position,
+                                zIndex: computedStyle.zIndex,
+                                isVisible: target.offsetWidth > 0 && target.offsetHeight > 0
                               });
+                              
+                              // Ensure image is visible
+                              if (target.offsetWidth === 0 || target.offsetHeight === 0) {
+                                console.warn(`[Thumbnail Warning] Image loaded but has zero dimensions!`, {
+                                  videoId: video.videoId,
+                                  style: target.style.cssText,
+                                  computed: {
+                                    width: computedStyle.width,
+                                    height: computedStyle.height
+                                  }
+                                });
+                              }
                             }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all pointer-events-none" style={{ zIndex: 10, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
