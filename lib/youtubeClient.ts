@@ -209,11 +209,17 @@ export async function searchExerciseVideos(
     const videos: YouTubeVideo[] = searchData.items.map((item: any, index: number) => {
       const details = detailsData.items?.[index];
       
+      // Get best available thumbnail (prefer high quality, fallback to medium, then default)
+      const thumbnail = item.snippet.thumbnails?.high?.url || 
+                       item.snippet.thumbnails?.medium?.url || 
+                       item.snippet.thumbnails?.default?.url ||
+                       `https://img.youtube.com/vi/${item.id.videoId}/mqdefault.jpg`;
+      
       return {
         videoId: item.id.videoId,
         title: item.snippet.title,
         description: item.snippet.description,
-        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+        thumbnail: thumbnail,
         channelTitle: item.snippet.channelTitle,
         duration: details?.contentDetails?.duration,
         viewCount: details?.statistics?.viewCount,

@@ -353,34 +353,6 @@ export default function FoodRecommendations({ token, motherId }: Props) {
           </div>
         ) : (
           <>
-            {/* Location Info */}
-            {location && (
-              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 p-4 border-2 border-blue-200">
-                <p className="text-sm text-slate-700 flex items-start gap-2 mb-2">
-                  <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
-                  <span>
-                    <strong>Location Detected:</strong> {location.address || `${location.city}, ${location.region}, ${location.country}`}
-                    {location.culture && ` • ${location.culture} culture`}
-                    {location.climate && ` • ${location.climate} climate`}
-                    {location.urbanRural && ` • ${location.urbanRural} setting`}
-                  </span>
-                </p>
-                <p className="text-xs text-slate-600 ml-6">
-                  Recommendations are personalized based on your detected location, culture, and climate.
-                </p>
-              </div>
-            )}
-
-            <div className="rounded-xl bg-gradient-to-br from-orange-50 to-pink-50 p-4 border-2 border-orange-200">
-              <p className="text-sm text-slate-700 flex items-start gap-2">
-                <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong>AI-Powered Recommendations:</strong> These recommendations are personalized based on your pregnancy stage, 
-                  medical conditions, allergies, detected location (IP-based), culture, climate, chat history, prescriptions, doctor Q&As, and recent health journal entries. All recommendations are medically validated.
-                </span>
-              </p>
-            </div>
-
             {/* Exercise Recommendations - PRIMARY FOCUS */}
             <div>
               <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -415,11 +387,18 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                       >
                         <div className="relative aspect-video bg-neutral-100">
                           <img
-                            src={video.thumbnail}
+                            src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
                             alt={video.title}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
+                              const target = e.target as HTMLImageElement;
+                              // Try YouTube thumbnail URL format if original fails
+                              if (!target.src.includes('youtube.com')) {
+                                target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
+                              } else {
+                                target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
+                              }
                             }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">
