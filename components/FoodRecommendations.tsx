@@ -444,28 +444,51 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                       >
                         <div className="relative aspect-video bg-neutral-100 overflow-hidden">
                           <img
-                            src={video.thumbnail || (video.videoId ? `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` : '')}
+                            src={(() => {
+                              // Priority 1: Use API thumbnail if available
+                              if (video.thumbnail && video.thumbnail.trim() !== '') {
+                                console.log(`[Thumbnail] Using API thumbnail for ${video.videoId}:`, video.thumbnail);
+                                return video.thumbnail;
+                              }
+                              // Priority 2: Construct URL if videoId exists
+                              if (video.videoId && video.videoId.trim() !== '') {
+                                const constructedUrl = `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
+                                console.log(`[Thumbnail] Using constructed URL for ${video.videoId}:`, constructedUrl);
+                                return constructedUrl;
+                              }
+                              // Priority 3: Placeholder
+                              console.warn(`[Thumbnail] No thumbnail or videoId for video:`, video);
+                              return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
+                            })()}
                             alt={video.title}
                             className="w-full h-full object-cover"
                             loading="lazy"
                             onError={(e) => {
                               // Try different YouTube thumbnail sizes
                               const target = e.target as HTMLImageElement;
-                              if (!video.videoId) {
+                              console.error(`[Thumbnail] Error loading image:`, target.src);
+                              if (!video.videoId || video.videoId.trim() === '') {
                                 // No videoId, use placeholder
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
                                 return;
                               }
                               if (!target.src.includes('mqdefault')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
+                                console.log(`[Thumbnail] Trying mqdefault for ${video.videoId}`);
                               } else if (!target.src.includes('sddefault')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/sddefault.jpg`;
+                                console.log(`[Thumbnail] Trying sddefault for ${video.videoId}`);
                               } else if (!target.src.includes('default')) {
                                 target.src = `https://img.youtube.com/vi/${video.videoId}/default.jpg`;
+                                console.log(`[Thumbnail] Trying default for ${video.videoId}`);
                               } else {
                                 // Final fallback - placeholder
+                                console.warn(`[Thumbnail] All attempts failed for ${video.videoId}, using placeholder`);
                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect fill="%23ddd" width="320" height="180"/><text x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999">Video</text></svg>';
                               }
+                            }}
+                            onLoad={() => {
+                              console.log(`[Thumbnail] Successfully loaded thumbnail for ${video.videoId}`);
                             }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all">

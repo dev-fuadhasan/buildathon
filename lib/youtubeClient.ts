@@ -209,13 +209,13 @@ export async function searchExerciseVideos(
     const videos: YouTubeVideo[] = searchData.items.map((item: any, index: number) => {
       const details = detailsData.items?.[index];
       
-      // Get best available thumbnail (prefer high quality, fallback to medium, then default)
+      // Get the best available thumbnail (prefer higher quality)
       const thumbnail = item.snippet.thumbnails?.high?.url || 
                        item.snippet.thumbnails?.medium?.url || 
-                       item.snippet.thumbnails?.default?.url ||
-                       `https://img.youtube.com/vi/${item.id.videoId}/mqdefault.jpg`;
+                       item.snippet.thumbnails?.default?.url || 
+                       '';
       
-      return {
+      const videoData = {
         videoId: item.id.videoId,
         title: item.snippet.title,
         description: item.snippet.description,
@@ -225,6 +225,14 @@ export async function searchExerciseVideos(
         viewCount: details?.statistics?.viewCount,
         publishedAt: item.snippet.publishedAt,
       };
+      
+      console.log(`[YouTube] Video ${index + 1}:`, {
+        videoId: videoData.videoId,
+        hasThumbnail: !!videoData.thumbnail,
+        thumbnailUrl: videoData.thumbnail || 'MISSING'
+      });
+      
+      return videoData;
     });
     
     console.log(`[YouTube] ✅ Found ${videos.length} video(s) for exercise: "${keywords}"`);

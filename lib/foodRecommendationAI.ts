@@ -264,7 +264,13 @@ ${pastRoutineContext || "No past recommendations available."}
    - Build on what worked well
 
 CRITICAL MEDICAL GUIDELINES:
-1. ALLERGIES: The mother has allergies: ${mother.allergies || "None"}. DO NOT suggest ANY foods containing these allergens. This is a safety requirement.
+1. ALLERGIES - CRITICAL SAFETY REQUIREMENT: The mother has allergies: ${mother.allergies || "None"}. 
+   - DO NOT suggest the allergen itself (e.g., if allergic to peanuts, don't suggest peanuts)
+   - DO NOT suggest foods that CONTAIN the allergen as an ingredient (e.g., if allergic to peanuts, avoid: peanut butter, satay sauce, trail mix with peanuts, certain chocolates, certain baked goods, etc.)
+   - DO NOT suggest foods that are RELATED to the allergen (e.g., if allergic to peanuts, also avoid tree nuts like almonds, cashews, walnuts; if allergic to shellfish, avoid all seafood; if allergic to dairy, avoid milk, cheese, yogurt, butter, cream, etc.)
+   - DO NOT suggest foods that might have CROSS-CONTAMINATION risks (e.g., if allergic to gluten, avoid foods processed in facilities that also process wheat; if allergic to nuts, avoid foods that may contain traces of nuts)
+   - IDENTIFY and AVOID all variations, derivatives, and hidden sources of the allergen
+   - This is a SAFETY REQUIREMENT - be thorough and comprehensive in identifying all foods to avoid
 2. Medical Conditions: Consider ${mother.conditions || "None"} - ensure recommendations are safe for these conditions
 3. Medications: Consider interactions with ${mother.medications || "None"}
 4. Pregnancy Stage: Currently ${weeksPregnant || "N/A"} weeks pregnant (Trimester ${trimester || "N/A"}) - adjust recommendations accordingly
@@ -279,7 +285,12 @@ GENERATION INSTRUCTIONS:
    - Use REAL food names from ${locationData?.culture || "this cultural"} cuisine
    - Are appropriate for ${locationData?.climate || "this climate"} climate
    - Consider ${locationData?.urbanRural || "urban"} setting
-   - Respect allergies: ${mother.allergies || "None"} - NEVER suggest foods with these allergens
+   - Respect allergies: ${mother.allergies || "None"} - NEVER suggest:
+     * The allergen itself
+     * Foods containing the allergen as an ingredient
+     * Related foods (e.g., if allergic to peanuts, avoid all tree nuts; if allergic to dairy, avoid all dairy products)
+     * Foods with cross-contamination risks
+     * Any variation or derivative of the allergen
    - Consider medical conditions: ${mother.conditions || "None"}
    - Are appropriate for ${weeksPregnant || "N/A"} weeks pregnancy (Trimester ${trimester || "N/A"})
    - Are different from past recommendations (avoid repetition)
