@@ -3,9 +3,10 @@
  * Generates personalized food and exercise recommendations for expectant mothers
  */
 
-import { MotherProfile, DailyEntry, DailyRoutine, getChatHistory, ChatMessage } from "./data";
+import { MotherProfile, DailyEntry, DailyRoutine, getChatHistory, ChatMessage, Question } from "./data";
 import { askMomsCare } from "./momsCareChat";
 import { listObjects, signedUrl } from "./r2Client";
+import { LocationData } from "./locationDetector";
 
 /**
  * Generates daily routine recommendations (breakfast, lunch, dinner, exercises) based on:
@@ -14,7 +15,8 @@ import { listObjects, signedUrl } from "./r2Client";
  * - Recent daily entries (only current/recent dates)
  * - Chat conversation history
  * - Prescriptions and reports
- * - Location (from address)
+ * - Location (from IP detection with full address, culture, climate)
+ * - Doctor Q&A history
  * - Previous recommendations to avoid repetition
  */
 export async function generateDailyRoutineRecommendations(
@@ -22,7 +24,9 @@ export async function generateDailyRoutineRecommendations(
   dailyEntries: DailyEntry[],
   pastRecommendations?: DailyRoutine[],
   prescriptionUrls?: string[],
-  chatHistory?: ChatMessage[]
+  chatHistory?: ChatMessage[],
+  locationData?: LocationData,
+  doctorQAs?: Question[]
 ): Promise<{ 
   breakfast: string; 
   lunch: string; 
@@ -64,18 +68,44 @@ export async function generateDailyRoutineRecommendations(
     const weeksPregnant = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
     const trimester = daysPregnant ? Math.floor(daysPregnant / 90) + 1 : (weeksPregnant ? Math.floor(weeksPregnant / 13) + 1 : undefined);
 
-    // Get location from address and area - combine both for better context
-    // AI will analyze the location to determine country, division/state, city, and urban/rural
-    const addressParts = [];
-    if (mother.address && mother.address.trim()) {
-      addressParts.push(mother.address.trim());
+    // Get location from locationData (IP-based) or fallback to address
+    let location = "Location not specified";
+    let locationContext = "";
+    
+    if (locationData) {
+      // Use detected location data
+      location = locationData.address || 
+                 `${locationData.city}, ${locationData.region}, ${locationData.country}` ||
+                 "Location not specified";
+      
+      locationContext = `
+LOCATION DETAILS (Detected from IP):
+- Full Address: ${location}
+- Country: ${locationData.country} (${locationData.countryCode})
+- Region/State: ${locationData.region}
+- City: ${locationData.city}
+- Postal Code: ${locationData.postalCode || "N/A"}
+- Culture: ${locationData.culture || "Global"}
+- Climate: ${locationData.climate || "temperate"}
+- Setting: ${locationData.urbanRural || "urban"}
+- Timezone: ${locationData.timezone || "Asia/Dhaka"}
+- Coordinates: ${locationData.latitude ? `${locationData.latitude}, ${locationData.longitude}` : "N/A"}
+`;
+    } else {
+      // Fallback to address from profile
+      const addressParts = [];
+      if (mother.address && mother.address.trim()) {
+        addressParts.push(mother.address.trim());
+      }
+      if (mother.area && mother.area.trim()) {
+        addressParts.push(mother.area.trim());
+      }
+      location = addressParts.length > 0 
+        ? addressParts.join(", ") 
+        : "Location not specified";
+      
+      locationContext = `Location: ${location} (from profile address)`;
     }
-    if (mother.area && mother.area.trim()) {
-      addressParts.push(mother.area.trim());
-    }
-    const location = addressParts.length > 0 
-      ? addressParts.join(", ") 
-      : "Location not specified";
     
     // Get chat history if not provided
     let chatContext = "";
@@ -118,6 +148,15 @@ export async function generateDailyRoutineRecommendations(
       prescriptionContext = `Prescriptions/Reports Available: ${prescriptionUrls.length} file(s) uploaded. Consider any medical instructions from these documents.`;
     }
 
+    // Build doctor Q&A context
+    let doctorQAContext = "";
+    if (doctorQAs && doctorQAs.length > 0) {
+      doctorQAContext = doctorQAs
+        .slice(0, 5)
+        .map((qa, idx) => `Q${idx + 1}: ${qa.question}\nA${idx + 1}: ${qa.answer}`)
+        .join("\n\n---\n\n");
+    }
+
     const profileContext = `
 Name: ${mother.name || "N/A"}
 Age: ${mother.age || "N/A"}
@@ -126,8 +165,8 @@ Medical Conditions: ${mother.conditions || "None"}
 Medications: ${mother.medications || "None"}
 Allergies: ${mother.allergies || "None"} - CRITICAL: DO NOT suggest any foods containing these allergens
 Blood Group: ${mother.bloodGroup || "N/A"}
-Location: ${location} - Analyze this location to determine country, division/state, city, urban/rural setting. Suggest foods that are locally available, culturally appropriate, and suitable for this specific location.
 Previous Pregnancies: ${mother.previousPregnancies || 0}
+${locationContext}
 `;
 
     // Build recent entries context
@@ -159,26 +198,21 @@ BEFORE generating recommendations, you MUST analyze ALL of the following user da
 1. PROFILE ANALYSIS:
 ${profileContext}
 
-2. LOCATION ANALYSIS (CRITICAL):
-   - Location: "${location}"
-   - You MUST analyze this location to determine:
-     * Country
-     * Division/State/Province
-     * City/Town
-     * Urban vs Rural setting
-     * Climate (tropical/temperate/cold)
-     * Cultural context
-   - Based on this analysis, suggest foods that are:
-     * Actually available in this specific location
-     * Culturally appropriate for this area
-     * Seasonally appropriate
-     * Suitable for urban vs rural settings
+2. LOCATION ANALYSIS (CRITICAL - FROM IP DETECTION):
+${locationContext}
+   - You MUST use this location data to suggest foods that are:
+     * Actually available in this specific location (${locationData?.city || "city"}, ${locationData?.region || "region"}, ${locationData?.country || "country"})
+     * Culturally appropriate for ${locationData?.culture || "the local"} culture
+     * Suitable for ${locationData?.climate || "the local"} climate
+     * Appropriate for ${locationData?.urbanRural || "urban"} setting
+     * Seasonally appropriate (consider current season in this location)
    - For exercises, consider:
-     * Climate (hot/cold/tropical affects exercise choices)
-     * Available space (urban apartments vs rural open areas)
-     * Cultural norms and local exercise facilities
+     * Climate: ${locationData?.climate || "temperate"} (affects exercise choices - hot/cold/tropical)
+     * Setting: ${locationData?.urbanRural || "urban"} (affects available space - apartments vs open areas)
+     * Cultural norms: ${locationData?.culture || "Global"} (affects acceptable exercise types)
+     * Local facilities: Consider what exercise facilities are typically available in ${locationData?.urbanRural || "urban"} ${locationData?.country || "areas"}
    - DO NOT use generic or predefined food lists
-   - Analyze the location dynamically and suggest what's ACTUALLY available there
+   - Suggest what's ACTUALLY available and culturally appropriate in this specific location
 
 3. PRESCRIPTIONS/REPORTS ANALYSIS:
 ${prescriptionContext || "No prescriptions/reports available. No medical restrictions from documents."}
@@ -204,7 +238,16 @@ ${entriesContext || "No recent journal entries available."}
      * Sleep patterns
    - Use this to adjust recommendations based on actual daily patterns
 
-6. PAST RECOMMENDATIONS ANALYSIS:
+6. DOCTOR Q&A ANALYSIS:
+${doctorQAContext || "No recent doctor Q&As available."}
+   - Review doctor's answers for:
+     * Specific dietary recommendations
+     * Exercise restrictions or suggestions
+     * Health concerns addressed
+     * Medical advice given
+   - Incorporate doctor's professional advice into recommendations
+
+7. PAST RECOMMENDATIONS ANALYSIS:
 ${pastRoutineContext || "No past recommendations available."}
    - Review what was recommended before
    - Ensure variety - don't repeat the same foods/exercises
@@ -235,11 +278,14 @@ Please provide recommendations in the following JSON format:
 }
 
 IMPORTANT LOCATION ANALYSIS:
-- Analyze the location "${location}" to identify: country, division/state, city, urban/rural setting
-- Suggest foods that are ACTUALLY available in this specific location - do not use generic lists
-- Consider cultural food preferences and local cuisine
-- For exercises, consider: climate (hot/cold/tropical), available space (urban apartment vs rural open space), cultural norms, local facilities
-- If location is unclear or generic, provide general safe recommendations but note that location-specific suggestions would be better with more details
+- Location detected: ${location}
+- Country: ${locationData?.country || "Unknown"} (${locationData?.countryCode || "N/A"})
+- Culture: ${locationData?.culture || "Global"} - suggest culturally appropriate foods
+- Climate: ${locationData?.climate || "temperate"} - adjust recommendations for climate
+- Setting: ${locationData?.urbanRural || "urban"} - consider available space and facilities
+- Suggest foods that are ACTUALLY available in ${locationData?.city || "this city"}, ${locationData?.region || "this region"}, ${locationData?.country || "this country"}
+- Consider local cuisine, seasonal availability, and cultural preferences
+- For exercises, adapt to: ${locationData?.climate || "temperate"} climate, ${locationData?.urbanRural || "urban"} setting, ${locationData?.culture || "local"} cultural norms
 
 Respond ONLY with valid JSON, no additional text.`;
 

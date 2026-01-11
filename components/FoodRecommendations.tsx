@@ -64,6 +64,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const [generating, setGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [location, setLocation] = useState<any>(null);
 
   useEffect(() => {
     // Get current date - will be updated when API responds with timezone-aware date
@@ -89,20 +90,23 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const fetchRecommendation = async (date: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/mother/food-recommendations?date=${date}`, {
+      const res = await fetch(`/api/mother/daily-routine?date=${date}`, {
         headers: authHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
         setRecommendation(data.recommendation);
+        setLocation(data.location);
       } else {
         const errorData = await res.json();
-        console.error("Error fetching food recommendations:", errorData);
+        console.error("Error fetching daily routine:", errorData);
         setRecommendation(null);
+        setLocation(null);
       }
     } catch (err) {
-      console.error("Error fetching food recommendations:", err);
+      console.error("Error fetching daily routine:", err);
       setRecommendation(null);
+      setLocation(null);
     } finally {
       setLoading(false);
     }
@@ -111,7 +115,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const generateRecommendation = async () => {
     setGenerating(true);
     try {
-      const res = await fetch("/api/mother/food-recommendations", {
+      const res = await fetch("/api/mother/daily-routine", {
         method: "POST",
         headers: {
           ...authHeaders(),
@@ -121,13 +125,14 @@ export default function FoodRecommendations({ token, motherId }: Props) {
       if (res.ok) {
         const data = await res.json();
         setRecommendation(data.recommendation);
+        setLocation(data.location);
         setSelectedDate(data.recommendation.date);
       } else {
         const errorData = await res.json();
         alert(errorData.error || "Failed to generate recommendations");
       }
     } catch (err) {
-      console.error("Error generating food recommendations:", err);
+      console.error("Error generating daily routine:", err);
       alert("Network error. Please try again.");
     } finally {
       setGenerating(false);
@@ -327,7 +332,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
           <div className="text-center py-12 text-slate-500 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
             <Icon name="health" size={48} className="mx-auto mb-3 text-slate-300" />
             <p className="text-lg font-medium mb-2">No daily routine for this date</p>
-            <p className="text-sm mb-4">Generate personalized food and exercise recommendations based on your pregnancy stage, health profile, allergies, and medical conditions.</p>
+            <p className="text-sm mb-4">Generate personalized exercise and food recommendations based on your pregnancy stage, health profile, allergies, medical conditions, detected location (IP-based), culture, climate, and all your health data.</p>
             <button
               onClick={generateRecommendation}
               disabled={generating}
@@ -348,43 +353,35 @@ export default function FoodRecommendations({ token, motherId }: Props) {
           </div>
         ) : (
           <>
+            {/* Location Info */}
+            {location && (
+              <div className="rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 p-4 border-2 border-blue-200">
+                <p className="text-sm text-slate-700 flex items-start gap-2 mb-2">
+                  <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Location Detected:</strong> {location.address || `${location.city}, ${location.region}, ${location.country}`}
+                    {location.culture && ` • ${location.culture} culture`}
+                    {location.climate && ` • ${location.climate} climate`}
+                    {location.urbanRural && ` • ${location.urbanRural} setting`}
+                  </span>
+                </p>
+                <p className="text-xs text-slate-600 ml-6">
+                  Recommendations are personalized based on your detected location, culture, and climate.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-xl bg-gradient-to-br from-orange-50 to-pink-50 p-4 border-2 border-orange-200">
               <p className="text-sm text-slate-700 flex items-start gap-2">
                 <Icon name="info" size={16} className="mt-0.5 flex-shrink-0" />
                 <span>
-                  <strong>AI-Powered Recommendations:</strong> These food and exercise suggestions are personalized based on your pregnancy stage, 
-                  medical conditions, allergies, location, chat history, prescriptions, and recent health journal entries. All recommendations are medically validated.
+                  <strong>AI-Powered Recommendations:</strong> These recommendations are personalized based on your pregnancy stage, 
+                  medical conditions, allergies, detected location (IP-based), culture, climate, chat history, prescriptions, doctor Q&As, and recent health journal entries. All recommendations are medically validated.
                 </span>
               </p>
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Icon name="health" size={20} />
-                Food Recommendations
-              </h3>
-              <div className="grid gap-4 md:grid-cols-3 mb-6">
-                <MealCard
-                  meal="breakfast"
-                  content={recommendation.breakfast}
-                  done={recommendation.breakfastEaten}
-                  doneAt={recommendation.breakfastEatenAt}
-                />
-                <MealCard
-                  meal="lunch"
-                  content={recommendation.lunch}
-                  done={recommendation.lunchEaten}
-                  doneAt={recommendation.lunchEatenAt}
-                />
-                <MealCard
-                  meal="dinner"
-                  content={recommendation.dinner}
-                  done={recommendation.dinnerEaten}
-                  doneAt={recommendation.dinnerEatenAt}
-                />
-              </div>
-            </div>
-
+            {/* Exercise Recommendations - PRIMARY FOCUS */}
             <div>
               <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Icon name="progress" size={20} />
@@ -400,10 +397,10 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                 />
               </div>
               
-              {/* YouTube Exercise Videos */}
+              {/* YouTube Exercise Videos - BELOW EXERCISES */}
               {recommendation.exerciseVideos && recommendation.exerciseVideos.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-md font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <div className="mt-6">
+                  <h4 className="text-md font-semibold text-slate-700 mb-4 flex items-center gap-2">
                     <Icon name="view" size={18} />
                     Recommended Exercise Videos
                   </h4>
@@ -449,6 +446,34 @@ export default function FoodRecommendations({ token, motherId }: Props) {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Food Recommendations - Secondary */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Icon name="health" size={20} />
+                Food Recommendations
+              </h3>
+              <div className="grid gap-4 md:grid-cols-3 mb-6">
+                <MealCard
+                  meal="breakfast"
+                  content={recommendation.breakfast}
+                  done={recommendation.breakfastEaten}
+                  doneAt={recommendation.breakfastEatenAt}
+                />
+                <MealCard
+                  meal="lunch"
+                  content={recommendation.lunch}
+                  done={recommendation.lunchEaten}
+                  doneAt={recommendation.lunchEatenAt}
+                />
+                <MealCard
+                  meal="dinner"
+                  content={recommendation.dinner}
+                  done={recommendation.dinnerEaten}
+                  doneAt={recommendation.dinnerEatenAt}
+                />
+              </div>
             </div>
 
             {recommendation.waterIntake && (
