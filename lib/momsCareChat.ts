@@ -1132,11 +1132,30 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     // Fix "**When to Consult:**a Doctor:**" pattern specifically
     cleanedReply = cleanedReply.replace(/\*\*When to Consult:\*\*([a-zA-Z\u0980-\u09FF][^*]+)\*\*/g, '**When to Consult $1:**');
     
+    // Fix double colons: "**Header::**" → "**Header:**"
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*):+/g, '$1');
+    
+    // CRITICAL: Fix "**Quick Answer It is" → "**Quick Answer:**\n\nIt is"
+    // Match known header names followed by text
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s+([A-Z][a-z])/gi, '**$1:**\n\n$2');
+    
+    // Fix separated bold markers: "**Header" followed by ":**" later
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+)\s+([A-Z][a-z][^:]{20,}):\*\*/g, '**$1:**\n\n$2');
+    
+    // Fix ":**" that appears alone (separated from header) - remove it
+    cleanedReply = cleanedReply.replace(/([^\*]):\*\*/g, '$1');
+    
+    // Fix "**Practical Recommendations:" (missing closing bold) → "**Practical Recommendations:**"
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor):(?!\*\*)/gi, '**$1:**');
+    
     // Fix double asterisks with newline: "**\n**Header:**" → "**Header:**"
     cleanedReply = cleanedReply.replace(/\*\*\s*\n\s*\*\*([^*]+)\*\*/g, '**$1**');
     
     // Fix double asterisks without newline: "**Important Notes:****" → "**Important Notes:**"
     cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\*\*/g, '$1');
+    
+    // Fix "Detailed Explanation:**" (missing opening bold)
+    cleanedReply = cleanedReply.replace(/([^\*])(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor):\*\*/gi, '\n\n**$2:**');
     
     // Fix "including:**- Reduced" → "including:\n\n- Reduced"
     cleanedReply = cleanedReply.replace(/([.!?])\*\*:\s*-/g, '$1\n\n-');
