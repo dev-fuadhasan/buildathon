@@ -135,6 +135,9 @@ export async function searchExerciseVideos(
   exerciseText: string,
   maxResults: number = 3
 ): Promise<YouTubeVideo[]> {
+  // Enforce maximum of 3 videos (strict limit)
+  const limitedMaxResults = Math.min(maxResults, 3);
+  
   try {
     if (youtubeApiKeys.length === 0) {
       initializeYouTubeKeys();
@@ -151,13 +154,13 @@ export async function searchExerciseVideos(
     const keywords = extractExerciseKeywords(exerciseText);
     const searchQuery = `pregnancy exercise ${keywords} prenatal safe`;
     
-    console.log(`[YouTube] Searching for: "${searchQuery}"`);
+    console.log(`[YouTube] Searching for: "${searchQuery}" (max ${limitedMaxResults} videos)`);
     
     const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
     searchUrl.searchParams.set('part', 'snippet');
     searchUrl.searchParams.set('q', searchQuery);
     searchUrl.searchParams.set('type', 'video');
-    searchUrl.searchParams.set('maxResults', maxResults.toString());
+    searchUrl.searchParams.set('maxResults', limitedMaxResults.toString());
     searchUrl.searchParams.set('order', 'relevance');
     searchUrl.searchParams.set('videoCategoryId', '26'); // Howto & Style category
     searchUrl.searchParams.set('key', apiKey);
@@ -179,7 +182,7 @@ export async function searchExerciseVideos(
           const nextKey = getNextApiKey();
           if (nextKey && nextKey !== apiKey) {
             console.log(`[YouTube] Retrying with next key...`);
-            return searchExerciseVideos(exerciseText, maxResults);
+            return searchExerciseVideos(exerciseText, limitedMaxResults);
           }
         }
       }
@@ -267,8 +270,10 @@ export async function searchExerciseVideos(
       return videoData;
     });
     
-    console.log(`[YouTube] ✅ Found ${videos.length} video(s) for exercise: "${keywords}"`);
-    return videos;
+    // Ensure we never return more than 3 videos (strict limit)
+    const limitedVideos = videos.slice(0, 3);
+    console.log(`[YouTube] ✅ Found ${videos.length} video(s), returning ${limitedVideos.length} (max 3) for exercise: "${keywords}"`);
+    return limitedVideos;
     
   } catch (error: any) {
     console.error(`[YouTube] Error searching for videos:`, error.message);

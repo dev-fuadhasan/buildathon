@@ -466,8 +466,10 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
       const { searchExerciseVideos } = await import("./youtubeClient");
       console.log(`[Food Recommendation] Searching YouTube videos for exercises: "${routineData.exercises}"`);
       exerciseVideos = await searchExerciseVideos(routineData.exercises, 3);
+      // Ensure maximum 3 videos (strict enforcement)
+      exerciseVideos = exerciseVideos.slice(0, 3);
       if (exerciseVideos.length > 0) {
-        console.log(`[Food Recommendation] ✅ Found ${exerciseVideos.length} exercise video(s)`);
+        console.log(`[Food Recommendation] ✅ Found ${exerciseVideos.length} exercise video(s) (max 3)`);
       } else {
         console.log(`[Food Recommendation] ⚠️ No exercise videos found`);
       }
