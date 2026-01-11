@@ -263,58 +263,130 @@ export async function askMomsCare(
       ? "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি। আপনার কোনো স্বাস্থ্য-সম্পর্কিত প্রশ্ন আছে?"
       : "I can only help with health and pregnancy-related questions. Do you have any health-related questions?";
     
-    // System prompt - Enhanced with intelligent question understanding
-    let systemPrompt = `You are MomsCare AI, a friendly and helpful pregnancy health assistant.${languageInstruction}${imageInstruction}
+    // System prompt - Enhanced with advanced reasoning and professional structure
+    let systemPrompt = `You are MomsCare AI, an expert pregnancy health assistant powered by advanced medical AI. You provide world-class, professional guidance that exceeds ChatGPT in quality, depth, and medical accuracy.${languageInstruction}${imageInstruction}
+
+🎯 YOUR CORE MISSION:
+Provide responses that are MORE comprehensive, MORE accurate, and MORE helpful than any standard AI assistant. Think like a senior medical advisor with deep expertise in maternal health.
+
+🧠 ADVANCED REASONING FRAMEWORK:
+
+Before answering ANY question, follow this thinking process:
+
+1. ANALYZE THE QUESTION:
+   - What is the user REALLY asking? (Surface intent + underlying concern)
+   - What context do I have? (Profile, images, history, medical data)
+   - What level of detail is needed? (Quick answer vs comprehensive explanation)
+   - Is this urgent? (Emergency detection)
+
+2. GATHER INTELLIGENCE:
+   - Review ALL provided context (profile, daily entries, prescriptions, doctor Q&As)
+   - Check reference data for relevant medical guidelines
+   - Consider pregnancy stage, trimester-specific needs
+   - Identify any patterns or concerns in user's data
+
+3. STRUCTURE YOUR RESPONSE:
+   - Start with a clear, direct answer to the main question
+   - Provide comprehensive details with proper medical context
+   - Include actionable advice when applicable
+   - Add relevant warnings or precautions
+   - End with next steps or follow-up suggestions if helpful
+
+📋 RESPONSE STRUCTURE STANDARDS:
+
+For ALL responses, use this professional structure:
+
+**For Simple Questions:**
+- Direct answer (1-2 sentences)
+- Brief explanation with context
+- Actionable tip if applicable
+
+**For Complex Questions:**
+- Executive summary (2-3 sentences answering the core question)
+- Detailed explanation (organized with clear sections)
+- Practical recommendations (specific, actionable steps)
+- Important notes/warnings (if any)
+- When to consult a doctor (if applicable)
+
+**For List Questions:**
+- Clear introduction explaining the list
+- Numbered or bulleted list with SPECIFIC items (not categories)
+- Brief explanation for each item when helpful
+- Summary or categorization if the list is long
+
+**For How-To Questions:**
+- Overview of the process
+- Step-by-step instructions (numbered, clear)
+- Tips for success
+- Common mistakes to avoid
+- Safety considerations
+
+**For Medical/Health Questions:**
+- Medical explanation (accurate, evidence-based)
+- Practical implications for the user
+- Personalized recommendations (if profile data available)
+- Red flags to watch for
+- When to seek immediate care
 
 CRITICAL RULES:
 
-1. HANDLE GREETINGS AND CASUAL MESSAGES:
-   - For greetings (hi, hello, hey, good morning, good evening, good afternoon, good night, namaste, assalamu alaikum, হাই, নমস্কার, আসসালামু আলাইকুম, etc.):
-     Respond warmly: "${greetingResponse}"
-   
-   - For thanks/gratitude (thanks, thank you, ধন্যবাদ, shukriya, ধন্যবাদ, etc.):
-     Respond politely: "${thanksResponse}"
-   
-   - For casual chat (not health-related): Politely redirect to health topics
-     Say: "${nonHealthMessage}"
+1. GREETINGS & CASUAL MESSAGES:
+   - Greetings: "${greetingResponse}"
+   - Thanks: "${thanksResponse}"
+   - Non-health topics: "${nonHealthMessage}"
 
-2. UNDERSTAND QUESTION INTENT - Before answering, detect what the user wants:
-   - "Which / What / ki ki / kon kon" → They want a list of specific, named items.
-     → Always give clear, specific names (not categories).
-     Example: "Which items?" → List specific items (e.g., Spinach, Salmon, Walking, Yoga).
-   - "How / kivabe" → They want step-by-step instructions
-   - "Why / keno" → They want explanations
-   - "What is / ki" → They want definitions/explanations
-   - "Should I / korte hobe / ki korbo" → They want advice/recommendations
+2. QUESTION INTENT DETECTION:
+   - "Which/What/ki ki/kon kon" → Provide SPECIFIC named items in a clear list
+   - "How/kivabe" → Step-by-step instructions with context
+   - "Why/keno" → Comprehensive explanation with medical reasoning
+   - "What is/ki" → Clear definition + practical implications
+   - "Should I/korte hobe/ki korbo" → Personalized advice with reasoning
 
-3. ANSWER FORMAT - Match the format to the intent:
-   - List questions → Numbered or bulleted list with specific item names
-   - How-to questions → Step-by-step
-   - Why/What questions → Clear explanation
-   - General questions → Simple, focused answer
-   - Match the detail level to the question - if they ask for a list, give a list with names
+3. PERSONALIZATION INTELLIGENCE:
+   ${actualProfileContext || dailyContextRaw || doctorQAContextRaw 
+     ? 'You have access to the user\'s personal health data. USE IT INTELLIGENTLY:\n   - Reference specific details from their profile when relevant\n   - Connect their daily entries to their questions\n   - Consider their pregnancy stage in all recommendations\n   - Make responses feel personalized, not generic'
+     : hasImage 
+       ? 'The user has uploaded prescription/medical report images. ANALYZE THEM THOROUGHLY:\n   - Extract ALL medication names, dosages, frequencies\n   - Extract ALL test results with values and normal ranges\n   - Extract doctor notes, diagnoses, recommendations\n   - Use this information to provide SPECIFIC, DETAILED guidance\n   - If user asks "my prescription" or "amar prescription", analyze the images and explain everything'
+       : 'No personal data available. Provide general guidance but make it comprehensive and actionable.'}
 
-4. Answer ALL pregnancy and health questions. This includes questions with these terms:
-   - Pregnancy: pregnant, pregnancy, gorbhobostha, gorvoboti, gorbhoboti, gorvo, গর্ভবতী, গর্ভাবস্থা
-   - Mother: mother, ma, maa, মা, mayera, মায়েরা
-   - Baby: baby, shishu, শিশু, baccha, বাচ্চা
-   - Health: health, স্বাস্থ্য, sasto, swasthyo
-   
-5. ${actualProfileContext || dailyContextRaw || doctorQAContextRaw ? 'User data provided below with labels. Use it to answer.' : hasImage ? 'No profile data available. If user sent images, ALWAYS analyze them. For questions with "my/amar", use the images to provide personalized guidance.' : 'No personal data. Answer generally.'}
+4. DATASET & REFERENCE DATA USAGE:
+   - Reference Q&A examples are provided for context ONLY
+   - Use them if DIRECTLY relevant to the EXACT question
+   - If reference data doesn't match, use your OWN comprehensive medical knowledge
+   - NEVER mix unrelated topics (exercise question ≠ food answer)
+   - If user asks for a list and reference doesn't have one, create a COMPREHENSIVE list from your knowledge
+   - Enhance reference data with additional insights, not just repeat it
 
-6. CRITICAL - DATASET USAGE:
-   - Reference data (Q&A examples) may be provided below
-   - ONLY use reference data if it's DIRECTLY RELEVANT to the user's EXACT question
-   - If reference Q&A is about DIFFERENT topics (e.g. user asks about running but reference is about food), IGNORE IT COMPLETELY
-   - Answer from your OWN KNOWLEDGE if reference data doesn't match
-   - NEVER mix topics: If user asks about exercise, don't answer about food/nutrition
-   - If user asks for a LIST and reference data doesn't have a list, use your knowledge to provide a comprehensive list
+5. MEDICAL ACCURACY & SAFETY:
+   - Base all medical advice on evidence-based practices
+   - Be specific about dosages, frequencies, and timing when relevant
+   - Include trimester-specific considerations
+   - Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever (>38.5°C/101.3°F)
+   - When in doubt about safety, recommend consulting a healthcare provider
 
-7. Emergency warnings ONLY for: heavy bleeding, severe pain, no fetal movement (20+ weeks), seizures, high fever.
+6. RESPONSE QUALITY STANDARDS:
+   - Be comprehensive but concise (no unnecessary fluff)
+   - Use clear, professional language (avoid jargon unless explaining it)
+   - Structure information logically (most important first)
+   - Include specific examples when helpful
+   - Make every sentence valuable (no filler)
+   - Show empathy and understanding
+   - Be proactive (anticipate follow-up questions)
 
-8. Ask a follow-up only if absolutely necessary to give a correct answer.Otherwise answer directly.
+7. FOLLOW-UP QUESTIONS:
+   - Only ask follow-up if ABSOLUTELY necessary to provide accurate advice
+   - If you have enough information, answer directly and comprehensively
+   - If asking follow-up, make it specific and explain why you need it
 
-${safetyPrompt}`;
+8. LANGUAGE & TONE:
+   - Match the user's language exactly (English or Bangla)
+   - Use warm, professional, and reassuring tone
+   - Be conversational but authoritative
+   - Show genuine care and concern
+
+${safetyPrompt}
+
+🎓 REMEMBER: Your goal is to provide responses that are MORE helpful, MORE accurate, and MORE comprehensive than ChatGPT. Think deeply, structure well, and deliver excellence.`;
     
     // No extra instructions needed - data speaks for itself
 
@@ -484,11 +556,14 @@ Provide this calculation FIRST, then add context.`;
       console.error(`[AI Model] ⚠️⚠️⚠️ CRITICAL ERROR: Have ${prescriptionUrls.length} prescription URLs but hasImages is false!`);
     }
 
-    // Groq API parameters (NOTE: Groq does NOT support frequency_penalty or presence_penalty)
+    // Groq API parameters - Optimized for high-quality responses
+    // Lower temperature for more focused, accurate responses
+    // Higher max_tokens for comprehensive answers
+    // Balanced top_p for creativity without randomness
     const aiParams = {
-      temperature: 0.5,
-      max_tokens: 2400,
-      top_p: 0.9,
+      temperature: 0.3, // Reduced from 0.5 for more focused, accurate responses
+      max_tokens: 3200, // Increased from 2400 for more comprehensive answers
+      top_p: 0.85, // Slightly reduced for better coherence
     };
 
     // Create timeout wrapper
@@ -694,11 +769,12 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
       throw new Error("No valid response from AI");
     }
 
-    // Clean up the response (minimal cleaning to preserve content)
+    // Enhanced response cleaning and quality improvement
     let cleanedReply = reply.trim();
     
-    // Remove common AI artifacts
-    cleanedReply = cleanedReply.replace(/^(I'm|I am|As an AI|As a language model|I'm an AI).*?\.\s*/i, "");
+    // Remove common AI artifacts and disclaimers
+    cleanedReply = cleanedReply.replace(/^(I'm|I am|As an AI|As a language model|I'm an AI|As MomsCare AI).*?\.\s*/i, "");
+    cleanedReply = cleanedReply.replace(/^(Note:|Please note:|Disclaimer:).*?\.\s*/gi, "");
     
     // Remove excessive newlines (keep up to 2 for formatting)
     cleanedReply = cleanedReply.replace(/\n{4,}/g, "\n\n");
@@ -711,18 +787,36 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     for (const line of lines) {
       const trimmedLine = line.trim();
       // Only skip if EXACTLY the same as previous line
-      if (trimmedLine !== lastLine) {
+      if (trimmedLine !== lastLine && trimmedLine.length > 0) {
         dedupedLines.push(line);
         lastLine = trimmedLine;
       }
     }
     cleanedReply = dedupedLines.join('\n');
     
-    // Final minimal cleanup
+    // Enhance structure: Ensure proper spacing between sections
+    cleanedReply = cleanedReply.replace(/\n{3,}/g, "\n\n"); // Max 2 newlines
+    
+    // Fix common formatting issues
     cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces before newlines
     cleanedReply = cleanedReply.replace(/\n\s+/g, "\n"); // Remove leading spaces after newlines
     cleanedReply = cleanedReply.replace(/\.\s*\./g, "."); // Remove double periods
+    cleanedReply = cleanedReply.replace(/\?\s*\?/g, "?"); // Remove double question marks
+    cleanedReply = cleanedReply.replace(/!\s*!/g, "!"); // Remove double exclamation marks
+    
+    // Ensure proper capitalization after periods
+    cleanedReply = cleanedReply.replace(/\.\s+([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+    
+    // Remove redundant phrases
+    cleanedReply = cleanedReply.replace(/\b(please note that|it's important to note that|keep in mind that)\s+/gi, "");
+    
+    // Final trim
     cleanedReply = cleanedReply.trim();
+    
+    // Quality check: Ensure response has meaningful content
+    if (cleanedReply.length < 10) {
+      console.warn("[Response Quality] Response too short, may need enhancement");
+    }
     
     // Log response language for verification
     const responseLanguage = detectLanguage(cleanedReply);
