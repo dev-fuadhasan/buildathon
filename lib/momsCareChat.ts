@@ -1139,6 +1139,18 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     // Match known header names followed by text
     cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s+([A-Z][a-z])/gi, '**$1:**\n\n$2');
     
+    // Fix headers missing colon and closing bold: "**Quick Answer\n" → "**Quick Answer:**\n\n"
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*\n/gi, '**$1:**\n\n');
+    
+    // Fix headers missing closing bold: "**Practical Recommendations- " → "**Practical Recommendations:**\n\n- "
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*-\s+/gi, '**$1:**\n\n- ');
+    
+    // Fix headers without bold markers: "Detailed Explanation" → "**Detailed Explanation:**"
+    cleanedReply = cleanedReply.replace(/(^|\n)\s*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*([A-Z][a-z]|$)/gi, '$1\n\n**$2:**\n\n$3');
+    
+    // Fix "including- " → "including:\n\n- "
+    cleanedReply = cleanedReply.replace(/(including|such as|for example|e\.g\.|namely)\s*-\s+/gi, '$1:\n\n- ');
+    
     // Fix separated bold markers: "**Header" followed by ":**" later
     cleanedReply = cleanedReply.replace(/\*\*([^*:]+)\s+([A-Z][a-z][^:]{20,}):\*\*/g, '**$1:**\n\n$2');
     
