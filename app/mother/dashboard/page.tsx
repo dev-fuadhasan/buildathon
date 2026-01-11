@@ -8,7 +8,7 @@ import DailyQuestionPopup from "@/components/DailyQuestionPopup";
 import FoodRecommendations from "@/components/FoodRecommendations";
 import GenerateReportModal from "@/components/GenerateReportModal";
 import Icon from "@/components/Icon";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -156,6 +156,7 @@ export default function MotherDashboard() {
   const [currentAnswer, setCurrentAnswer] = useState("");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [doctorArea, setDoctorArea] = useState<string>("");
   const [doctorLoading, setDoctorLoading] = useState(false);
@@ -194,18 +195,20 @@ export default function MotherDashboard() {
   // Scroll to notifications when tab is active and scroll is requested
   useEffect(() => {
     if (activeTab === "notifications" && shouldScrollToNotifications) {
-      const scrollToNotifications = () => {
-        const notificationsElement = document.getElementById("notifications-section");
-        if (notificationsElement) {
-          notificationsElement.scrollIntoView({ behavior: "smooth", block: "start" });
-          setShouldScrollToNotifications(false);
-        } else {
-          // Retry if element not found yet
-          setTimeout(scrollToNotifications, 100);
-        }
-      };
-      // Wait for tab to render
-      setTimeout(scrollToNotifications, 150);
+      // Use requestAnimationFrame for smoother, faster scrolling
+      requestAnimationFrame(() => {
+        const scrollToNotifications = () => {
+          const notificationsElement = document.getElementById("notifications-section");
+          if (notificationsElement) {
+            notificationsElement.scrollIntoView({ behavior: "smooth", block: "start" });
+            setShouldScrollToNotifications(false);
+          } else {
+            // Retry if element not found yet (with shorter delay)
+            setTimeout(scrollToNotifications, 50);
+          }
+        };
+        scrollToNotifications();
+      });
     }
   }, [activeTab, shouldScrollToNotifications]);
 
@@ -565,7 +568,10 @@ export default function MotherDashboard() {
     }
   };
 
-  const fetchNotifications = async (t = token) => {
+  const fetchNotifications = useCallback(async (t = token, showLoading = false) => {
+    if (showLoading) {
+      setNotificationsLoading(true);
+    }
     try {
       const res = await fetch("/api/mother/notifications", { headers: authHeaders(t) });
       if (res.ok) {
@@ -575,8 +581,21 @@ export default function MotherDashboard() {
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
+    } finally {
+      if (showLoading) {
+        setNotificationsLoading(false);
+      }
     }
-  };
+  }, [token]);
+
+  const handleNotificationBellClick = useCallback(() => {
+    // Immediately switch to notifications tab for instant feedback
+    setActiveTab("notifications");
+    setShowCards(false);
+    setShouldScrollToNotifications(true);
+    // Fetch fresh notifications in the background
+    fetchNotifications(token, true);
+  }, [token, fetchNotifications]);
 
   const parseDoctorMarkdown = (markdown: string): Doctor[] => {
     if (!markdown || markdown.trim().length === 0) {
@@ -1804,16 +1823,17 @@ export default function MotherDashboard() {
           <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-6 sm:p-8 md:p-12 mt-6 border border-pink-200 shadow-lg">
             <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
             <button
-              onClick={() => {
-                setActiveTab("notifications");
-                setShowCards(false);
-                setShouldScrollToNotifications(true);
-              }}
+              onClick={handleNotificationBellClick}
               aria-label="View notifications"
-              className="absolute top-4 right-4 md:top-6 md:right-6 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-pink-200 shadow-md flex items-center justify-center hover:shadow-lg hover:scale-[1.02] transition-all"
+              disabled={notificationsLoading}
+              className="absolute top-4 right-4 md:top-6 md:right-6 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-pink-200 shadow-md flex items-center justify-center hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-wait"
             >
-              <Icon name="notifications" size={22} className="text-pink-600" />
-              {unreadCount > 0 && (
+              {notificationsLoading ? (
+                <Icon name="sync" size={22} className="text-pink-600 animate-spin" />
+              ) : (
+                <Icon name="notifications" size={22} className="text-pink-600" />
+              )}
+              {!notificationsLoading && unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white" />
               )}
             </button>
@@ -3832,9 +3852,17 @@ export default function MotherDashboard() {
               <span className="flex items-center gap-2">
                 <Icon name="notifications" size={20} />
                 Notifications
+                {notificationsLoading && (
+                  <Icon name="sync" size={16} className="animate-spin text-pink-600 ml-2" />
+                )}
               </span>
             }>
-            {notifications.length === 0 ? (
+            {notificationsLoading && notifications.length === 0 ? (
+              <div className="text-center py-12">
+                <Icon name="sync" size={32} className="animate-spin text-pink-600 mx-auto mb-4" />
+                <p className="text-slate-600">Loading notifications...</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <p>No notifications yet. You'll receive recommendations and daily task reminders here!</p>
               </div>
