@@ -238,7 +238,7 @@ export default function Home() {
       </section>
 
       {/* Trust & Medical Safety Section */}
-      <section className="py-20 bg-neutral-900 text-white relative overflow-hidden">
+      <section className="py-20 bg-neutral-900 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
@@ -246,24 +246,24 @@ export default function Home() {
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="secure" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold text-white">Medical Grade Privacy</h4>
-              <p className="text-neutral-300">Your health data is encrypted at rest and in transit. We never share your personal information.</p>
+              <h4 className="text-2xl font-bold !text-white">Medical Grade Privacy</h4>
+              <p className="!text-neutral-300">Your health data is encrypted at rest and in transit. We never share your personal information.</p>
             </div>
             
             <div className="md:w-1/3 text-center md:text-left space-y-4">
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="doctor" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold text-white">Expert-Reviewed AI</h4>
-              <p className="text-neutral-300">Our AI model is fine-tuned with verified pregnancy datasets and reviewed by healthcare professionals.</p>
+              <h4 className="text-2xl font-bold !text-white">Expert-Reviewed AI</h4>
+              <p className="!text-neutral-300">Our AI model is fine-tuned with verified pregnancy datasets and reviewed by healthcare professionals.</p>
             </div>
             
             <div className="md:w-1/3 text-center md:text-left space-y-4">
               <div className="inline-block p-3 rounded-2xl bg-white/10 mb-4">
                 <Icon name="health" size={32} className="brightness-0 invert" />
               </div>
-              <h4 className="text-2xl font-bold text-white">Emergency Aware</h4>
-              <p className="text-neutral-300">The system intelligently recognizes emergency signs and directs you to immediate professional help.</p>
+              <h4 className="text-2xl font-bold !text-white">Emergency Aware</h4>
+              <p className="!text-neutral-300">The system intelligently recognizes emergency signs and directs you to immediate professional help.</p>
             </div>
           </div>
         </div>
@@ -453,7 +453,7 @@ export default function Home() {
       </section>
 
       {/* Specialized User Sections - Modern Cards */}
-      <section id="get-started" className="py-24 bg-gradient-to-br from-neutral-900 to-neutral-800 text-white overflow-hidden relative">
+      <section id="get-started" className="py-24 bg-gradient-to-br from-neutral-900 to-neutral-800 overflow-hidden relative">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -463,8 +463,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-20">
             <h2 className="text-pink-500 font-bold tracking-widest uppercase text-sm mb-4">Join Our Community</h2>
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6">Designed for Mothers, Supported by Professionals</h3>
-            <p className="text-lg text-neutral-300">Choose your path and start experiencing a new standard of pregnancy care today.</p>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black !text-white mb-6">Designed for Mothers, Supported by Professionals</h3>
+            <p className="text-lg !text-neutral-300">Choose your path and start experiencing a new standard of pregnancy care today.</p>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -477,8 +477,8 @@ export default function Home() {
                   <Icon name="mom" size={40} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black text-white mb-4">For Mothers</h4>
-                  <p className="text-neutral-300 text-lg leading-relaxed">
+                  <h4 className="text-3xl font-black !text-white mb-4">For Mothers</h4>
+                  <p className="!text-neutral-300 text-lg leading-relaxed">
                     Access all AI features, health tracking, and personalized recommendations for free. Start your healthy pregnancy journey now.
                   </p>
                 </div>
@@ -529,8 +529,8 @@ export default function Home() {
                   <Icon name="doctor" size={40} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black text-white mb-4">For Health Workers</h4>
-                  <p className="text-neutral-300 text-lg leading-relaxed">
+                  <h4 className="text-3xl font-black !text-white mb-4">For Health Workers</h4>
+                  <p className="!text-neutral-300 text-lg leading-relaxed">
                     Help mothers in your community, manage patient records, and provide expert consultations through our specialized dashboard.
                   </p>
                 </div>
