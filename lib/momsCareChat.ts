@@ -1126,11 +1126,35 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     // Ensure bullet points have proper spacing (escape dash properly)
     cleanedReply = cleanedReply.replace(/([•-]\s+[^\n]+)\n([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
     
-    // Ensure section headers are followed by content on new line
-    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\s*([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    // CRITICAL: Fix malformed headers like "**When to Consult:**a Doctor:**"
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+):\*\*([a-zA-Z\u0980-\u09FF][^*]+)\*\*/g, '**$1 $2:**');
     
-    // Fix spacing after section headers - ensure content starts on new line
-    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\s*\n?\s*([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    // Fix "**When to Consult:**a Doctor:**" pattern specifically
+    cleanedReply = cleanedReply.replace(/\*\*When to Consult:\*\*([a-zA-Z\u0980-\u09FF][^*]+)\*\*/g, '**When to Consult $1:**');
+    
+    // Fix double asterisks with newline: "**\n**Header:**" → "**Header:**"
+    cleanedReply = cleanedReply.replace(/\*\*\s*\n\s*\*\*([^*]+)\*\*/g, '**$1**');
+    
+    // Fix double asterisks without newline: "**Important Notes:****" → "**Important Notes:**"
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\*\*/g, '$1');
+    
+    // Fix "including:**- Reduced" → "including:\n\n- Reduced"
+    cleanedReply = cleanedReply.replace(/([.!?])\*\*:\s*-/g, '$1\n\n-');
+    
+    // Ensure section headers are followed by content on new line (match any character after colon)
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)([^\n\s])/g, '$1\n\n$2');
+    
+    // Fix spacing after section headers - ensure content starts on new line (more aggressive)
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\s*([a-zA-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Fix headers immediately followed by text without space
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)([A-Za-z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Fix bullet points that are stuck to previous text: "text**- item" → "text\n\n- item"
+    cleanedReply = cleanedReply.replace(/([^*])\*\*-\s+/g, '$1\n\n- ');
+    
+    // Fix "text:**- item" → "text:\n\n- item"
+    cleanedReply = cleanedReply.replace(/([.!?]):\*\*-\s+/g, '$1:\n\n- ');
     
     // Fix common formatting issues
     cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces
@@ -1145,6 +1169,31 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     // Remove redundant phrases
     cleanedReply = cleanedReply.replace(/\b(please note that|it's important to note that|keep in mind that)\s+/gi, "");
     
+    // CRITICAL FINAL PASS: Fix any remaining formatting issues
+    // Fix bullet points that are not on new lines
+    cleanedReply = cleanedReply.replace(/([.!?])\s*-\s+([A-Za-z\u0980-\u09FF])/g, '$1\n\n- $2');
+    
+    // Fix malformed headers one more time (catch any we missed)
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+):\*\*([a-zA-Z\u0980-\u09FF])/g, '**$1:**\n\n$2');
+    
+    // Fix "**Header:**text" → "**Header:**\n\ntext" (final check)
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)([A-Za-z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Ensure all section headers have proper line breaks before them
+    cleanedReply = cleanedReply.replace(/([^\n])(\*\*[^*]+\*\*:)/g, '$1\n\n$2');
+    
+    // Ensure all section headers have proper line breaks after them (final check)
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)([^\n\s])/g, '$1\n\n$2');
+    
+    // Fix bullet points that run together
+    cleanedReply = cleanedReply.replace(/-\s+([^\n]+)-\s+/g, '- $1\n\n- ');
+    
+    // Fix any remaining "text:**- item" patterns
+    cleanedReply = cleanedReply.replace(/([a-zA-Z\u0980-\u09FF]):\*\*-\s+/g, '$1:\n\n- ');
+    
+    // Fix any remaining double asterisks at end of headers
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\*\*/g, '$1');
+    
     // Final cleanup: ensure no single-line responses for complex questions
     const lineCount = cleanedReply.split('\n').filter(l => l.trim().length > 0).length;
     const isLongResponse = cleanedReply.length > 300;
@@ -1152,6 +1201,9 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
       // Force breaks in long single-paragraph responses
       cleanedReply = cleanedReply.replace(/([.!?])\s+([A-Z\u0980-\u09FF][^.!?]{50,})/g, '$1\n\n$2');
     }
+    
+    // Remove excessive newlines (max 2 consecutive)
+    cleanedReply = cleanedReply.replace(/\n{4,}/g, '\n\n');
     
     // Final trim
     cleanedReply = cleanedReply.trim();
