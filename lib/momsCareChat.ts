@@ -1070,18 +1070,67 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     }
     cleanedReply = dedupedLines.join('\n');
     
+    // CRITICAL: Fix and standardize section headers - ensure all are properly bolded
+    const sectionHeaders = [
+      'Quick Answer', 'Detailed Explanation', 'Practical Recommendations', 'Important Notes',
+      'When to Consult', 'Introduction', 'The List', 'Summary', 'Overview', 'Step-by-Step',
+      'Tips for Success', 'Common Mistakes', 'Safety Considerations', 'Medical Explanation',
+      'What This Means', 'Personalized Recommendations', 'Red Flags', 'When to Seek',
+      'When to Consult a Doctor'
+    ];
+    
+    // Fix section headers - ensure they're all bold and properly formatted
+    sectionHeaders.forEach(header => {
+      // Fix headers with extra spaces in bold markers: ** Header ** → **Header**
+      cleanedReply = cleanedReply.replace(new RegExp(`\\*\\*\\s+${header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\*\\*:?`, 'gi'), `**${header}:**`);
+      // Fix headers with extra spaces before colon: **Header :** → **Header:**
+      cleanedReply = cleanedReply.replace(new RegExp(`\\*\\*${header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*\\*\\*`, 'gi'), `**${header}:**`);
+      // Fix headers missing bold markers: Practical Recommendations: → **Practical Recommendations:**
+      cleanedReply = cleanedReply.replace(new RegExp(`(^|\\n)\\s*${header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:`, 'gi'), `\n\n**${header}:**`);
+      // Fix headers with partial bold: *Header: or **Header (without closing)
+      cleanedReply = cleanedReply.replace(new RegExp(`(^|\\n)\\s*\\*{1,2}\\s*${header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:?\\s*\\*{0,2}`, 'gi'), `\n\n**${header}:**`);
+    });
+    
+    // Fix common formatting issues with section headers
+    // Fix "** Important Notes:" → "**Important Notes:**"
+    cleanedReply = cleanedReply.replace(/\*\*\s+([^*]+)\s+\*\*/g, '**$1**');
+    // Fix headers with colon outside bold: **Header**: → **Header:**
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+)\*\*:/g, '**$1:**');
+    // Fix headers missing closing bold: **Header: → **Header:**
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+):(?!\*\*)/g, '**$1:**');
+    
     // Ensure proper spacing: at least one line break between major sections
     // Detect section breaks (numbered items, bold text, "Step", etc.)
     cleanedReply = cleanedReply.replace(/(\n)(\d+\.\s+|[•-]\s+|\*\*[^*]+\*\*|Step \d+:|Quick Answer:|Detailed|Practical|Important|When to|Introduction:|The List:|Summary:|Overview:|Tips|Common|Safety|Medical|What This|Personalized|Red Flags|When to Seek)/g, '\n\n$2');
     
-    // Force breaks before common section headers (even if not bold)
-    cleanedReply = cleanedReply.replace(/([.!?])\s+(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek)/gi, '$1\n\n**$2:**');
+    // Force breaks before common section headers (even if not bold) - ensure proper formatting
+    cleanedReply = cleanedReply.replace(/([.!?])\s+(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)/gi, '$1\n\n**$2:**');
+    
+    // Fix any section headers that are missing bold or have formatting issues
+    cleanedReply = cleanedReply.replace(/\*\*\s+([^*]+)\s+\*\*/g, '**$1**'); // Remove extra spaces in bold: ** Header ** → **Header**
+    cleanedReply = cleanedReply.replace(/\*\*([^*]+):\s*\*\*/g, '**$1:**'); // Fix bold with colon: **Header**: → **Header:**
+    
+    // CRITICAL: Fix section headers that are completely missing bold markers
+    // Pattern: "Practical Recommendations:" → "**Practical Recommendations:**"
+    cleanedReply = cleanedReply.replace(/(^|\n)\s*(Practical Recommendations|Important Notes|When to Consult a Doctor|Quick Answer|Detailed Explanation|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek)\s*:(?!\*\*)/gi, '$1\n\n**$2:**');
+    
+    // Fix section headers with extra spaces: "** Important Notes:" → "**Important Notes:**"
+    cleanedReply = cleanedReply.replace(/\*\*\s+([^*:]+)\s*:/g, '**$1:**');
+    
+    // Fix section headers with space before colon: "**Header :" → "**Header:**"
+    cleanedReply = cleanedReply.replace(/\*\*([^*:]+)\s+:/g, '**$1:**');
     
     // Ensure numbered lists have proper spacing
     cleanedReply = cleanedReply.replace(/(\d+\.\s+[^\n]+)\n([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
     
     // Ensure bullet points have proper spacing (escape dash properly)
     cleanedReply = cleanedReply.replace(/([•-]\s+[^\n]+)\n([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Ensure section headers are followed by content on new line
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\s*([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
+    
+    // Fix spacing after section headers - ensure content starts on new line
+    cleanedReply = cleanedReply.replace(/(\*\*[^*]+\*\*:)\s*\n?\s*([A-Z\u0980-\u09FF])/g, '$1\n\n$2');
     
     // Fix common formatting issues
     cleanedReply = cleanedReply.replace(/\s+\n/g, "\n"); // Remove trailing spaces
