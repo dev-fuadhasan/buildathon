@@ -115,11 +115,14 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const generateRecommendation = async () => {
     // Prevent double-click/double-generation
     if (generating || loading) {
+      console.log("[Daily Routine] Already generating, skipping...");
       return;
     }
     
+    console.log("[Daily Routine] Starting recommendation generation...");
     setGenerating(true);
     setLoading(true);
+    
     try {
       const res = await fetch("/api/mother/daily-routine", {
         method: "POST",
@@ -128,21 +131,38 @@ export default function FoodRecommendations({ token, motherId }: Props) {
           "Content-Type": "application/json",
         },
       });
+      
+      console.log("[Daily Routine] API response status:", res.status);
+      
       if (res.ok) {
         const data = await res.json();
-        setRecommendation(data.recommendation);
-        setLocation(data.location);
-        setSelectedDate(data.recommendation.date);
+        console.log("[Daily Routine] Received data:", {
+          hasRecommendation: !!data.recommendation,
+          hasLocation: !!data.location,
+          date: data.recommendation?.date
+        });
+        
+        if (data.recommendation) {
+          setRecommendation(data.recommendation);
+          setLocation(data.location);
+          setSelectedDate(data.recommendation.date);
+          console.log("[Daily Routine] ✅ Successfully set recommendation");
+        } else {
+          console.error("[Daily Routine] No recommendation in response");
+          alert("Failed to generate recommendations. Please try again.");
+        }
       } else {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("[Daily Routine] API error:", errorData);
         alert(errorData.error || "Failed to generate recommendations");
       }
-    } catch (err) {
-      console.error("Error generating daily routine:", err);
-      alert("Network error. Please try again.");
+    } catch (err: any) {
+      console.error("[Daily Routine] Error generating daily routine:", err);
+      alert(`Network error: ${err.message || "Please try again."}`);
     } finally {
       setGenerating(false);
       setLoading(false);
+      console.log("[Daily Routine] Generation complete");
     }
   };
 
@@ -282,11 +302,26 @@ export default function FoodRecommendations({ token, motherId }: Props) {
   const exercisesDone = recommendation?.exercisesDone || false;
 
   return (
-    <>
-      {/* Fullscreen Loading Overlay */}
+    <div className="relative">
+      {/* Fullscreen Loading Overlay - Fixed position to cover entire viewport */}
       {(generating || loading) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+        <div 
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 99999,
+            backdropFilter: 'blur(4px)'
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl"
+            style={{ zIndex: 100000 }}
+          >
             <Icon name="pending" size={64} className="mx-auto mb-4 text-pink-500 animate-spin" />
             <h3 className="text-xl font-semibold text-slate-800 mb-2">Generating Recommendations</h3>
             <p className="text-slate-600">
@@ -529,7 +564,7 @@ export default function FoodRecommendations({ token, motherId }: Props) {
         )}
       </div>
     </DashboardCard>
-    </>
+    </div>
   );
 }
 

@@ -254,15 +254,32 @@ export async function POST(req: NextRequest) {
     }
     
     // Generate new recommendations
-    const routineData = await generateDailyRoutineRecommendations(
-      mother,
-      dailyEntries,
-      pastRecommendations,
-      prescriptionUrls,
-      chatHistory?.messages,
-      locationData,
-      recentQAs
-    );
+    console.log(`[Daily Routine POST] Generating recommendations for ${user.id}...`);
+    let routineData;
+    try {
+      routineData = await generateDailyRoutineRecommendations(
+        mother,
+        dailyEntries,
+        pastRecommendations,
+        prescriptionUrls,
+        chatHistory?.messages,
+        locationData,
+        recentQAs
+      );
+      console.log(`[Daily Routine POST] ✅ Generated recommendations:`, {
+        hasBreakfast: !!routineData.breakfast,
+        hasLunch: !!routineData.lunch,
+        hasDinner: !!routineData.dinner,
+        hasExercises: !!routineData.exercises,
+        hasVideos: !!routineData.exerciseVideos?.length
+      });
+    } catch (genError: any) {
+      console.error(`[Daily Routine POST] ❌ Error generating recommendations:`, genError);
+      return NextResponse.json(
+        { error: `Failed to generate recommendations: ${genError.message || "Unknown error"}` },
+        { status: 500 }
+      );
+    }
 
     // Create or update recommendation
     const now = new Date().toISOString();
@@ -272,10 +289,10 @@ export async function POST(req: NextRequest) {
       id: existing?.id || uuid(),
       motherId: user.id,
       date: today,
-      breakfast: routineData.breakfast,
-      lunch: routineData.lunch,
-      dinner: routineData.dinner,
-      exercises: routineData.exercises,
+      breakfast: routineData.breakfast || "Balanced breakfast with protein, whole grains, and fruits",
+      lunch: routineData.lunch || "Nutritious lunch with vegetables, lean protein, and whole grains",
+      dinner: routineData.dinner || "Light dinner with vegetables and protein",
+      exercises: routineData.exercises || "15-minute gentle walk, 10 minutes of prenatal yoga stretches",
       waterIntake: routineData.waterIntake || "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.",
       exerciseVideos: routineData.exerciseVideos || undefined,
       breakfastEaten: existing?.breakfastEaten || false,
@@ -286,7 +303,16 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     };
 
-    await saveFoodRecommendation(recommendation);
+    try {
+      await saveFoodRecommendation(recommendation);
+      console.log(`[Daily Routine POST] ✅ Saved recommendation for date: ${today}`);
+    } catch (saveError: any) {
+      console.error(`[Daily Routine POST] ❌ Error saving recommendation:`, saveError);
+      return NextResponse.json(
+        { error: `Failed to save recommendation: ${saveError.message || "Unknown error"}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       recommendation,
