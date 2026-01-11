@@ -193,26 +193,36 @@ ${locationContext}
     // CRITICAL: Analyze ALL available user data before generating recommendations
     const prompt = `You are a medical expert specializing in pregnancy care, nutrition, and safe exercise for expectant mothers. 
 
-BEFORE generating recommendations, you MUST analyze ALL of the following user data:
+YOUR TASK: Generate personalized daily routine recommendations (breakfast, lunch, dinner, exercises) based on COMPLETE analysis of ALL provided data.
+
+CRITICAL REQUIREMENT: You MUST analyze and use ALL the following data to generate recommendations:
 
 1. PROFILE ANALYSIS:
 ${profileContext}
 
-2. LOCATION ANALYSIS (CRITICAL - FROM IP DETECTION):
+2. LOCATION ANALYSIS (CRITICAL - FROM IP DETECTION - USE THIS TO GENERATE PROPER RECOMMENDATIONS):
 ${locationContext}
-   - You MUST use this location data to suggest foods that are:
-     * Actually available in this specific location (${locationData?.city || "city"}, ${locationData?.region || "region"}, ${locationData?.country || "country"})
-     * Culturally appropriate for ${locationData?.culture || "the local"} culture
-     * Suitable for ${locationData?.climate || "the local"} climate
-     * Appropriate for ${locationData?.urbanRural || "urban"} setting
-     * Seasonally appropriate (consider current season in this location)
-   - For exercises, consider:
-     * Climate: ${locationData?.climate || "temperate"} (affects exercise choices - hot/cold/tropical)
-     * Setting: ${locationData?.urbanRural || "urban"} (affects available space - apartments vs open areas)
-     * Cultural norms: ${locationData?.culture || "Global"} (affects acceptable exercise types)
-     * Local facilities: Consider what exercise facilities are typically available in ${locationData?.urbanRural || "urban"} ${locationData?.country || "areas"}
-   - DO NOT use generic or predefined food lists
-   - Suggest what's ACTUALLY available and culturally appropriate in this specific location
+
+LOCATION-BASED RECOMMENDATION RULES:
+   - Country: ${locationData?.country || "Unknown"} (${locationData?.countryCode || "N/A"})
+   - Culture: ${locationData?.culture || "Global"}
+   - Climate: ${locationData?.climate || "temperate"}
+   - Setting: ${locationData?.urbanRural || "urban"}
+   - City/Region: ${locationData?.city || "Unknown"}, ${locationData?.region || "Unknown"}
+
+FOOD RECOMMENDATIONS MUST BE:
+   * Actually available and commonly found in ${locationData?.country || "this country"} (${locationData?.culture || "this culture"})
+   * Typical foods from ${locationData?.culture || "this cultural"} cuisine that are safe for pregnancy
+   * Suitable for ${locationData?.climate || "this climate"} climate (e.g., hot foods in cold climate, cooling foods in hot climate)
+   * Appropriate for ${locationData?.urbanRural || "urban"} setting (consider what's typically available)
+   * Use actual food names from ${locationData?.culture || "this cultural"} cuisine (e.g., if South Asian: roti, dal, biryani, if Western: pasta, salad, if Middle Eastern: hummus, falafel, etc.)
+   * DO NOT use generic lists - suggest REAL foods from this location's cuisine
+
+EXERCISE RECOMMENDATIONS MUST BE:
+   * Suitable for ${locationData?.climate || "temperate"} climate (hot: indoor/early morning, cold: indoor/warm-up needed, tropical: consider humidity)
+   * Appropriate for ${locationData?.urbanRural || "urban"} setting (urban: indoor/home exercises, rural: outdoor options available)
+   * Culturally acceptable for ${locationData?.culture || "this culture"} (consider local exercise preferences and facilities)
+   * Consider what exercise facilities/space are typically available in ${locationData?.urbanRural || "urban"} ${locationData?.country || "areas"}
 
 3. PRESCRIPTIONS/REPORTS ANALYSIS:
 ${prescriptionContext || "No prescriptions/reports available. No medical restrictions from documents."}
@@ -262,33 +272,63 @@ CRITICAL MEDICAL GUIDELINES:
 6. Medical Validity: All recommendations must be medically sound and safe for pregnancy
 7. WATER INTAKE: Include specific water drinking recommendations based on pregnancy stage, climate, and activity level
 
-IMPORTANT: 
-- Analyze ALL the data above before generating recommendations
-- Location-based food suggestions are CRITICAL - suggest what's actually available based on detected location context, but DO NOT mention location names, city names, area names, or country names in the recommendation text itself
-- Consider all context: profile, location, prescriptions, chat, daily entries, past recommendations
-- Generate personalized, medically valid recommendations based on COMPLETE analysis
-- DO NOT include location names, area names, city names, or country names in the food or exercise recommendation text
+GENERATION INSTRUCTIONS:
+1. FIRST: Read and understand ALL the data above (profile, location, prescriptions, chat, daily entries, doctor Q&As, past recommendations)
+2. SECOND: Based on the location data (${locationData?.country || "country"}, ${locationData?.culture || "culture"}, ${locationData?.climate || "climate"}), identify what foods are ACTUALLY available and commonly eaten in this location
+3. THIRD: Generate recommendations that:
+   - Use REAL food names from ${locationData?.culture || "this cultural"} cuisine
+   - Are appropriate for ${locationData?.climate || "this climate"} climate
+   - Consider ${locationData?.urbanRural || "urban"} setting
+   - Respect allergies: ${mother.allergies || "None"} - NEVER suggest foods with these allergens
+   - Consider medical conditions: ${mother.conditions || "None"}
+   - Are appropriate for ${weeksPregnant || "N/A"} weeks pregnancy (Trimester ${trimester || "N/A"})
+   - Are different from past recommendations (avoid repetition)
+   - Incorporate advice from doctor Q&As if provided
+   - Consider recent daily entries and chat history
+
+4. DO NOT mention location names, city names, area names, or country names in the recommendation text
+5. DO NOT use generic food lists - use actual food names from the detected location's cuisine
+6. Make recommendations specific, detailed, and actionable
+
+EXAMPLE FORMAT (adapt based on location):
+- If South Asian location: "Roti with dal and vegetable curry, fresh yogurt, and seasonal fruits"
+- If Western location: "Whole grain toast with eggs, fresh fruit, and a glass of milk"
+- If Middle Eastern location: "Hummus with whole wheat pita, fresh vegetables, and olives"
 
 Please provide recommendations in the following JSON format:
 {
-  "breakfast": "Specific breakfast recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
-  "lunch": "Specific lunch recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
-  "dinner": "Specific dinner recommendation with details, considering allergies and medical conditions. Suggest foods that are locally available and culturally appropriate (DO NOT mention location names or area names in the recommendation text).",
-  "exercises": "Simple, safe exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy, considering climate, available space, and cultural context. Examples: '15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises' (DO NOT mention location names or area names in the recommendation text).",
-  "waterIntake": "Specific water drinking recommendations based on pregnancy stage (${weeksPregnant || "N/A"} weeks), climate, and activity level. Include daily amount and timing suggestions (e.g., 'Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.')"
+  "breakfast": "Specific breakfast with actual food names from ${locationData?.culture || "this cultural"} cuisine, considering allergies (${mother.allergies || "None"}), medical conditions (${mother.conditions || "None"}), and pregnancy stage (${weeksPregnant || "N/A"} weeks). Include portion suggestions and preparation tips.",
+  "lunch": "Specific lunch with actual food names from ${locationData?.culture || "this cultural"} cuisine, considering allergies (${mother.allergies || "None"}), medical conditions (${mother.conditions || "None"}), and pregnancy stage (${weeksPregnant || "N/A"} weeks). Include portion suggestions and preparation tips.",
+  "dinner": "Specific dinner with actual food names from ${locationData?.culture || "this cultural"} cuisine, considering allergies (${mother.allergies || "None"}), medical conditions (${mother.conditions || "None"}), and pregnancy stage (${weeksPregnant || "N/A"} weeks). Include portion suggestions and preparation tips.",
+  "exercises": "Specific exercise recommendations appropriate for ${weeksPregnant || "N/A"} weeks pregnancy, ${locationData?.climate || "temperate"} climate, ${locationData?.urbanRural || "urban"} setting. Include duration, frequency, and safety tips. Examples: '15-minute gentle walk in the morning or evening, 10 minutes of prenatal yoga stretches, 5 minutes of breathing exercises'",
+  "waterIntake": "Specific water drinking recommendations for ${weeksPregnant || "N/A"} weeks pregnancy, ${locationData?.climate || "temperate"} climate. Include daily amount (liters/glasses), timing, and tips."
 }
 
-IMPORTANT LOCATION ANALYSIS (USE FOR CONTEXT ONLY, DO NOT MENTION IN RECOMMENDATIONS):
-- Location detected: ${location}
-- Country: ${locationData?.country || "Unknown"} (${locationData?.countryCode || "N/A"})
-- Culture: ${locationData?.culture || "Global"} - suggest culturally appropriate foods (but don't mention culture name in text)
-- Climate: ${locationData?.climate || "temperate"} - adjust recommendations for climate (but don't mention climate name in text)
-- Setting: ${locationData?.urbanRural || "urban"} - consider available space and facilities (but don't mention setting in text)
-- Suggest foods that are ACTUALLY available based on this location context, but DO NOT mention the location name in the recommendation
-- Consider local cuisine, seasonal availability, and cultural preferences - but describe foods naturally without location references
-- For exercises, adapt to climate and setting context, but DO NOT mention location or area names in the exercise text
+CRITICAL FINAL INSTRUCTIONS:
+1. You MUST use the location data (${locationData?.country || "country"}, ${locationData?.culture || "culture"}) to suggest REAL foods from that cuisine
+2. You MUST consider all medical data: allergies (${mother.allergies || "None"}), conditions (${mother.conditions || "None"}), medications (${mother.medications || "None"})
+3. You MUST consider pregnancy stage: ${weeksPregnant || "N/A"} weeks (Trimester ${trimester || "N/A"})
+4. You MUST avoid repeating past recommendations
+5. You MUST incorporate doctor's advice if provided in Q&As
+6. Generate SPECIFIC, DETAILED recommendations - not generic ones
 
-Respond ONLY with valid JSON, no additional text.`;
+EXAMPLE OUTPUTS (adapt to detected location):
+If location is South Asian (Bangladesh, India, Pakistan):
+- Breakfast: "Paratha with egg curry, fresh yogurt, and seasonal fruits like mango or banana. Include a glass of warm milk."
+- Lunch: "Steamed rice with dal (lentil curry), mixed vegetable curry, fish curry (if no allergies), and fresh salad."
+- Dinner: "Roti with chicken curry or vegetable curry, dal, and fresh vegetables. Keep it light and easy to digest."
+
+If location is Western (USA, UK, Europe):
+- Breakfast: "Whole grain toast with scrambled eggs, fresh fruit salad, and a glass of milk or orange juice."
+- Lunch: "Grilled chicken or fish with steamed vegetables, brown rice, and a side salad."
+- Dinner: "Light pasta with vegetables and lean protein, or soup with whole grain bread."
+
+If location is Middle Eastern:
+- Breakfast: "Hummus with whole wheat pita, fresh vegetables, olives, and feta cheese (if no dairy allergies)."
+- Lunch: "Grilled chicken or fish with tabbouleh salad, rice, and fresh vegetables."
+- Dinner: "Lentil soup with whole grain bread, fresh salad, and grilled vegetables."
+
+Respond ONLY with valid JSON in the exact format specified above. No additional text, explanations, or markdown.`;
 
     const messages = [
       {
@@ -318,32 +358,75 @@ Respond ONLY with valid JSON, no additional text.`;
       waterIntake?: string;
     };
     
+    console.log("[Food Recommendation] Raw AI response length:", response.length);
+    console.log("[Food Recommendation] Raw AI response preview:", response.substring(0, 300));
+    
     try {
       // Extract JSON from response (handle cases where AI adds extra text)
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         routineData = JSON.parse(jsonMatch[0]);
-        // Ensure exercises field exists
-        if (!routineData.exercises) {
-          routineData.exercises = "15-minute gentle walk, 10 minutes of prenatal yoga stretches";
+        console.log("[Food Recommendation] ✅ Successfully parsed JSON");
+        
+        // Validate and ensure all required fields exist with proper content
+        const isSouthAsian = locationData?.culture === "South Asian";
+        
+        if (!routineData.breakfast || routineData.breakfast.trim().length < 10) {
+          console.warn("[Food Recommendation] ⚠️ Breakfast too short, using location-based fallback");
+          routineData.breakfast = isSouthAsian
+            ? "Paratha with egg curry, fresh yogurt, and seasonal fruits. Include a glass of warm milk."
+            : "Whole grain toast with eggs, fresh fruit, and a glass of milk";
         }
-        // Ensure waterIntake field exists (add default if missing)
-        if (!routineData.waterIntake) {
+        
+        if (!routineData.lunch || routineData.lunch.trim().length < 10) {
+          console.warn("[Food Recommendation] ⚠️ Lunch too short, using location-based fallback");
+          routineData.lunch = isSouthAsian
+            ? "Steamed rice with dal (lentil curry), mixed vegetable curry, and fresh salad"
+            : "Grilled chicken or fish with steamed vegetables and brown rice";
+        }
+        
+        if (!routineData.dinner || routineData.dinner.trim().length < 10) {
+          console.warn("[Food Recommendation] ⚠️ Dinner too short, using location-based fallback");
+          routineData.dinner = isSouthAsian
+            ? "Roti with chicken or vegetable curry, dal, and fresh vegetables. Keep it light and easy to digest."
+            : "Light pasta with vegetables and lean protein, or soup with whole grain bread";
+        }
+        
+        if (!routineData.exercises || routineData.exercises.trim().length < 10) {
+          console.warn("[Food Recommendation] ⚠️ Exercises too short, using fallback");
+          routineData.exercises = "15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises";
+        }
+        
+        if (!routineData.waterIntake || routineData.waterIntake.trim().length < 10) {
+          console.warn("[Food Recommendation] ⚠️ Water intake too short, using fallback");
           routineData.waterIntake = `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.`;
         }
+        
+        console.log("[Food Recommendation] ✅ Final validated recommendations");
       } else {
+        console.error("[Food Recommendation] ❌ No JSON found in response");
         throw new Error("No JSON found in response");
       }
-    } catch (parseError) {
-      console.error("Error parsing daily routine recommendation JSON:", parseError);
-      // Fallback to default recommendations (safe for pregnancy)
+    } catch (parseError: any) {
+      console.error("[Food Recommendation] ❌ Error parsing JSON:", parseError.message);
+      console.error("[Food Recommendation] Raw response (first 1000 chars):", response.substring(0, 1000));
+      
+      // Fallback to location-appropriate recommendations
+      const isSouthAsian = locationData?.culture === "South Asian";
       routineData = {
-        breakfast: "Oatmeal with fresh fruits and a glass of milk",
-        lunch: "Grilled chicken/fish with steamed vegetables and brown rice",
-        dinner: "Lentil soup with whole grain roti and fresh salad",
-        exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches",
+        breakfast: isSouthAsian
+          ? "Paratha with egg curry, fresh yogurt, and seasonal fruits. Include a glass of warm milk."
+          : "Whole grain toast with scrambled eggs, fresh fruit salad, and a glass of milk",
+        lunch: isSouthAsian
+          ? "Steamed rice with dal (lentil curry), mixed vegetable curry, and fresh salad"
+          : "Grilled chicken or fish with steamed vegetables and brown rice",
+        dinner: isSouthAsian
+          ? "Roti with chicken or vegetable curry, dal, and fresh vegetables. Keep it light and easy to digest."
+          : "Light pasta with vegetables and lean protein, or soup with whole grain bread",
+        exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches, breathing exercises",
         waterIntake: "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals."
       };
+      console.log("[Food Recommendation] ⚠️ Using fallback recommendations for culture:", locationData?.culture);
     }
 
     // Search for YouTube exercise videos based on recommended exercises
