@@ -120,7 +120,7 @@ MomsCare is a comprehensive, AI-powered platform that revolutionizes pregnancy c
 - **24/7 AI-Powered Assistance**: Instant, personalized pregnancy guidance using advanced AI technology
 - **Multi-Language Support**: English, Bangla, and Banglish (Romanized Bangla)
 - **Comprehensive Health Tracking**: Profile management, prescription storage, daily journaling
-- **Healthcare Professional Integration**: Doctor and nurse dashboards for expert consultations
+- **Healthcare Professional Integration**: Doctor and health worker dashboards for expert consultations
 - **Advanced AI Features**: Image analysis, intelligent question classification, risk prediction
 - **Secure Cloud Storage**: Secure file storage for prescriptions and documents
 
@@ -161,7 +161,7 @@ MomsCare operates as a web-based platform accessible through any modern web brow
 
 #### For Healthcare Professionals:
 1. User visits homepage and clicks "Join as Health Worker"
-2. Selects role (Doctor, Nurse, or Other health worker)
+2. Selects role (Doctor or Other health worker)
 3. Fills comprehensive application form including:
    - Personal information (name, email, phone)
    - Professional credentials (specialty, BMDC number for doctors)
@@ -170,7 +170,7 @@ MomsCare operates as a web-based platform accessible through any modern web brow
 4. System saves application with "pending" status
 5. Admin reviews application and approves or rejects
 6. Upon approval, healthcare professional receives notification and can login
-7. System routes to appropriate dashboard based on role (doctor or nurse)
+7. System routes to doctor dashboard upon approval
 
 #### For Administrators:
 1. Super admin logs in with credentials
@@ -224,7 +224,7 @@ MomsCare operates as a web-based platform accessible through any modern web brow
 2. Types question and submits
 3. System creates question record with "pending" status
 4. Question appears in healthcare professional dashboard
-5. Doctor/nurse reviews question and provides answer
+5. Doctor reviews question and provides answer
 6. System notifies mother of response
 7. Mother can view answer and ask follow-up questions
 8. Conversation thread is maintained for context
@@ -283,15 +283,6 @@ MomsCare supports four distinct user types, each with specific permissions and a
   - View analytics and statistics
   - Cannot access other doctors' data
 
-#### 3. **Nurses/Health Workers**
-- **Registration**: Requires admin approval
-- **Access Level**: Nurse dashboard, patient management
-- **Permissions**:
-  - Manage patient records
-  - Upload and organize patient files
-  - View priority-based patient list
-  - Access AI-powered priority scoring
-  - Cannot access doctor-specific features
 
 #### 4. **Administrators**
 - **Types**: Super Admin and Editors
@@ -624,11 +615,6 @@ MomsCare maintains a comprehensive dual-language knowledge base system:
 - **Analytics**: View statistics and engagement metrics
 - **Patient Interaction**: Track interactions with mothers
 
-#### Nurse Features:
-- **Patient Management**: Manage patient records and files
-- **File Organization**: Upload and organize patient documents
-- **Priority System**: AI-powered priority scoring for patients
-- **Patient Dashboard**: Comprehensive patient overview
 
 ### 7. Admin Dashboard
 
@@ -688,14 +674,6 @@ MomsCare implements comprehensive role-based access control to ensure data secur
 - ❌ Cannot modify mother profiles
 - ❌ Cannot access admin features
 
-#### Nurse/Health Worker Permissions:
-- ✅ Manage patient records
-- ✅ Upload and organize patient files
-- ✅ View priority-based patient list
-- ✅ Access AI-powered priority scoring
-- ✅ Manage own profile
-- ❌ Cannot answer mother questions (doctor-only feature)
-- ❌ Cannot access admin features
 
 #### Editor Permissions:
 - ✅ Limited admin functions as assigned

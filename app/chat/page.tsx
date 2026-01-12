@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 import { useEmbedding } from '@/hooks/useEmbedding';
+import { preprocessMarkdown } from "@/lib/markdownPreprocessor";
 
 type Message = { role: "user" | "assistant"; content: string; imageUrl?: string };
 
@@ -37,6 +38,20 @@ export default function ChatPage() {
   const [attachedImage, setAttachedImage] = useState<{ file: File; preview: string } | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Incremental markdown preprocessing for streaming
+  const preprocessMarkdownIncremental = (content: string): string => {
+    // Apply preprocessing but be gentle with partial markdown
+    // Don't break incomplete markdown structures
+    try {
+      // Pass isStreaming=true to be more lenient with partial content
+      return preprocessMarkdown(content, true);
+    } catch (error) {
+      // If preprocessing fails, return content as-is
+      console.error("Markdown preprocessing error:", error);
+      return content;
+    }
+  };
 
   // Embedding hook for browser WASM
   const { embed, isModelReady, isLoading: modelLoading, progress: modelProgress } = useEmbedding();
@@ -304,41 +319,171 @@ export default function ChatPage() {
         }
       }
       
-      const res = await fetch("/api/chat", {
+      // Use streaming by default
+      const res = await fetch("/api/chat?stream=true", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "text/event-stream",
           ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
         },
         body: JSON.stringify({
           messages: newMessages,
-          imageUrl: uploadedImageUrl, // Send image URL with message
-          embedding: clientEmbedding || undefined, // Include embedding if available, otherwise undefined
+          imageUrl: uploadedImageUrl,
+          embedding: clientEmbedding || undefined,
         }),
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
+        // Try to parse error as JSON, fallback to text
+        const errorText = await res.text();
+        let errorData: any = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || `HTTP ${res.status}` };
+        }
         throw new Error(errorData.message || errorData.error || `HTTP ${res.status}`);
       }
 
-      const data = await res.json();
-      if (!data.reply) {
-        throw new Error("No reply received from server");
-      }
+      // Check if response is streaming
+      const contentType = res.headers.get("content-type");
+      const isStreaming = contentType?.includes("text/event-stream");
 
-      const finalMessages = [...newMessages, { role: "assistant" as const, content: data.reply }];
-      setMessages(finalMessages);
-      
-      // Stop loading immediately after showing response
-      setLoading(false);
-      
-      // Save to conversation in background (don't block UI)
-      if (isMother && conversationId) {
-        saveMessagesToConversation(finalMessages, conversationId).catch((err) => {
-          console.error("Background conversation save failed:", err);
-          // Silent failure - user already has their response
-        });
+      if (isStreaming) {
+        // STREAMING MODE: Process chunks as they arrive
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let accumulatedContent = "";
+        
+        // Add assistant message placeholder that will be updated
+        const assistantMessageId = Date.now();
+        setMessages([...newMessages, { 
+          role: "assistant" as const, 
+          content: "",
+          _isStreaming: true,
+          _id: assistantMessageId
+        } as any]);
+        
+        if (!reader) {
+          throw new Error("No response body");
+        }
+        
+        let streamComplete = false;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() || ""; // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  if (data.error) {
+                    throw new Error(data.error);
+                  }
+                  
+                  if (data.chunk) {
+                    accumulatedContent += data.chunk;
+                    
+                    // Update the assistant message with accumulated content
+                    // Apply incremental markdown preprocessing
+                    const processedContent = preprocessMarkdownIncremental(accumulatedContent);
+                    
+                    setMessages(prev => {
+                      const updated = [...prev];
+                      const assistantIndex = updated.findIndex((m: any) => m._id === assistantMessageId);
+                      if (assistantIndex >= 0) {
+                        updated[assistantIndex] = {
+                          ...updated[assistantIndex],
+                          content: processedContent,
+                        };
+                      }
+                      return updated;
+                    });
+                    
+                    // Auto-scroll to bottom as content streams in
+                    setTimeout(() => scrollToBottom(), 50);
+                  }
+                  
+                  if (data.done) {
+                    // Streaming complete - finalize message
+                    streamComplete = true;
+                    setMessages(prev => {
+                      const updated = [...prev];
+                      const assistantIndex = updated.findIndex((m: any) => m._id === assistantMessageId);
+                      if (assistantIndex >= 0) {
+                        const final = updated[assistantIndex];
+                        delete (final as any)._isStreaming;
+                        delete (final as any)._id;
+                        updated[assistantIndex] = {
+                          role: "assistant",
+                          content: accumulatedContent.trim(),
+                        };
+                      }
+                      return updated;
+                    });
+                    
+                    setLoading(false);
+                    
+                    // Save to conversation in background
+                    if (isMother && conversationId) {
+                      const finalMessages = [...newMessages, { 
+                        role: "assistant" as const, 
+                        content: accumulatedContent.trim() 
+                      }];
+                      saveMessagesToConversation(finalMessages, conversationId).catch((err) => {
+                        console.error("Background conversation save failed:", err);
+                      });
+                    }
+                    
+                    break; // Exit inner loop
+                  }
+                } catch (parseError) {
+                  console.error("Failed to parse SSE data:", parseError);
+                }
+              }
+            }
+            
+            // Exit outer loop if streaming is complete
+            if (streamComplete) break;
+          }
+        } catch (streamError: any) {
+          console.error("Streaming error:", streamError);
+          setLoading(false);
+          
+          // Show error message
+          const errorMessages = [
+            ...newMessages,
+            { role: "assistant" as const, content: `❌ ${streamError.message || "Streaming error occurred"}` },
+          ];
+          setMessages(errorMessages);
+        } finally {
+          reader.releaseLock();
+        }
+      } else {
+        // NON-STREAMING MODE (fallback)
+        const data = await res.json();
+        if (!data.reply) {
+          throw new Error("No reply received from server");
+        }
+
+        const finalMessages = [...newMessages, { role: "assistant" as const, content: data.reply }];
+        setMessages(finalMessages);
+        setLoading(false);
+        
+        if (isMother && conversationId) {
+          saveMessagesToConversation(finalMessages, conversationId).catch((err) => {
+            console.error("Background conversation save failed:", err);
+          });
+        }
       }
     } catch (err: any) {
       console.error("Chat error:", err);
@@ -362,14 +507,14 @@ export default function ChatPage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-64px)] sm:h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] max-w-7xl mx-auto gap-0 sm:gap-2 px-0 sm:px-2 md:px-4">
+      <div className="flex h-[calc(100vh-56px)] sm:h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] max-w-7xl mx-auto gap-0 sm:gap-4 px-0 sm:px-4 no-select overflow-hidden">
         {/* Conversation History Sidebar - Only for logged-in mothers */}
         {isMother && (
           <>
             {/* Mobile Overlay */}
             {showSidebar && (
               <div
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+                className="fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-md animate-fade-in"
                 onClick={() => setShowSidebar(false)}
               />
             )}
@@ -379,65 +524,72 @@ export default function ChatPage() {
               fixed lg:relative top-0 left-0 h-full lg:h-auto
               w-[280px] sm:w-72 lg:w-80
               bg-white border-r border-slate-200 
-              flex flex-col z-50
-              transform transition-transform duration-300 ease-in-out
-              shadow-xl lg:shadow-none
+              flex flex-col z-[70] lg:z-10
+              transform transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+              shadow-2xl lg:shadow-none
               ${showSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
               {/* Sidebar Header */}
-              <div className="p-3 sm:p-4 border-b border-slate-200 flex-shrink-0 bg-gradient-to-r from-pink-50 to-rose-50">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-800">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex-shrink-0 bg-white">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-black text-neutral-900 tracking-tight">
                     {lang === "bn" ? "চ্যাট ইতিহাস" : "Chat History"}
                   </h2>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="lg:hidden p-2 hover:bg-slate-100 rounded-lg touch-manipulation"
+                    className="lg:hidden p-2 hover:bg-neutral-50 rounded-2xl transition-all active:scale-90 tap-highlight-none"
                     aria-label="Close sidebar"
                   >
-                    <Icon name="close" size={20} />
+                    <Icon name="close" size={24} className="opacity-40" />
                   </button>
                 </div>
                 
                 {/* New Chat Button */}
                 <button
                   onClick={startNewConversation}
-                  className="w-full btn-primary text-sm py-2.5 sm:py-2 flex items-center justify-center gap-2 touch-manipulation min-h-[44px]"
+                  className="w-full btn-primary py-3.5 rounded-2xl flex items-center justify-center gap-3 font-black shadow-pink-100 active:scale-95 tap-highlight-none"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                  <Icon name="add" size={20} className="brightness-0 invert" />
                   {lang === "bn" ? "নতুন চ্যাট" : "New Chat"}
                 </button>
               </div>
               
               {/* Conversations List */}
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-1">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 scrollbar-hide">
                 {conversations.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 text-sm">
+                  <div className="text-center py-12 flex flex-col items-center gap-4 opacity-30">
+                    <Icon name="chat" size={48} className="brightness-0" />
+                    <p className="text-sm font-bold tracking-widest uppercase">
                     {lang === "bn" ? "কোন ইতিহাস নেই" : "No history yet"}
+                    </p>
                   </div>
                 ) : (
                   conversations.map((conv) => (
                     <div
                       key={conv.id}
-                      className={`group relative rounded-lg border transition-all ${
+                      className={`group relative rounded-2xl transition-all duration-300 ${
                         currentConversationId === conv.id
-                          ? 'bg-pink-50 border-pink-200'
-                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                          ? 'bg-pink-50 ring-2 ring-pink-500/20'
+                          : 'bg-white hover:bg-neutral-50'
                       }`}
                     >
                       <button
                         onClick={() => loadConversation(conv.id)}
-                        className="w-full text-left p-3 sm:p-2.5 touch-manipulation"
+                        className="w-full text-left p-4 tap-highlight-none"
                       >
-                        <div className="flex items-start gap-2 sm:gap-2">
-                          <Icon name="chat" size={18} className="sm:w-4 sm:h-4 flex-shrink-0 mt-0.5 text-pink-500" />
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            currentConversationId === conv.id ? 'bg-pink-500 text-white' : 'bg-neutral-100'
+                          }`}>
+                            <Icon name="chat" size={18} className={currentConversationId === conv.id ? 'brightness-0 invert' : 'opacity-40'} />
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm sm:text-xs sm:text-sm font-medium text-slate-800 line-clamp-2 mb-1">
+                            <p className={`text-sm font-bold truncate mb-1 ${
+                              currentConversationId === conv.id ? 'text-pink-700' : 'text-neutral-900'
+                            }`}>
                               {conv.title}
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                               {new Date(conv.updatedAt).toLocaleDateString(lang === "bn" ? "bn-BD" : "en-US", {
                                 month: "short",
                                 day: "numeric",
@@ -453,7 +605,7 @@ export default function ChatPage() {
                           e.stopPropagation();
                           deleteConversation(conv.id);
                         }}
-                        className="absolute top-2 right-2 p-2 sm:p-1.5 rounded-md bg-white/80 hover:bg-red-50 text-slate-400 hover:text-red-600 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
+                        className="absolute top-1/2 -translate-y-1/2 right-3 p-2 rounded-xl bg-white shadow-sm hover:bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 transition-all active:scale-90 tap-highlight-none border border-neutral-100"
                         title={lang === "bn" ? "মুছে ফেলুন" : "Delete"}
                       >
                         <Icon name="delete" size={16} />
@@ -467,53 +619,51 @@ export default function ChatPage() {
         )}
         
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 gap-2 sm:gap-1.5 px-2 sm:px-0">
-          {/* Header - Compact Design */}
-          <div className="flex items-center justify-between flex-shrink-0 py-2 sm:py-1">
-            <div className="flex items-center gap-2 sm:gap-1.5">
+        <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">
+          {/* Header - App-style Design */}
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-neutral-100 flex-shrink-0">
+            <div className="flex items-center gap-3">
               {/* Mobile Menu Button - Only for logged-in mothers */}
               {isMother && (
                 <button
                   onClick={() => setShowSidebar(true)}
-                  className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors touch-manipulation"
+                  className="lg:hidden p-2 rounded-xl bg-neutral-50 text-neutral-600 hover:bg-pink-50 hover:text-pink-600 active:scale-90 transition-all tap-highlight-none"
                   aria-label="Open chat history"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  <Icon name="progress" size={24} />
                 </button>
               )}
-              <div className="flex items-center gap-2 sm:gap-1.5">
-                <h1 className="text-base sm:text-base md:text-lg font-bold bg-gradient-to-r from-pink-600 to-pink-500 bg-clip-text text-transparent leading-none">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-black text-neutral-900 tracking-tight leading-none">
                   MomsCare AI
                 </h1>
-                <span className="hidden sm:flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-full border border-slate-200">
-                  <Icon name={isMother ? "ai" : "chat"} size={12} />
-                  {isMother ? "Personalized" : "Public"}
-                </span>
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                </div>
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
+                  {isMother ? "Personalized Care" : "Standard Mode"}
+                </p>
               </div>
             </div>
             {!isMother && (
-              <Link href="/mother/login" className="btn-secondary text-xs sm:text-xs px-3 sm:px-3 py-1.5 sm:py-1 whitespace-nowrap text-center touch-manipulation min-h-[36px] sm:min-h-[32px]">
+              <Link href="/mother/login" className="px-4 py-2 bg-pink-50 text-pink-600 rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 tap-highlight-none">
                 Login
               </Link>
             )}
           </div>
 
-          {/* Safety Disclaimer - Ultra Compact */}
-          <div className="rounded-lg sm:rounded-md bg-yellow-50 border border-yellow-200 px-3 sm:px-2 py-2 sm:py-1 flex-shrink-0">
-            <p className="flex items-start gap-2 sm:gap-1 text-xs sm:text-xs text-yellow-900 leading-relaxed sm:leading-tight">
-              <Icon name="warning" size={14} className="sm:w-3 sm:h-3 mt-0.5 flex-shrink-0 opacity-70" />
-              <span className="text-xs sm:text-[10px]">
-                <strong className="font-semibold">Note:</strong> AI provides general info only. For emergencies, contact your provider.
-              </span>
+          {/* Safety Disclaimer - Integrated and Subtle */}
+          <div className="px-4 py-2 bg-yellow-50/50 backdrop-blur-sm border-b border-yellow-100/50 flex-shrink-0">
+            <p className="flex items-center gap-2 text-[10px] font-bold text-yellow-800 uppercase tracking-tight">
+              <Icon name="warning" size={12} className="opacity-60" />
+              <span>Note: AI information only. For emergencies, contact a professional.</span>
             </p>
           </div>
 
           {/* Main Chat Container */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl sm:rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 relative">
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-3 md:p-4 space-y-3 sm:space-y-2 bg-gradient-to-b from-slate-50 to-white min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-transparent scrollbar-hide">
               {messages.map((msg, idx) => (
                 <ChatBubble 
                   key={idx} 
@@ -523,41 +673,51 @@ export default function ChatPage() {
                 />
               ))}
               {loading && (
-                <div className="flex items-center gap-3 text-slate-500 py-2">
-                  <div className="animate-pulse text-xl sm:text-2xl">💭</div>
-                  <span className="text-sm sm:text-sm font-medium">
-                    {lang === "bn" ? "MomsCare চিন্তা করছে..." : "MomsCare is thinking..."}
+                <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl w-fit shadow-sm border border-neutral-100">
+                  <div className="flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                    {lang === "bn" ? "MomsCare লিখছে..." : "AI is typing..."}
                   </span>
                 </div>
               )}
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-4" />
             </div>
 
-            {/* Upload Message */}
-            {uploadMessage && (
-              <div className={`mx-4 mb-2 rounded-lg p-3 ${
-                uploadMessage.includes("successfully") || uploadMessage.includes("Success") 
-                  ? "bg-green-50 text-green-800 border border-green-200" 
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}>
-                <p className="text-sm font-medium">{uploadMessage}</p>
+            {/* Floating Model Progress */}
+            {modelLoading && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-64 bg-white/90 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-blue-50 animate-fade-in">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">WASM Loader</p>
+                  <p className="text-[10px] font-black text-blue-600">{modelProgress}%</p>
+                </div>
+                <div className="w-full h-1.5 bg-blue-50 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 transition-all duration-500 ease-out" style={{ width: `${modelProgress}%` }} />
+                </div>
               </div>
             )}
 
-            {/* Input Section */}
-            <div className="border-t border-slate-200 bg-white p-3 sm:p-2 md:p-3 flex-shrink-0">
-              {/* Model download progress (visible to all users) */}
-              {modelLoading && (
-                <div className="mb-2 sm:mb-2">
-                  <div className="flex items-center justify-between mb-1.5 sm:mb-1">
-                    <p className="text-xs sm:text-xs text-gray-600">Model downloading (WASM)</p>
-                    <p className="text-xs sm:text-xs text-gray-600 font-medium">{modelProgress}%</p>
-                  </div>
-                  <div className="w-full h-2 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${modelProgress}%` }} />
-                  </div>
+            {/* Input Section - Floating App style */}
+            <div className="p-4 sm:p-6 bg-gradient-to-t from-neutral-50 via-neutral-50 to-transparent flex-shrink-0">
+              <div className="max-w-3xl mx-auto space-y-4">
+                {/* Upload Message Overlay */}
+                {uploadMessage && (
+                  <div className={`rounded-2xl px-4 py-3 flex items-center justify-between animate-slide-up ${
+                    uploadMessage.includes("successfully") 
+                      ? "bg-green-500 text-white shadow-green-100" 
+                      : "bg-red-500 text-white shadow-red-100"
+                  } shadow-lg`}>
+                    <p className="text-xs font-bold">{uploadMessage}</p>
+                    <button onClick={() => setUploadMessage("")} className="active:scale-90">
+                      <Icon name="close" size={16} className="brightness-0 invert" />
+                    </button>
                 </div>
               )}
+
+                <div className="bg-white rounded-3xl shadow-2xl border border-neutral-200/50 p-2 sm:p-3 relative">
               {/* Combined Chat Input with Image Attachment */}
               <ChatInput 
                 onSend={sendMessage} 
@@ -566,9 +726,10 @@ export default function ChatPage() {
                 onImageRemove={handleImageRemove}
                 currentImage={attachedImage}
               />
+                </div>
               
               {isMother && (
-                <div className="mt-2 sm:mt-2 pt-2 border-t border-slate-100">
+                  <div className="flex justify-center">
                   <ChatPrescriptionUpload
                     onUpload={async (file) => {
                       setUploadMessage("");
@@ -586,22 +747,21 @@ export default function ChatPage() {
                         try {
                           const text = await res.text();
                           data = text ? JSON.parse(text) : {};
-                        } catch {
-                          // If parsing fails, use empty object
-                        }
+                          } catch { }
                         if (res.ok) {
-                          setUploadMessage(lang === "bn" ? "✅ প্রেসক্রিপশন সফলভাবে আপলোড করা হয়েছে!" : "✅ Prescription uploaded successfully!");
+                            setUploadMessage(lang === "bn" ? "✅ সফলভাবে আপলোড করা হয়েছে!" : "✅ Uploaded successfully!");
                         } else {
-                          setUploadMessage(`❌ ${data.error || (lang === "bn" ? "আপলোড ব্যর্থ হয়েছে" : "Upload failed")}`);
+                            setUploadMessage(`❌ ${data.error || "Failed"}`);
                         }
                       } catch (err) {
-                        setUploadMessage(`❌ ${lang === "bn" ? "নেটওয়ার্ক ত্রুটি" : "Network error"}`);
+                          setUploadMessage(`❌ ${lang === "bn" ? "নেটওয়ার্ক ত্রুটি" : "Error"}`);
                       }
                     }}
                     disabled={loading}
                   />
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>

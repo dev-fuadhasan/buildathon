@@ -12,7 +12,7 @@ export default function DoctorRegister() {
     email: "",
     phone: "",
     password: "",
-    role: "doctor" as "doctor" | "nurse" | "others",
+    role: "doctor" as "doctor" | "others",
     hospitalClinicName: "",
     specialty: "",
     bmdcNumber: "",
@@ -138,11 +138,6 @@ export default function DoctorRegister() {
               <p className="ml-2"><span className="font-medium">Email:</span> demo@doctor.com</p>
               <p className="ml-2"><span className="font-medium">Password:</span> 123456</p>
             </div>
-            <div>
-              <p className="font-semibold mb-1">For nurse:</p>
-              <p className="ml-2"><span className="font-medium">Email:</span> demo@nurse1.com</p>
-              <p className="ml-2"><span className="font-medium">Password:</span> 123456</p>
-            </div>
           </div>
         </div>
 
@@ -150,14 +145,14 @@ export default function DoctorRegister() {
           {/* Role Selection */}
           <div>
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Role Selection</h3>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="flex items-center space-x-2 cursor-pointer p-4 border-2 rounded-lg hover:bg-slate-50 transition-colors">
                 <input
                   type="radio"
                   name="role"
                   value="doctor"
                   checked={form.role === "doctor"}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "others" })}
                   className="w-4 h-4 text-blue-600"
                 />
                 <span className="text-slate-700 font-medium">Doctor</span>
@@ -166,23 +161,12 @@ export default function DoctorRegister() {
                 <input
                   type="radio"
                   name="role"
-                  value="nurse"
-                  checked={form.role === "nurse"}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-slate-700 font-medium">Nurse</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer p-4 border-2 rounded-lg hover:bg-slate-50 transition-colors">
-                <input
-                  type="radio"
-                  name="role"
                   value="others"
                   checked={form.role === "others"}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "nurse" | "others" })}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as "doctor" | "others" })}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-slate-700 font-medium">Others</span>
+                <span className="text-slate-700 font-medium">Other Health Worker</span>
               </label>
             </div>
           </div>
@@ -203,7 +187,7 @@ export default function DoctorRegister() {
                   required
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  {form.role === "nurse" || form.role === "others" 
+                  {form.role === "others" 
                     ? "If your hospital/clinic already exists, you'll be added to the same dashboard."
                     : "For doctors, this is your clinic/hospital name."}
                 </p>

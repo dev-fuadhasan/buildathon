@@ -220,30 +220,30 @@ export default function DoctorDashboard() {
           }
         }} />
         
-        {/* Header - Redesigned */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        {/* Hero Section - Redesigned */}
+        <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-3xl p-8 sm:p-10 md:p-12 mb-8 shadow-2xl relative overflow-hidden no-select">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/5 rounded-full blur-2xl -ml-10 -mb-10"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold gradient-text mb-2 sm:mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-bold uppercase tracking-widest mb-4">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                Professional Portal
+              </div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black !text-white mb-3 tracking-tight">
               Doctor Dashboard
             </h1>
-            <p className="text-sm sm:text-lg text-neutral-600">
+              <p className="text-blue-100 text-lg font-medium opacity-90 max-w-md leading-relaxed">
               Answer questions from mothers with care and expertise.
             </p>
           </div>
-          <div className="hidden md:flex flex-wrap gap-2 sm:gap-3">
-            <Link href="/doctor/profile" className="btn-secondary flex items-center gap-2">
-              <Icon name="profile" size={20} />
-              My Profile
-            </Link>
-            <button
-              className="btn-ghost text-sm"
-              onClick={() => {
-                localStorage.removeItem("doctorToken");
-                location.href = "/";
-              }}
-            >
-              Logout
-            </button>
+            
+            <div className="flex flex-shrink-0 relative">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-white/15 backdrop-blur-md border-2 border-white/30 flex items-center justify-center shadow-xl group hover:bg-white/20 transition-all duration-500">
+                <Icon name="doctor" size={64} className="text-white brightness-0 invert opacity-90 group-hover:scale-110 transition-transform" />
+              </div>
+            </div>
           </div>
         </div>
 

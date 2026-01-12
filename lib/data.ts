@@ -37,7 +37,7 @@ export type ProfileChange = {
   newValue: string | undefined;
 };
 
-export type HealthWorkerRole = "doctor" | "nurse" | "others";
+export type HealthWorkerRole = "doctor" | "others";
 export type HealthWorkerStatus = "pending" | "approved" | "rejected" | "paused";
 
 export type DoctorProfile = {
@@ -46,7 +46,7 @@ export type DoctorProfile = {
   passwordHash: string;
   name?: string;
   phone?: string;
-  role: HealthWorkerRole; // "doctor" | "nurse" | "others"
+  role: HealthWorkerRole; // "doctor" | "others"
   specialty?: string;
   bmdcNumber?: string; // BMDC Registration Number
   hospitalClinicName?: string; // Hospital/Clinic name (normalized for matching)
@@ -76,7 +76,7 @@ export type EditorProfile = {
   createdBy: string; // Super admin ID who created this editor
 };
 
-// Patient data for nurses/others
+// Patient data for health workers
 export type PatientData = {
   id: string;
   hospitalClinicName: string; // Which hospital/clinic this patient belongs to
@@ -169,45 +169,6 @@ export type Conversation = {
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
-};
-
-// Live Chat Types
-export type LiveChatUser = {
-  userId?: string; // If logged in (mother/doctor ID)
-  userType?: "mother" | "doctor"; // If logged in
-  name: string;
-  phone: string;
-  email?: string;
-  sessionId?: string; // Browser session identifier
-  ipAddress?: string; // IP address for persistence
-};
-
-export type LiveChatMessage = {
-  id: string;
-  conversationId: string;
-  senderId: string; // "admin" or user identifier
-  senderType: "admin" | "user";
-  senderName: string;
-  content: string;
-  createdAt: string;
-  read: boolean;
-};
-
-export type LiveChatConversation = {
-  id: string; // Unique conversation ID
-  userId?: string; // If logged in
-  userType?: "mother" | "doctor";
-  userName: string;
-  userPhone: string;
-  userEmail?: string;
-  sessionId?: string; // Browser session
-  ipAddress?: string;
-  messages: LiveChatMessage[];
-  status: "active" | "closed" | "resolved";
-  createdAt: string;
-  updatedAt: string;
-  lastMessageAt?: string;
-  adminId?: string; // Admin handling the conversation
 };
 
 export type DailyEntry = {
@@ -334,7 +295,6 @@ const dailyQuestionSessionKey = (motherId: string, date: string) => `daily-quest
 const foodRecommendationKey = (motherId: string, date: string) => `food-recommendations/${motherId}/${date}.json`;
 const patientKey = (hospitalClinicName: string, patientId: string) => `patients/${encodeURIComponent(hospitalClinicName)}/${patientId}.json`;
 const notificationKey = (motherId: string, id: string) => `notifications/${motherId}/${id}.json`;
-const liveChatConversationKey = (id: string) => `live-chat/conversations/${id}.json`;
 const adminActivityKey = (id: string) => `admin-activities/${id}.json`;
 const adminSettingsKey = "admin-settings.json";
 
@@ -847,55 +807,6 @@ export async function deleteNotification(motherId: string, notificationId: strin
   }
 }
 
-// Live Chat Functions
-export async function getLiveChatConversation(conversationId: string): Promise<LiveChatConversation | null> {
-  try {
-    return await getJson<LiveChatConversation>(liveChatConversationKey(conversationId));
-  } catch (err) {
-    return null;
-  }
-}
-
-export async function saveLiveChatConversation(conversation: LiveChatConversation) {
-  return putJson(liveChatConversationKey(conversation.id), conversation);
-}
-
-export async function listLiveChatConversations(): Promise<LiveChatConversation[]> {
-  try {
-    return await listJson<LiveChatConversation>("live-chat/conversations/");
-  } catch (err) {
-    return [];
-  }
-}
-
-export async function getConversationsBySession(sessionId: string): Promise<LiveChatConversation[]> {
-  try {
-    const all = await listLiveChatConversations();
-    return all.filter(conv => conv.sessionId === sessionId);
-  } catch (err) {
-    return [];
-  }
-}
-
-export async function getConversationsByUserId(userId: string): Promise<LiveChatConversation[]> {
-  try {
-    const all = await listLiveChatConversations();
-    return all.filter(conv => conv.userId === userId);
-  } catch (err) {
-    return [];
-  }
-}
-
-export async function deleteLiveChatConversation(conversationId: string): Promise<void> {
-  try {
-    const { deleteObject } = await import("./r2Client");
-    await deleteObject(liveChatConversationKey(conversationId));
-  } catch (err) {
-    console.error("Error deleting live chat conversation:", err);
-    throw err;
-  }
-}
-
 // Admin Activity Logging Functions
 export async function logAdminActivity(activity: AdminActivity): Promise<void> {
   try {
@@ -982,7 +893,7 @@ export async function markTokenAsUsed(token: string): Promise<void> {
   }
 }
 
-// Patient Data Functions (for nurses/others)
+// Patient Data Functions (for health workers)
 export async function savePatient(patient: PatientData): Promise<void> {
   try {
     await putJson(patientKey(patient.hospitalClinicName, patient.id), patient);

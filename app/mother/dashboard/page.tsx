@@ -11,10 +11,11 @@ import Icon from "@/components/Icon";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 import { safeAsync } from "@/lib/safeAsync";
+import { Suspense } from "react";
 
 type Profile = {
   name?: string;
@@ -123,8 +124,17 @@ const AREA_LINKS: Record<string, string> = {
 const SCRAPINGDOG_API_KEY = process.env.NEXT_PUBLIC_SCRAPINGDOG_API_KEY || "";
 
 export default function MotherDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Icon name="sync" size={48} className="animate-spin text-pink-600" /></div>}>
+      <MotherDashboardContent />
+    </Suspense>
+  );
+}
+
+function MotherDashboardContent() {
   const t = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [motherId, setMotherId] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -213,6 +223,19 @@ export default function MotherDashboard() {
   }, [activeTab, shouldScrollToNotifications]);
 
   useEffect(() => {
+    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor", "food"];
+    const tab = searchParams.get("tab");
+    
+    if (tab && validTabs.includes(tab)) {
+      setActiveTab(tab as any);
+      setShowCards(false);
+    } else {
+      setActiveTab(null);
+      setShowCards(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const t = localStorage.getItem("motherToken") || "";
     setToken(t);
     if (!t) return;
@@ -222,23 +245,6 @@ export default function MotherDashboard() {
     } catch {
       // Will be set when profile loads
     }
-
-    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor", "food"];
-
-    const updateFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      const paramTab = params.get("tab");
-      if (paramTab && validTabs.includes(paramTab)) {
-        setActiveTab(paramTab as any);
-        setShowCards(false);
-      } else {
-        setActiveTab(null);
-        setShowCards(true);
-      }
-    };
-
-    updateFromUrl();
-    window.addEventListener("popstate", updateFromUrl);
     
     fetchProfile(t);
     fetchPrescriptions(t);
@@ -260,8 +266,6 @@ export default function MotherDashboard() {
       }
     }
     
-    // Removed checkDailyQuestions - Daily Health Questions section removed
-    
     const frequentInterval = setInterval(() => {
       fetchNotifications(t);
       fetchQuestions(t);
@@ -279,7 +283,6 @@ export default function MotherDashboard() {
     }, 5 * 60 * 1000);
     
     return () => {
-      window.removeEventListener("popstate", updateFromUrl);
       clearInterval(frequentInterval);
       clearInterval(mediumInterval);
       clearInterval(slowInterval);
@@ -1709,13 +1712,6 @@ export default function MotherDashboard() {
     );
   }
 
-  const navigateToTab = (tab: "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "profile" | "find-doctor" | "food") => {
-    setActiveTab(tab);
-    setShowCards(false);
-    const params = new URLSearchParams(window.location.search);
-    params.set("tab", tab);
-    router.push(`/mother/dashboard?${params.toString()}`);
-  };
 
   const navigationCards = [
     {
@@ -1731,7 +1727,7 @@ export default function MotherDashboard() {
       title: "Profile Details",
       description: "View and update your health profile and preferences.",
       icon: "profile",
-      action: () => navigateToTab("profile"),
+      href: "/mother/dashboard?tab=profile",
       accent: "from-indigo-500 to-blue-500",
     },
     {
@@ -1739,7 +1735,7 @@ export default function MotherDashboard() {
       title: "Prescription",
       description: "Upload or review prescriptions for better guidance.",
       icon: "prescription",
-      action: () => navigateToTab("prescriptions"),
+      href: "/mother/dashboard?tab=prescriptions",
       accent: "from-cyan-500 to-teal-500",
     },
     {
@@ -1747,7 +1743,7 @@ export default function MotherDashboard() {
       title: "Q&A",
       description: "Ask doctors, read answers, and comments.",
       icon: "question",
-      action: () => navigateToTab("questions"),
+      href: "/mother/dashboard?tab=questions",
       accent: "from-purple-500 to-violet-500",
     },
     {
@@ -1755,7 +1751,7 @@ export default function MotherDashboard() {
       title: "Daily Entry",
       description: "Log daily notes, symptoms, and mood changes.",
       icon: "daily-entry",
-      action: () => navigateToTab("journal"),
+      href: "/mother/dashboard?tab=journal",
       accent: "from-amber-500 to-orange-500",
     },
     {
@@ -1763,7 +1759,7 @@ export default function MotherDashboard() {
       title: "Daily Routine",
       description: "Get personalized daily food and exercise suggestions based on your health profile.",
       icon: "health",
-      action: () => navigateToTab("food"),
+      href: "/mother/dashboard?tab=food",
       accent: "from-orange-500 to-pink-500",
     },
     {
@@ -1771,7 +1767,7 @@ export default function MotherDashboard() {
       title: "Progress",
       description: "Track your pregnancy journey and milestones.",
       icon: "progress",
-      action: () => navigateToTab("progress"),
+      href: "/mother/dashboard?tab=progress",
       accent: "from-emerald-500 to-green-500",
     },
     {
@@ -1779,7 +1775,7 @@ export default function MotherDashboard() {
       title: "Find a Doctor",
       description: "See gynecologists near you by area.",
       icon: "doctor",
-      action: () => navigateToTab("find-doctor"),
+      href: "/mother/dashboard?tab=find-doctor",
       accent: "from-rose-500 to-orange-500",
     },
     {
@@ -1820,51 +1816,60 @@ export default function MotherDashboard() {
         {/* Block main content ONLY if questions popup is actually showing */}
         <div className={`space-y-6 sm:space-y-8 px-2 sm:px-0 pb-20 lg:pb-0 ${showQuestionPopup && questionSession && !questionSession.completed ? 'pointer-events-none opacity-50' : ''}`}>
           {/* Hero Section with notification access */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-50 to-pink-100 rounded-3xl p-6 sm:p-8 md:p-12 mt-6 border border-pink-200 shadow-lg">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
+          <section className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-3xl p-5 sm:p-6 md:p-8 mt-4 shadow-2xl no-select">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/5 rounded-full blur-2xl -ml-10 -mb-10"></div>
+            
             <button
               onClick={handleNotificationBellClick}
               aria-label="View notifications"
               disabled={notificationsLoading}
-              className="absolute top-4 right-4 md:top-6 md:right-6 w-11 h-11 rounded-full bg-white/90 backdrop-blur border border-pink-200 shadow-md flex items-center justify-center hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-wait"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 shadow-xl flex items-center justify-center hover:bg-white/30 hover:scale-110 active:scale-90 transition-all duration-300 disabled:opacity-50 tap-highlight-none z-20"
             >
               {notificationsLoading ? (
-                <Icon name="sync" size={22} className="text-pink-600 animate-spin" />
+                <Icon name="sync" size={22} className="text-white animate-spin" />
               ) : (
-              <Icon name="notifications" size={22} className="text-pink-600" />
+                <Icon name="notifications" size={22} className="text-white brightness-0 invert" />
               )}
               {!notificationsLoading && unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 border-2 border-white" />
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-yellow-400 border-2 border-pink-600 animate-pulse" />
               )}
             </button>
-            <div className="relative z-10">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
-                <div className="flex-1">
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 mb-2 md:mb-3">
-                    Welcome{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}! 👋
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+              <div className="flex-1 pr-12 md:pr-0">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest mb-2 sm:mb-3">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  Active Journey
+                </div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black !text-white mb-2 sm:mb-3 leading-tight tracking-tight">
+                  Hi{profile?.name ? `, ${profile.name.split(" ")[0]}` : ""}! 👋
                   </h1>
-                  <p className="text-base sm:text-lg md:text-xl text-neutral-700 font-medium mb-4 md:mb-6">
-                    Get 24/7 AI-powered pregnancy support tailored to your journey.
+                <p className="text-sm sm:text-base text-pink-50 font-medium mb-4 sm:mb-6 max-w-xl leading-relaxed opacity-90">
+                  Your personalized pregnancy companion is ready to help you today.
                   </p>
-                  {weeksPregnant && (
-                    <div className="flex flex-wrap gap-4">
-                      <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-4 shadow-md border border-pink-200">
-                        <p className="text-sm text-neutral-600 mb-1">Week of Pregnancy</p>
-                        <p className="text-2xl font-bold text-pink-600">{weeksPregnant} weeks</p>
+                
+                {weeksPregnant !== undefined && (
+                  <div className="flex flex-wrap gap-2 sm:gap-4">
+                    <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 sm:px-5 sm:py-3 border border-white/10 shadow-lg group hover:bg-white/20 transition-colors">
+                      <p className="text-pink-100 text-[10px] font-bold uppercase tracking-wider mb-0.5 opacity-80">Pregnancy</p>
+                      <p className="text-lg sm:text-xl font-black text-white">{weeksPregnant} <span className="text-xs sm:text-sm font-medium opacity-80">Weeks</span></p>
                       </div>
                       {daysLeft !== null && (
-                        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-6 py-4 shadow-md border border-pink-200">
-                          <p className="text-sm text-neutral-600 mb-1">Days to Due Date</p>
-                          <p className="text-2xl font-bold text-pink-600">{daysLeft} days</p>
+                      <div className="bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 sm:px-5 sm:py-3 border border-white/10 shadow-lg group hover:bg-white/20 transition-colors">
+                        <p className="text-pink-100 text-[10px] font-bold uppercase tracking-wider mb-0.5 opacity-80">Countdown</p>
+                        <p className="text-lg sm:text-xl font-black text-white">{daysLeft} <span className="text-xs sm:text-sm font-medium opacity-80">Days Left</span></p>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-                <div className="hidden md:flex flex-shrink-0">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 flex items-center justify-center shadow-xl">
-                    <Icon name="mom" size={64} className="text-white" />
-                  </div>
+              
+              <div className="hidden md:flex flex-shrink-0 relative">
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse"></div>
+                <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full bg-white flex items-center justify-center shadow-2xl relative overflow-hidden group border-2 border-white/30">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 group-hover:translate-x-full transition-transform duration-1000"></div>
+                  <Icon name="mom" size={80} className="group-hover:scale-110 transition-transform duration-500" />
                 </div>
               </div>
             </div>
@@ -2037,25 +2042,24 @@ export default function MotherDashboard() {
 
           {/* Quick navigation cards to replace tabs */}
           {showCards && (
-            <section>
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            <section className="fade-in">
+              <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                 {navigationCards.map((card) => {
                   const CardContent = (
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <div className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-lg flex-shrink-0`}>
-                        <Icon name={card.icon} size={20} className="sm:w-6 sm:h-6 text-white" />
+                    <div className="flex items-center gap-4 sm:gap-6 h-full">
+                      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-xl flex-shrink-0 group-hover:rotate-6 group-hover:scale-110 transition-all duration-300`}>
+                        <Icon name={card.icon} size={28} className="sm:w-10 sm:h-10 brightness-0 invert" />
                       </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base sm:text-lg font-bold text-neutral-900">{card.title}</h3>
-                        </div>
-                        <p className="text-neutral-600 text-xs sm:text-sm mb-2 leading-relaxed">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl sm:text-2xl font-black text-neutral-900 mb-1 group-hover:text-pink-600 transition-colors tracking-tight truncate">
+                          {card.title}
+                        </h3>
+                        <p className="text-neutral-600 text-sm sm:text-base line-clamp-1 opacity-80">
                           {card.description}
                         </p>
-                        <div className="flex items-center gap-2 text-pink-600 font-semibold text-xs sm:text-sm group-hover:gap-3 transition-all">
-                          <span>{card.href ? "Open" : "Go to section"}</span>
-                          <span>→</span>
                         </div>
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-all duration-300 transform group-hover:translate-x-1">
+                        <span className="text-xl">→</span>
                       </div>
                     </div>
                   );
@@ -2065,9 +2069,9 @@ export default function MotherDashboard() {
                       <Link
                         key={card.id}
                         href={card.href}
-                        className="group relative rounded-xl bg-white border-2 border-neutral-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300 active:scale-[0.98]"
-                        onClick={() => setShowCards(false)}
+                        className="group relative rounded-3xl bg-white border border-neutral-200 p-6 sm:p-8 shadow-sm hover:shadow-2xl hover:border-pink-200 transition-all duration-500 transform hover:-translate-y-2 active:scale-[0.97] tap-highlight-none overflow-hidden"
                       >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                         {CardContent}
                       </Link>
                     );
@@ -2076,15 +2080,32 @@ export default function MotherDashboard() {
                   return (
                     <button
                       key={card.id}
-                      onClick={() => card.action && card.action()}
-                      className="group text-left rounded-xl bg-white border-2 border-neutral-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:border-pink-300 active:scale-[0.98] touch-manipulation"
+                      onClick={() => {
+                        if (card.action) card.action();
+                      }}
+                      className="group relative text-left rounded-3xl bg-white border border-neutral-200 p-6 sm:p-8 shadow-sm hover:shadow-2xl hover:border-pink-200 transition-all duration-500 transform hover:-translate-y-2 active:scale-[0.97] tap-highlight-none touch-manipulation overflow-hidden"
                     >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                       {CardContent}
                     </button>
                   );
                 })}
               </div>
             </section>
+          )}
+
+        {/* Tabs Content */}
+        <div className="space-y-6">
+          {activeTab && (
+            <div className="flex items-center gap-4 mb-2">
+              <button
+                onClick={() => router.push("/mother/dashboard")}
+                className="flex items-center gap-2 text-pink-600 font-bold hover:gap-3 transition-all active:scale-95 tap-highlight-none px-4 py-2 rounded-xl bg-pink-50"
+              >
+                <span className="text-xl">←</span>
+                Back to Dashboard
+              </button>
+            </div>
           )}
 
         {/* Profile Tab */}
@@ -3911,6 +3932,7 @@ export default function MotherDashboard() {
           </DashboardCard>
           </div>
         )}
+        </div>
         </div>
       </Layout>
   );

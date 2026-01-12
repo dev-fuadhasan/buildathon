@@ -35,18 +35,22 @@ export async function POST(req: NextRequest) {
     }, { status: 403 });
   }
 
+  // Only allow doctors to login - health workers (others) are not supported
+  if (doctor.role !== "doctor") {
+    return NextResponse.json({ 
+      error: "Only doctors can access this login. Health workers are not supported."
+    }, { status: 403 });
+  }
+
   const token = signAuthToken({ id: doctor.id, email: doctor.email, role: "doctor" });
   const { passwordHash, ...safe } = doctor;
-  
-  // Determine dashboard route based on role
-  const dashboardRoute = doctor.role === "doctor" ? "/doctor/dashboard" : "/nurse/dashboard";
   
   return NextResponse.json({ 
     token, 
     doctor: safe,
     status: doctor.status,
     role: doctor.role,
-    dashboardRoute,
+    dashboardRoute: "/doctor/dashboard",
   });
 }
 

@@ -15,7 +15,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Only doctors can mark questions as seen, not nurses/others
+  // Only doctors can mark questions as seen, not health workers
   const { getDoctor } = await import("@/lib/data");
   const doctor = await getDoctor(user.id);
   if (!doctor || doctor.role !== "doctor") {

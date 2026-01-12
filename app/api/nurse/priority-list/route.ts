@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can access priority list" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can access priority list" }, { status: 403 });
     }
 
     const patients = await listPatients(doctor.hospitalClinicName);

@@ -14,41 +14,12 @@ export default function Home() {
   const router = useRouter();
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
-  const [isNurse, setIsNurse] = useState(false);
-  const [userRole, setUserRole] = useState<"doctor" | "nurse" | "others" | null>(null);
 
   useEffect(() => {
     const motherToken = localStorage.getItem("motherToken");
     const doctorToken = localStorage.getItem("doctorToken");
     setIsMother(!!motherToken);
     setIsDoctor(!!doctorToken);
-    
-    // Check if doctor token belongs to nurse/others
-    if (doctorToken) {
-      const checkRole = async () => {
-        try {
-          const res = await fetch("/api/doctor/profile", {
-            headers: { Authorization: `Bearer ${doctorToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const role = data.profile?.role;
-            if (role === "nurse" || role === "others") {
-              setIsNurse(true);
-              setIsDoctor(false);
-              setUserRole(role);
-            } else {
-              setIsNurse(false);
-              setIsDoctor(true);
-              setUserRole("doctor");
-            }
-          }
-        } catch {
-          setIsNurse(false);
-        }
-      };
-      checkRole();
-    }
   }, []);
 
   const handleMotherClick = (e: React.MouseEvent) => {
@@ -62,9 +33,7 @@ export default function Home() {
 
   const handleDoctorClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isNurse) {
-      router.push("/nurse/dashboard");
-    } else if (isDoctor) {
+    if (isDoctor) {
       router.push("/doctor/dashboard");
     } else {
       router.push("/doctor/register");
@@ -112,10 +81,10 @@ export default function Home() {
                 Experience personalized care, expert guidance, and smart tools designed to support you every step of your journey—from conception to birth.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2 w-full sm:w-auto px-4 sm:px-0">
                 <button
                   onClick={handleMotherClick}
-                  className="w-full sm:w-auto group relative inline-flex items-center justify-center gap-3 text-lg font-bold px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-300"
+                  className="w-full sm:w-auto group relative inline-flex items-center justify-center gap-3 text-lg font-bold px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 tap-highlight-none"
                 >
                   <Icon name="mom" size={24} className="brightness-0 invert" />
                   <span className="whitespace-nowrap">{isMother ? "Go to Dashboard" : "Start Your Journey"}</span>
@@ -124,7 +93,7 @@ export default function Home() {
                 
                 <Link
                   href="/chat"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 text-lg font-semibold px-8 py-4 bg-white text-neutral-900 rounded-2xl border-2 border-neutral-200 shadow-md hover:border-pink-300 hover:bg-pink-50/50 transition-all duration-300"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 text-lg font-semibold px-8 py-4 bg-white text-neutral-900 rounded-2xl border-2 border-neutral-200 shadow-md hover:border-pink-300 hover:bg-pink-50/50 active:scale-[0.98] transition-all duration-300 tap-highlight-none"
                 >
                   <Icon name="chat" size={24} className="text-pink-500" />
                   <span className="whitespace-nowrap">Chat with AI</span>
@@ -321,17 +290,19 @@ export default function Home() {
             ].map((tool, idx) => (
               <div
                 key={idx}
-                className="group bg-white p-8 rounded-[2rem] border border-neutral-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-pink-200"
+                className="group bg-white p-6 sm:p-8 rounded-[2rem] border border-neutral-200 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:border-pink-200 active:scale-95 tap-highlight-none"
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center group-hover:bg-pink-600 group-hover:rotate-6 transition-all duration-300">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-pink-50 flex items-center justify-center group-hover:bg-pink-600 group-hover:rotate-6 transition-all duration-500 shadow-sm">
                     <Icon name={tool.icon} size={32} className="text-pink-600 group-hover:text-white transition-colors" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-neutral-100 text-neutral-500 rounded-full">{tool.badge}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-neutral-100 text-neutral-500 rounded-full group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">{tool.badge}</span>
                 </div>
-                <h4 className="text-xl font-bold text-neutral-900 mb-3">{tool.title}</h4>
-                <p className="text-neutral-600 leading-relaxed text-sm mb-6">{tool.desc}</p>
-                <div className="h-1 w-12 bg-pink-200 group-hover:w-full transition-all duration-500 rounded-full"></div>
+                <h4 className="text-xl font-black text-neutral-900 mb-3 tracking-tight group-hover:text-pink-600 transition-colors">{tool.title}</h4>
+                <p className="text-neutral-600 leading-relaxed text-sm mb-6 opacity-80 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
+                <div className="h-1.5 w-12 bg-pink-100 group-hover:w-full transition-all duration-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-pink-500 w-0 group-hover:w-full transition-all duration-1000 delay-100"></div>
+                </div>
               </div>
             ))}
           </div>
@@ -356,15 +327,15 @@ export default function Home() {
                 { step: "02", title: "Smart Health Logging", desc: "Log your symptoms and journals. AI learns from your data to support you.", icon: "smart-health-logging" },
                 { step: "03", title: "Access AI & Experts", desc: "Get 24/7 AI chat, smart recommendations, and direct links to gynecologists.", icon: "chat" }
               ].map((item, idx) => (
-                <div key={idx} className="bg-white px-8 pb-10 pt-12 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-pink-900/5 text-center relative overflow-hidden group hover:-translate-y-2 transition-all duration-300">
-                  <div className="absolute top-0 right-0 p-6">
-                    <span className="text-7xl font-black text-pink-50/50 group-hover:text-pink-100/50 transition-colors tracking-tighter">{item.step}</span>
+                <div key={idx} className="bg-white px-8 pb-10 pt-12 rounded-[2.5rem] border border-neutral-100 shadow-xl shadow-pink-900/5 text-center relative overflow-hidden group hover:-translate-y-2 active:scale-95 transition-all duration-500 tap-highlight-none">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-8xl font-black text-pink-500 tracking-tighter">{item.step}</span>
                   </div>
-                  <div className="w-20 h-20 rounded-3xl bg-pink-600 mx-auto flex items-center justify-center mb-8 shadow-xl transform group-hover:rotate-12 transition-transform">
+                  <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-pink-500 to-rose-600 mx-auto flex items-center justify-center mb-8 shadow-2xl transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500">
                     <Icon name={item.icon} size={36} className="brightness-0 invert" />
                   </div>
-                  <h4 className="text-2xl font-black text-neutral-900 mb-4">{item.title}</h4>
-                  <p className="text-neutral-600 text-base leading-relaxed">{item.desc}</p>
+                  <h4 className="text-2xl font-black text-neutral-900 mb-4 tracking-tight group-hover:text-pink-600 transition-colors">{item.title}</h4>
+                  <p className="text-neutral-600 text-base leading-relaxed opacity-80">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -467,34 +438,36 @@ export default function Home() {
             <p className="text-lg !text-neutral-300">Choose your path and start experiencing a new standard of pregnancy care today.</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4 sm:px-0">
             {/* Mothers Card */}
-            <div className="group relative bg-white/5 backdrop-blur-md rounded-[3rem] p-10 sm:p-12 border border-white/10 hover:border-pink-500/30 transition-all duration-500">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-pink-600 rounded-full blur-[100px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            <div className="group relative bg-white/5 backdrop-blur-md rounded-[3.5rem] p-10 sm:p-14 border border-white/10 hover:border-pink-500/30 transition-all duration-700 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-pink-600 rounded-full blur-[120px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
+              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-rose-600 rounded-full blur-[100px] opacity-5"></div>
               
-              <div className="relative space-y-8">
-                <div className="w-20 h-20 rounded-3xl bg-pink-600 flex items-center justify-center shadow-2xl">
-                  <Icon name="mom" size={40} className="brightness-0 invert" />
+              <div className="relative space-y-10">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-2xl transform group-hover:-rotate-6 transition-transform duration-500">
+                  <Icon name="mom" size={48} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black !text-white mb-4">For Mothers</h4>
-                  <p className="!text-neutral-300 text-lg leading-relaxed">
+                  <h4 className="text-4xl font-black !text-white mb-6 tracking-tight">For Mothers</h4>
+                  <p className="!text-neutral-300 text-xl leading-relaxed opacity-90">
                     Access all AI features, health tracking, and personalized recommendations for free. Start your healthy pregnancy journey now.
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-5">
                   {!isMother ? (
                     <>
                       <Link
                         href="/mother/register"
-                        className="flex-1 inline-flex items-center justify-center gap-2 font-bold px-8 py-4 bg-pink-600 text-white rounded-2xl hover:bg-pink-700 transition-all shadow-xl shadow-pink-900/20"
+                        className="flex-1 inline-flex items-center justify-center gap-3 font-black px-8 py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-3xl hover:from-pink-700 hover:to-rose-700 transition-all shadow-2xl shadow-pink-900/40 active:scale-95 tap-highlight-none"
                       >
                         Create Account
+                        <span className="text-xl">→</span>
                       </Link>
                       <Link
                         href="/mother/login"
-                        className="flex-1 inline-flex items-center justify-center font-bold px-8 py-4 bg-white/10 text-white rounded-2xl border border-white/20 hover:bg-white/20 transition-all"
+                        className="flex-1 inline-flex items-center justify-center font-black px-8 py-5 bg-white/10 text-white rounded-3xl border-2 border-white/20 hover:bg-white/20 transition-all active:scale-95 tap-highlight-none"
                       >
                         Sign In
                       </Link>
@@ -502,17 +475,18 @@ export default function Home() {
                   ) : (
                     <button
                       onClick={handleMotherClick}
-                      className="w-full inline-flex items-center justify-center gap-2 font-bold px-8 py-4 bg-pink-600 text-white rounded-2xl hover:bg-pink-700 transition-all shadow-xl shadow-pink-900/20"
+                      className="w-full inline-flex items-center justify-center gap-3 font-black px-8 py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-3xl hover:from-pink-700 hover:to-rose-700 transition-all shadow-2xl shadow-pink-900/40 active:scale-95 tap-highlight-none"
                     >
                       Go to Dashboard
+                      <span className="text-xl">→</span>
                     </button>
                   )}
                 </div>
                 
-                <ul className="space-y-3 pt-4">
-                  {["Unlimited AI Chat Support", "Pregnancy Stage Tracking", "Health Journal & Recommendations"].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-400">
-                      <span className="w-5 h-5 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-500 font-bold text-[10px]">✓</span>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                  {["Unlimited AI Chat", "Pregnancy Stage Tracking", "Health Journal", "Smart Recommendations"].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300 font-medium">
+                      <div className="w-6 h-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-500 font-black text-[10px] border border-pink-500/30">✓</div>
                       {item}
                     </li>
                   ))}
@@ -521,50 +495,52 @@ export default function Home() {
             </div>
 
             {/* Doctors Card */}
-            <div className="group relative bg-white/5 backdrop-blur-md rounded-[3rem] p-10 sm:p-12 border border-white/10 hover:border-blue-500/30 transition-all duration-500">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
+            <div className="group relative bg-white/5 backdrop-blur-md rounded-[3.5rem] p-10 sm:p-14 border border-white/10 hover:border-blue-500/30 transition-all duration-700 shadow-2xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600 rounded-full blur-[120px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
               
-              <div className="relative space-y-8">
-                <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-2xl">
-                  <Icon name="doctor" size={40} className="brightness-0 invert" />
+              <div className="relative space-y-10">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl transform group-hover:rotate-6 transition-transform duration-500">
+                  <Icon name="doctor" size={48} className="brightness-0 invert" />
                 </div>
                 <div>
-                  <h4 className="text-3xl font-black !text-white mb-4">For Health Workers</h4>
-                  <p className="!text-neutral-300 text-lg leading-relaxed">
-                    Help mothers in your community, manage patient records, and provide expert consultations through our specialized dashboard.
+                  <h4 className="text-4xl font-black !text-white mb-6 tracking-tight">For Doctors</h4>
+                  <p className="!text-neutral-300 text-xl leading-relaxed opacity-90">
+                    Help mothers in your community, answer questions, and provide expert consultations through our specialized dashboard.
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {(!isDoctor && !isNurse) ? (
+                <div className="flex flex-col sm:flex-row gap-5">
+                  {!isDoctor ? (
                     <>
                       <Link
                         href="/healthworker/register"
-                        className="flex-1 inline-flex items-center justify-center gap-2 font-bold px-8 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-900/20"
+                        className="flex-1 inline-flex items-center justify-center gap-3 font-black px-8 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-2xl shadow-blue-900/40 active:scale-95 tap-highlight-none"
                       >
-                        Join as Provider
+                        Join as Doctor
+                        <span className="text-xl">→</span>
                       </Link>
                       <Link
                         href="/healthworker/login"
-                        className="flex-1 inline-flex items-center justify-center font-bold px-8 py-4 bg-white/10 text-white rounded-2xl border border-white/20 hover:bg-white/20 transition-all"
+                        className="flex-1 inline-flex items-center justify-center font-black px-8 py-5 bg-white/10 text-white rounded-3xl border-2 border-white/20 hover:bg-white/20 transition-all active:scale-95 tap-highlight-none"
                       >
-                        Provider Login
+                        Doctor Login
                       </Link>
                     </>
                   ) : (
                     <button
                       onClick={handleDoctorClick}
-                      className="w-full inline-flex items-center justify-center gap-2 font-bold px-8 py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-900/20"
+                      className="w-full inline-flex items-center justify-center gap-3 font-black px-8 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-2xl shadow-blue-900/40 active:scale-95 tap-highlight-none"
                     >
                       Go to Dashboard
+                      <span className="text-xl">→</span>
                     </button>
                   )}
                 </div>
                 
-                <ul className="space-y-3 pt-4">
-                  {["Patient Queue Management", "Secure Document Sharing", "Expert Recognition Platform"].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-400">
-                      <span className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-[10px]">✓</span>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                  {["Expert Verification", "Question Answering", "Patient Consultation", "Clinical Statistics"].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300 font-medium">
+                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-black text-[10px] border border-blue-500/30">✓</div>
                       {item}
                     </li>
                   ))}

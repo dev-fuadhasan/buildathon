@@ -17,9 +17,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Hospital/Clinic name not found" }, { status: 400 });
     }
 
-    // Only nurses/others can access this endpoint
+    // Only health workers can access this endpoint
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can access patient data" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can access patient data" }, { status: 403 });
     }
 
     const patients = await listPatients(doctor.hospitalClinicName);
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can add patients" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can add patients" }, { status: 403 });
     }
 
     const now = new Date().toISOString();

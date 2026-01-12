@@ -7,6 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useTranslation } from "@/hooks/useTranslation";
+import BottomNav from "./BottomNav";
+import { Suspense } from "react";
 type Props = PropsWithChildren;
 
 export default function Layout({ children }: Props) {
@@ -16,7 +18,6 @@ export default function Layout({ children }: Props) {
   const isHome = pathname === "/";
   const [isMother, setIsMother] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
-  const [isNurse, setIsNurse] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -29,30 +30,6 @@ export default function Layout({ children }: Props) {
     setIsMother(!!motherToken);
     setIsDoctor(!!doctorToken);
     setIsAdmin(!!adminToken);
-    
-    // Check if doctor token belongs to nurse/others
-    if (doctorToken) {
-      const checkNurseRole = async () => {
-        try {
-          const res = await fetch("/api/doctor/profile", {
-            headers: { Authorization: `Bearer ${doctorToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.profile?.role === "nurse" || data.profile?.role === "others") {
-              setIsNurse(true);
-              setIsDoctor(false);
-            } else {
-              setIsNurse(false);
-              setIsDoctor(true);
-            }
-          }
-        } catch {
-          setIsNurse(false);
-        }
-      };
-      checkNurseRole();
-    }
 
     // Removed auto-redirect - users can now visit landing page even when logged in
   }, [isHome, router]);
@@ -94,51 +71,6 @@ export default function Layout({ children }: Props) {
             <button
               onClick={() => {
                 localStorage.removeItem("motherToken");
-                location.href = "/";
-              }}
-              className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              {t.common.logout}
-            </button>
-        </>
-      );
-    } else if (isNurse) {
-      // Logged in as nurse - show full navigation
-      return (
-        <>
-          <Link
-            href="/nurse/dashboard"
-            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
-              pathname === "/nurse/dashboard"
-                ? "text-blue-600 bg-blue-50 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Nurse Dashboard
-          </Link>
-          <Link
-            href="/nurse/dashboard"
-            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
-              pathname === "/nurse/dashboard"
-                ? "text-blue-600 bg-blue-50 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            Manage Patients
-          </Link>
-          <Link
-            href="/nurse/profile"
-            className={`font-medium transition-colors px-4 py-2 rounded-lg ${
-              pathname === "/nurse/profile"
-                ? "text-blue-600 bg-blue-50 font-semibold"
-                : "text-neutral-600 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            {t.doctor.myProfile}
-          </Link>
-          <button
-            onClick={() => {
-              localStorage.removeItem("doctorToken");
               location.href = "/";
             }}
             className="font-medium transition-colors px-4 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -360,13 +292,13 @@ export default function Layout({ children }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col no-select">
       {/* Header - Enhanced Navigation */}
-      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200 shadow-md sticky top-0 z-50 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="flex items-center justify-between h-16 md:h-18">
-            <Link href="/" className="flex items-center group">
-              <div className="relative w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 flex-shrink-0">
+      <header className="bg-white/80 backdrop-blur-md border-b border-neutral-200 sticky top-0 z-50 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 md:h-18">
+            <Link href="/" className="flex items-center group active-scale tap-highlight-none">
+              <div className="relative w-28 h-8 sm:w-40 sm:h-12 md:w-48 md:h-14 flex-shrink-0 transition-transform group-hover:scale-105">
                 <Image
                   src="/mainlogo.png"
                   alt="MomsCare Logo"
@@ -383,20 +315,19 @@ export default function Layout({ children }: Props) {
               </nav>
               
               {/* Language Toggle - Always visible in top right, outside nav */}
-              <div className="flex-shrink-0 z-10">
+              <div className="flex-shrink-0 z-10 scale-90 sm:scale-100">
                 <LanguageSelector />
               </div>
               
               {/* Mobile menu button - Show MobileDashboardMenu button on dashboards, otherwise show default */}
               {pathname.startsWith("/mother/dashboard") || 
                pathname.startsWith("/doctor/dashboard") || 
-               pathname.startsWith("/nurse/dashboard") ||
                pathname.startsWith("/admin/dashboard") ? (
-                <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden"></div>
+                <div id="mobile-dashboard-menu-button-slot" className="lg:!hidden tap-highlight-none"></div>
               ) : (
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="lg:hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors flex-shrink-0"
+                  className="lg:hidden p-2 rounded-xl text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-all active:scale-90 tap-highlight-none"
                   aria-label="Toggle menu"
                 >
                   {mobileMenuOpen ? (
@@ -411,25 +342,21 @@ export default function Layout({ children }: Props) {
                 </button>
               )}
             </div>
+            </div>
           </div>
           
           {/* Mobile menu - Hide on dashboards (handled by MobileDashboardMenu) */}
           {mobileMenuOpen && !pathname.startsWith("/mother/dashboard") && 
            !pathname.startsWith("/doctor/dashboard") && 
-           !pathname.startsWith("/nurse/dashboard") && 
            !pathname.startsWith("/admin/dashboard") && (
-            <nav className="lg:hidden mt-4 pb-4 border-t border-neutral-200 pt-4 flex flex-col gap-2">
+          <nav className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-neutral-100 p-4 flex flex-col gap-2 animate-slide-up">
               {getNavItems()}
-              <div className="pt-2">
-                <LanguageSelector />
-              </div>
             </nav>
           )}
-        </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pb-20 lg:pb-0">
         {isHome ? (
           children
         ) : (
@@ -439,6 +366,9 @@ export default function Layout({ children }: Props) {
         )}
       </main>
 
+      <Suspense fallback={null}>
+        <BottomNav />
+      </Suspense>
     </div>
   );
 }

@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
 
     const allDoctors = await listAllDoctors();
     
-    // Filter only nurses and others (not doctors)
-    const nurses = allDoctors.filter((d) => d.role === "nurse" || d.role === "others");
+    // Filter only health workers (others, not doctors)
+    const nurses = allDoctors.filter((d) => d.role === "others");
 
     return NextResponse.json({ nurses });
   } catch (error: any) {

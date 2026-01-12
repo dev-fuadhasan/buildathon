@@ -3297,7 +3297,7 @@
       {
         "id": 165,
         "text": {
-          "en": "Do you have any difficulty understanding health information given by doctors or nurses?",
+          "en": "Do you have any difficulty understanding health information given by doctors or health workers?",
           "bn": "ডাক্তার বা নার্স যে স্বাস্থ্যবিষয়ক নির্দেশনা দেন, সেগুলো বুঝতে কি আপনার কষ্ট হয় বলে মনে হয়?"
         },
         "answers": {
@@ -3418,7 +3418,7 @@
       {
         "id": 171,
         "text": {
-          "en": "Has any doctor or nurse told you that your blood pressure is too high in this pregnancy?",
+          "en": "Has any doctor or health worker told you that your blood pressure is too high in this pregnancy?",
           "bn": "এই গর্ভাবস্থায় কি কোনো ডাক্তার বা নার্স বলেছেন যে আপনার রক্তচাপ স্বাভাবিকের চেয়ে বেশি বা খুব বেশি?"
         },
         "answers": {
@@ -3779,7 +3779,7 @@
       {
         "id": 189,
         "text": {
-          "en": "Have you ever delivered a baby at a health facility with a skilled doctor or nurse?",
+          "en": "Have you ever delivered a baby at a health facility with a skilled doctor or health worker?",
           "bn": "আপনি কি আগে কোনো সন্তানকে হাসপাতালে বা স্বাস্থ্যকেন্দ্রে দক্ষ ডাক্তার/নার্সের মাধ্যমে জন্ম দিয়েছেন?"
         },
         "answers": {

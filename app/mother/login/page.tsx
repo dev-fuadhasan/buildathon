@@ -2,6 +2,7 @@
 
 import Layout from "@/components/Layout";
 import MessagePopup from "@/components/MessagePopup";
+import Icon from "@/components/Icon";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -58,11 +59,15 @@ export default function MotherLogin() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Mother Login</h1>
-          <p className="text-slate-600">Access your dashboard and chat context.</p>
+      <div className="mx-auto max-w-xl space-y-8 py-4 sm:py-8 px-4">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-xl mb-4 transform -rotate-6">
+            <Icon name="mom" size={40} className="brightness-0 invert" />
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight">Mother Login</h1>
+          <p className="text-neutral-600 font-medium max-w-xs mx-auto leading-relaxed">Access your personalized pregnancy dashboard and chat context.</p>
         </div>
+        
         <MessagePopup
           isOpen={popup.isOpen}
           onClose={() => setPopup({ ...popup, isOpen: false })}
@@ -71,84 +76,97 @@ export default function MotherLogin() {
           message={popup.message}
         />
 
-        {/* Demo Account Info */}
-        <div className="bg-blue-50/60 border border-blue-200/60 rounded-lg p-4 space-y-2">
-          <p className="text-sm text-blue-900/80 font-medium">
-            You can easily create new accounts but if you want to check an already created demo account then use these credentials
-          </p>
-          <div className="text-sm text-blue-800/70 space-y-1">
-            <p><span className="font-semibold">Email:</span> demo@mother.com</p>
-            <p><span className="font-semibold">Password:</span> mother</p>
+        <form onSubmit={onSubmit} className="bg-white rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-pink-100 space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50" />
+          
+          <div className="space-y-4 relative z-10">
+            <div>
+              <label className="block text-sm font-bold text-neutral-700 mb-2 ml-1">Email Address</label>
+              <input
+                className="input w-full bg-neutral-50 border-neutral-200 focus:bg-white"
+                placeholder="mother@example.com"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="relative">
+              <label className="block text-sm font-bold text-neutral-700 mb-2 ml-1">Password</label>
+              <div className="relative">
+                <input
+                  className="input w-full bg-neutral-50 border-neutral-200 focus:bg-white pr-12"
+                  placeholder="Your secure password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-pink-600 transition-colors tap-highlight-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <Icon name="view" size={20} className="brightness-0 opacity-50" />
+                  ) : (
+                    <Icon name="view" size={20} className="brightness-0 opacity-20" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={onSubmit} className="card space-y-4">
-          <input
-            className="input"
-            placeholder="Email"
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <div className="relative">
-            <input
-              className="input pr-10"
-              placeholder="Password"
-              type={showPassword ? "text" : "password"}
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                  <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                </svg>
-              )}
-            </button>
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex items-center justify-between">
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
+              <Icon name="error" size={16} />
+              <p className="font-medium">{error}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end">
             <Link
               href="/forgot-password?role=mother"
-              className="text-sm text-pink-600 hover:text-pink-700 font-medium"
+              className="text-sm text-pink-600 hover:text-pink-700 font-bold underline underline-offset-4 decoration-2"
             >
               Forgot Password?
             </Link>
           </div>
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Login"}
+
+          <button 
+            type="submit" 
+            className="btn-primary w-full py-4 text-lg font-black shadow-pink-200 active:scale-95 transition-all tap-highlight-none" 
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Icon name="sync" size={20} className="animate-spin brightness-0 invert" />
+                Signing in...
+              </span>
+            ) : "Login to Dashboard"}
           </button>
         </form>
         
         {/* Registration Section */}
-        <div className="card bg-pink-50 border-2 border-pink-200">
-          <div className="text-center space-y-3">
-            <p className="text-slate-700 font-medium">
-              Don't have an account?
-            </p>
-            <Link 
-              href="/mother/register" 
-              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 hover:from-pink-700 hover:to-rose-700"
-            >
-              Create New Account
-              <span className="text-lg">→</span>
-            </Link>
-            <p className="text-xs text-slate-500 mt-2">
-              Register to get started with MomsCare
-            </p>
+        <div className="text-center space-y-4 pb-8">
+          <p className="text-neutral-500 font-medium">Don't have an account yet?</p>
+          <Link 
+            href="/mother/register" 
+            className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-neutral-900 border-2 border-neutral-200 rounded-2xl font-bold shadow-sm hover:border-pink-300 hover:bg-pink-50 transition-all duration-300 active:scale-95 tap-highlight-none group"
+          >
+            Create New Account
+            <span className="group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
+          
+          {/* Demo Account Info */}
+          <div className="mt-8 bg-blue-50/50 backdrop-blur-sm border border-blue-100 rounded-2xl p-4 max-w-sm mx-auto">
+            <p className="text-xs text-blue-600 font-bold uppercase tracking-widest mb-2">Demo Access</p>
+            <div className="text-sm text-blue-800 flex justify-center gap-4">
+              <p><span className="font-bold">Email:</span> demo@mother.com</p>
+              <p><span className="font-bold">Pass:</span> mother</p>
+            </div>
           </div>
         </div>
       </div>

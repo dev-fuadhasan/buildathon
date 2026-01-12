@@ -20,7 +20,7 @@ export async function GET(
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can access patient data" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can access patient data" }, { status: 403 });
     }
 
     const patient = await getPatient(doctor.hospitalClinicName, id);
@@ -85,7 +85,7 @@ export async function PUT(
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can edit patients" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can edit patients" }, { status: 403 });
     }
 
     const patient = await getPatient(doctor.hospitalClinicName, id);
@@ -153,7 +153,7 @@ export async function DELETE(
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can delete patients" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can delete patients" }, { status: 403 });
     }
 
     await deletePatient(doctor.hospitalClinicName, id);

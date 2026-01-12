@@ -73,6 +73,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --animate-slide-up: slide-up 0.3s ease-out;
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 }
 
 * {
@@ -300,6 +311,36 @@ html {
 @media (max-width: 640px) {
   .tab {
     @apply px-4 py-2.5 text-sm;
+  }
+}
+
+/* App-like feel improvements */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+.active-scale {
+  @apply transition-transform active:scale-95;
+}
+
+.tap-highlight-none {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Full screen sheet for mobile modals */
+@media (max-width: 640px) {
+  .mobile-sheet {
+    @apply fixed inset-x-0 bottom-0 top-auto rounded-t-3xl max-h-[90vh] overflow-y-auto animate-slide-up;
   }
 }
 

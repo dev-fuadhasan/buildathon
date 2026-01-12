@@ -5,7 +5,6 @@ import Layout from "@/components/Layout";
 import ListCard from "@/components/ListCard";
 import DetailModal from "@/components/DetailModal";
 import MessagePopup from "@/components/MessagePopup";
-import AdminLiveChatSection from "@/components/AdminLiveChatSection";
 import MobileDashboardMenu from "@/components/MobileDashboardMenu";
 import Icon from "@/components/Icon";
 import { useEffect, useState } from "react";
@@ -102,7 +101,7 @@ export default function AdminDashboard() {
   const [allNurses, setAllNurses] = useState<Doctor[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "nurses" | "reports" | "live-chat" | "editors" | "activity-logs" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "doctors" | "mothers" | "nurses" | "reports" | "editors" | "activity-logs" | "settings">("overview");
   const [adminSettings, setAdminSettings] = useState<{
     morningRecommendationHour: number;
     morningRecommendationMinute: number;
@@ -226,7 +225,7 @@ export default function AdminDashboard() {
       
       // Restore active tab from localStorage
       const savedTab = localStorage.getItem("adminDashboardTab");
-      if (savedTab && ["overview", "analytics", "doctors", "mothers", "nurses", "reports", "live-chat", "editors", "activity-logs", "settings"].includes(savedTab)) {
+      if (savedTab && ["overview", "analytics", "doctors", "mothers", "nurses", "reports", "editors", "activity-logs", "settings"].includes(savedTab)) {
         setActiveTab(savedTab as any);
       }
       
@@ -288,7 +287,7 @@ export default function AdminDashboard() {
   
   // Redirect to dashboard if logged in and on home page
   useEffect(() => {
-    if (token && window.location.pathname === "/") {
+    if (token && typeof window !== "undefined" && window.location.pathname === "/") {
       window.location.href = "/admin/dashboard";
     }
   }, [token]);
@@ -735,9 +734,8 @@ export default function AdminDashboard() {
     { id: "analytics", label: "Analytics", icon: "progress" },
     { id: "doctors", label: "Doctors", icon: "doctor" },
     { id: "mothers", label: "Mothers", icon: "mom" },
-    { id: "nurses", label: "Nurses/Others", icon: "nurse" },
+    { id: "nurses", label: "Health Workers", icon: "nurse" },
     { id: "reports", label: "Reports", icon: "reports", badge: reports.filter((r: any) => !r.reportStatus || r.reportStatus === "pending").length },
-    { id: "live-chat", label: "Live Chat", icon: "chat" },
     ...(adminType === "super_admin" ? [
       { id: "editors", label: "Editors", icon: "editor" },
       { id: "activity-logs", label: "Activity Logs", icon: "log" },
@@ -1804,14 +1802,14 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Nurses Tab */}
+        {/* Health Workers Tab */}
         {activeTab === "nurses" && (
-          <DashboardCard title="All Nurses/Others">
+          <DashboardCard title="All Health Workers">
             {/* Search Bar */}
             <div className="mb-4">
               <input
                 type="text"
-                placeholder="🔍 Search nurses by name, email, hospital/clinic..."
+                placeholder="🔍 Search health workers by name, email, hospital/clinic..."
                 className="input w-full"
                 value={nurseSearch}
                 onChange={(e) => setNurseSearch(e.target.value)}
@@ -1830,7 +1828,7 @@ export default function AdminDashboard() {
                 );
               }).length === 0 ? (
                 <p className="text-slate-500 text-center py-8">
-                  {nurseSearch ? "No nurses found matching your search." : "No nurses/others registered yet."}
+                  {nurseSearch ? "No health workers found matching your search." : "No health workers registered yet."}
                 </p>
               ) : (
                 allNurses.filter(n => {
@@ -1846,7 +1844,7 @@ export default function AdminDashboard() {
                 }).map((n) => (
                   <ListCard
                     key={n.id}
-                    title={n.name || "Unnamed nurse"}
+                    title={n.name || "Unnamed health worker"}
                     subtitle={n.email}
                     badge={
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -1862,7 +1860,7 @@ export default function AdminDashboard() {
                     onClick={() => loadDoctorDetails(n.id)}
                   >
                     <p className="text-xs text-slate-500 mt-1">
-                      Role: {n.role === "nurse" ? "Nurse" : "Other Health Worker"}
+                      Role: Other Health Worker
                     </p>
                     {n.hospitalClinicName && (
                       <p className="text-xs text-slate-500 mt-1">
@@ -2654,10 +2652,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Live Chat Tab */}
-        {activeTab === "live-chat" && (
-          <AdminLiveChatSection token={token} />
-        )}
 
         {activeTab === "editors" && adminType === "super_admin" && (
           <div className="space-y-4">
@@ -2858,7 +2852,7 @@ export default function AdminDashboard() {
                               });
                               if (res.ok) {
                                 const data = await res.json();
-                                if (data.doctor && (data.doctor.role === "nurse" || data.doctor.role === "others")) {
+                                if (data.doctor && data.doctor.role === "others") {
                                   setSelectedDoctor(data.doctor);
                                   setActiveTab("nurses");
                                 } else {

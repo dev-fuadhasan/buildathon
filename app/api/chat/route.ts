@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { askMomsCare } from "@/lib/momsCareChat";
+import { askMomsCare, askMomsCareStream } from "@/lib/momsCareChat";
 import { getUserFromRequest } from "@/lib/auth";
 import { getChatHistory, updateChatHistory, ChatMessage } from "@/lib/data";
 import { checkSafety } from "@/lib/safetyGuardrails";
@@ -200,28 +200,79 @@ export async function POST(req: NextRequest) {
         console.log("[💬 CHAT API] ℹ️  Using client-provided semantic context");
       }
       
-      // Get AI response (no profile context for guests)
+      // Check if client wants streaming (via query param or header)
+      const wantsStreaming = req.headers.get("accept")?.includes("text/event-stream") || 
+                            req.nextUrl.searchParams.get("stream") === "true";
+      
+      if (wantsStreaming) {
+        // STREAMING MODE
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              const imageUrls = imageUrl ? [imageUrl] : [];
+              let extraContexts: any = userLanguage === "bn" && translatedUserMessage !== lastUserMessage
+                ? { translatedQuery: translatedUserMessage }
+                : {};
+              
+              if (semanticContext) {
+                extraContexts.semanticContext = semanticContext;
+              }
+              
+              // Add safety warnings first if needed
+              if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
+                const warning = `${safetyCheck.recommendation}\n\n`;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: warning })}\n\n`));
+              } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
+                const warning = `${safetyCheck.recommendation}\n\n`;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: warning })}\n\n`));
+              }
+              
+              // Stream the AI response
+              for await (const chunk of askMomsCareStream(messages, undefined, imageUrls, undefined, false, false, extraContexts)) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+              }
+              
+              // Send final metadata
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, safetyWarning: safetyCheck.riskLevel !== "low", riskLevel: safetyCheck.riskLevel })}\n\n`));
+              controller.close();
+            } catch (error: any) {
+              console.error("Streaming error:", error);
+              const errorMessage = userLanguage === "bn"
+                ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+                : "Sorry, something went wrong. Please try again in a moment.";
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
+              controller.close();
+            }
+          },
+        });
+        
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      }
+      
+      // NON-STREAMING MODE (fallback)
       let reply: string;
       try {
         const timeoutPromise = new Promise<string>((_, reject) => {
           setTimeout(() => reject(new Error("Request timeout")), 55000);
         });
         
-        // Prepare image URLs array
         const imageUrls = imageUrl ? [imageUrl] : [];
-        
-        // Pass translated message to avoid duplicate translation in askMomsCare
         let extraContexts: any = userLanguage === "bn" && translatedUserMessage !== lastUserMessage
           ? { translatedQuery: translatedUserMessage }
           : {};
         
-        // Include semantic search context (from Supabase or client)
         if (semanticContext) {
           extraContexts.semanticContext = semanticContext;
           console.log("[Chat API] Included Supabase semantic context");
         }
         
-        // Send messages directly to AI in original language
         reply = await Promise.race([
           askMomsCare(messages, undefined, imageUrls, undefined, false, false, extraContexts),
           timeoutPromise
@@ -245,15 +296,12 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // Add safety warnings if needed
       if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
         reply = `${safetyCheck.recommendation}\n\n${reply}`;
       } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
         reply = `${safetyCheck.recommendation}\n\n${reply}`;
       }
       
-      // AI responds directly in user's language (no translation needed)
-      // DO NOT store chat history for logged-out users
       return NextResponse.json({
         reply: reply.trim(),
         safetyWarning: safetyCheck.riskLevel !== "low",
@@ -593,60 +641,146 @@ export async function POST(req: NextRequest) {
       console.log(`[⚠️ DEBUG] Question classification primary: ${questionClassification.primary}`);
     }
     
-    // Get AI response with ONLY relevant filtered data
+    // ✅ VECTOR SEARCH (for logged-in users) - Do this before streaming check
+    let semanticContext = "";
+    if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+      try {
+        console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
+        const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+          minSimilarity: 0.25,
+          maxResults: 3,
+        }, clientEmbedding);
+        semanticContext = formatSearchResultsForContext(searchResults);
+        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
+      } catch (err) {
+        console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
+      }
+    } else if (!clientContext) {
+      try {
+        console.log("\n" + "=".repeat(70));
+        console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
+        console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
+        const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+          minSimilarity: 0.25,
+          maxResults: 3,
+        }, null);
+        semanticContext = formatSearchResultsForContext(searchResults);
+        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+        console.log("=".repeat(70) + "\n");
+      } catch (err) {
+        console.error("[💬 CHAT API] ❌ Vector search failed:", err);
+      }
+    } else {
+      semanticContext = clientContext;
+      console.log("[Chat API] Using client-provided semantic context");
+    }
+    
+    // Check if client wants streaming
+    const wantsStreaming = req.headers.get("accept")?.includes("text/event-stream") || 
+                          req.nextUrl.searchParams.get("stream") === "true";
+    
+    if (wantsStreaming) {
+      // STREAMING MODE for logged-in users
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            let extraContext = {
+              dailyContext,
+              doctorQAContext,
+              motherId: user!.id,
+            };
+            
+            if (semanticContext) {
+              (extraContext as any).semanticContext = semanticContext;
+            }
+            
+            // Add safety warnings first if needed
+            if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
+              const warning = `${safetyCheck.recommendation}\n\n`;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: warning })}\n\n`));
+            } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
+              const warning = `${safetyCheck.recommendation}\n\n`;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: warning })}\n\n`));
+            }
+            
+            // Stream the AI response
+            let fullReply = "";
+            for await (const chunk of askMomsCareStream(messages, profileContext, prescriptionUrls, weeksPregnant, isPersonal, true, extraContext)) {
+              fullReply += chunk;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+            }
+            
+            // Save chat history in background (don't wait)
+            const saveHistory = async () => {
+              try {
+                let previousHistory: ChatMessage[] = [];
+                try {
+                  const history = await getChatHistory(user!.id);
+                  if (history?.messages) {
+                    previousHistory = history.messages;
+                  }
+                } catch (err) {
+                  console.error("Failed to load previous history:", err);
+                }
+                
+                const allMessages = [...previousHistory, ...messages];
+                const cleanedMessages = cleanMessages(allMessages);
+                const limitedMessages = limitConversationHistory(cleanedMessages, 20);
+                
+                const updatedMessages: ChatMessage[] = limitedMessages.map((m: any) => ({
+                  role: m.role as "user" | "assistant",
+                  content: m.content,
+                  timestamp: new Date().toISOString(),
+                }));
+                
+                updatedMessages.push({
+                  role: "assistant",
+                  content: fullReply.trim(),
+                  timestamp: new Date().toISOString(),
+                });
+                
+                await updateChatHistory(user!.id, updatedMessages);
+              } catch (err) {
+                console.error("Failed to save chat history:", err);
+              }
+            };
+            
+            saveHistory();
+            
+            // Send final metadata
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, safetyWarning: safetyCheck.riskLevel !== "low", riskLevel: safetyCheck.riskLevel })}\n\n`));
+            controller.close();
+          } catch (error: any) {
+            console.error("Streaming error:", error);
+            const errorMessage = userLanguage === "bn"
+              ? "দুঃখিত, একটি সমস্যা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+              : "Sorry, something went wrong. Please try again in a moment.";
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
+            controller.close();
+          }
+        },
+      });
+      
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
+    
+    // NON-STREAMING MODE (fallback for logged-in users)
     let reply: string;
     try {
-      // Increase timeout for batch processing (batches can take longer)
       const hasManyImages = prescriptionUrls && prescriptionUrls.length > 5;
-      const timeoutMs = hasManyImages ? 110000 : 30000; // 110s for batch processing, 30s for single requests
+      const timeoutMs = hasManyImages ? 110000 : 30000;
       const timeoutPromise = new Promise<string>((_, reject) => {
         setTimeout(() => reject(new Error("Request timeout")), timeoutMs);
       });
 
-      // ✅ VECTOR SEARCH (for logged-in users)
-      let semanticContext = "";
-      // If client provided embedding prefer that
-      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
-        try {
-          console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
-          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          }, clientEmbedding);
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
-        } catch (err) {
-          console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
-          console.log('[💬 CHAT API] Continuing without semantic context (system is resilient)');
-        }
-      } else if (!clientContext) {
-        // Only search if client didn't already do it
-        try {
-          console.log("\n" + "=".repeat(70));
-          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
-          console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
-          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-            minSimilarity: 0.25,
-            maxResults: 3,
-          }, null);
-          semanticContext = formatSearchResultsForContext(searchResults);
-          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
-          if (semanticContext) {
-            console.log(`[💬 CHAT API] Context length: ${semanticContext.length} chars`);
-          }
-          console.log("=".repeat(70) + "\n");
-        } catch (err) {
-          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
-          console.log("[💬 CHAT API] Continuing without semantic context (system is resilient)");
-          console.log("=".repeat(70) + "\n");
-          // Continue without semantic context - system is resilient
-        }
-      } else {
-        semanticContext = clientContext;
-        console.log("[Chat API] Using client-provided semantic context");
-      }
-      
-      // ✅ Include semantic context with other contexts
+      // ✅ Include semantic context with other contexts (semanticContext already retrieved above)
       const extraContext = {
         dailyContext,
         doctorQAContext,

@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Only doctors can answer questions, not nurses/others
+  // Only doctors can answer questions, not health workers
   const { getDoctor } = await import("@/lib/data");
   const doctor = await getDoctor(user.id);
   if (!doctor || doctor.role !== "doctor") {

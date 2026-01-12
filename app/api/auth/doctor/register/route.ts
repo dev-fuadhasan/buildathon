@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       password,
       name,
       phone,
-      role, // "doctor" | "nurse" | "others"
+      role, // "doctor" | "others"
       hospitalClinicName, // New field
       specialty,
       bmdcNumber,
@@ -39,9 +39,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate role
-    const validRole = role === "doctor" || role === "nurse" || role === "others";
+    const validRole = role === "doctor" || role === "others";
     if (!validRole) {
-      return NextResponse.json({ error: "Invalid role. Must be doctor, nurse, or others" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid role. Must be doctor or others" }, { status: 400 });
     }
 
     // Hospital/clinic name is required
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Hospital/Clinic name is required" }, { status: 400 });
     }
 
-    // For doctors, all fields are required. For nurses/others, some fields are optional
+    // For doctors, all fields are required. For others, some fields are optional
     if (role === "doctor") {
       if (!name || !phone || !specialty || !bmdcNumber || !clinicAddress || !qualification || !experience) {
         return NextResponse.json(
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      // Nurses/others: name, phone, and hospital/clinic name are required
+      // Others: name, phone, and hospital/clinic name are required
       if (!name || !phone) {
         return NextResponse.json(
           { error: "Name and phone are required" },
@@ -75,9 +75,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
-    // For nurses/others: Check if hospital/clinic name matches existing ones
+    // For others: Check if hospital/clinic name matches existing ones
     let matchedHospitalName = finalHospitalClinicName;
-    if (role === "nurse" || role === "others") {
+    if (role === "others") {
       const existingHospitalNames = await getAllHospitalNames();
       const match = await findMatchingHospitalName(finalHospitalClinicName, existingHospitalNames);
       if (match) {
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       email,
       name,
       phone,
-      role: role as "doctor" | "nurse" | "others",
+      role: role as "doctor" | "others",
       specialty: role === "doctor" ? specialty : undefined,
       bmdcNumber: role === "doctor" ? bmdcNumber : undefined,
       hospitalClinicName: matchedHospitalName, // Normalized/matched name

@@ -28,7 +28,7 @@ export function MobileDashboardMenuButton({ isOpen, onToggle }: { isOpen: boolea
         e.stopPropagation();
         onToggle();
       }}
-      className="lg:!hidden p-2 rounded-lg text-neutral-600 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+      className="lg:!hidden p-2.5 rounded-2xl text-neutral-600 bg-neutral-50 hover:bg-pink-50 hover:text-pink-600 active:scale-90 transition-all shadow-sm border border-neutral-200 tap-highlight-none"
       aria-label="Toggle menu"
     >
       {isOpen ? (

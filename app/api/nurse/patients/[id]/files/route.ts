@@ -22,7 +22,7 @@ export async function POST(
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can upload files" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can upload files" }, { status: 403 });
     }
 
     const patient = await getPatient(doctor.hospitalClinicName, id);
@@ -145,7 +145,7 @@ export async function DELETE(
     }
 
     if (doctor.role === "doctor") {
-      return NextResponse.json({ error: "Only nurses and others can delete files" }, { status: 403 });
+      return NextResponse.json({ error: "Only health workers can delete files" }, { status: 403 });
     }
 
     const patient = await getPatient(doctor.hospitalClinicName, id);

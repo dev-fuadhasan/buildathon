@@ -460,23 +460,35 @@ Format:
 **For Complex Questions:**
 Format:
 **Quick Answer:**
+
 [2-3 sentences answering the core question directly]
 
 **Detailed Explanation:**
+
 [First key point with explanation]
 [Second key point with explanation]
 [Third key point with explanation]
 
 **Practical Recommendations:**
+
 - [Specific actionable step 1]
 - [Specific actionable step 2]
 - [Specific actionable step 3]
 
 **Important Notes:**
+
 - [Warning or precaution if any]
 
 **When to Consult a Doctor:**
+
 - [Specific situations that require medical attention]
+
+🚨 CRITICAL MARKDOWN FORMATTING RULES:
+- ALWAYS use "**Header:**" format (with colon and closing bold markers)
+- ALWAYS add a blank line (\n\n) after each header before content
+- NEVER write "**Header\n" or "**Header- " or "HeaderText" without proper formatting
+- ALWAYS use "**Header:**\n\n" format for all section headers
+- For lists after text, use "text:\n\n- item" format, NOT "text- item"
 
 **For List Questions:**
 Format:
@@ -986,6 +998,53 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     cleanedReply = cleanedReply.replace(/^(I'm|I am|As an AI|As a language model|I'm an AI|As MomsCare AI).*?\.\s*/i, "");
     cleanedReply = cleanedReply.replace(/^(Note:|Please note:|Disclaimer:).*?\.\s*/gi, "");
     
+    // CRITICAL FIRST PASS: Fix malformed markdown headers - MUST run before any other processing
+    // The AI is generating invalid markdown that ReactMarkdown can't parse properly
+    
+    // Pattern 1: "**Quick Answer\n" → "**Quick Answer:**\n\n"
+    // Handle both \n and \r\n line endings
+    cleanedReply = cleanedReply.replace(/\*\*Quick Answer(\s*\r?\n)/gi, '**Quick Answer:**\n\n');
+    cleanedReply = cleanedReply.replace(/\*\*Detailed Explanation(\s*\r?\n)/gi, '**Detailed Explanation:**\n\n');
+    cleanedReply = cleanedReply.replace(/\*\*Practical Recommendations(\s*\r?\n)/gi, '**Practical Recommendations:**\n\n');
+    cleanedReply = cleanedReply.replace(/\*\*Important Notes(\s*\r?\n)/gi, '**Important Notes:**\n\n');
+    cleanedReply = cleanedReply.replace(/\*\*When to Consult a Doctor:(\s*\r?\n)/gi, '**When to Consult a Doctor:**\n\n');
+    
+    // Pattern 2: "**Practical Recommendations- " → "**Practical Recommendations:**\n\n- "
+    cleanedReply = cleanedReply.replace(/\*\*Quick Answer\s*-\s+/gi, '**Quick Answer:**\n\n- ');
+    cleanedReply = cleanedReply.replace(/\*\*Detailed Explanation\s*-\s+/gi, '**Detailed Explanation:**\n\n- ');
+    cleanedReply = cleanedReply.replace(/\*\*Practical Recommendations\s*-\s+/gi, '**Practical Recommendations:**\n\n- ');
+    cleanedReply = cleanedReply.replace(/\*\*Important Notes\s*-\s+/gi, '**Important Notes:**\n\n- ');
+    
+    // Pattern 3: "Detailed ExplanationWhen" (no bold) → "**Detailed Explanation:**\n\nWhen"
+    // Handle both \n and \r\n line endings
+    cleanedReply = cleanedReply.replace(/(^|\r?\n)Detailed Explanation([A-Z][a-z])/gi, '$1\n\n**Detailed Explanation:**\n\n$2');
+    cleanedReply = cleanedReply.replace(/(^|\r?\n)Quick Answer([A-Z][a-z])/gi, '$1\n\n**Quick Answer:**\n\n$2');
+    cleanedReply = cleanedReply.replace(/(^|\r?\n)Practical Recommendations([A-Z][a-z])/gi, '$1\n\n**Practical Recommendations:**\n\n$2');
+    cleanedReply = cleanedReply.replace(/(^|\r?\n)Important Notes([A-Z][a-z])/gi, '$1\n\n**Important Notes:**\n\n$2');
+    
+    // Pattern 4: "including- Reduced" → "including:\n\n- Reduced"
+    cleanedReply = cleanedReply.replace(/(including|such as|for example|e\.g\.|namely)\s*-\s+([A-Z])/gi, '$1:\n\n- $2');
+    
+    // Pattern 5: Fix any remaining headers without proper formatting
+    // Catch "**Header" followed by newline or text (missing colon)
+    // Handle both \n and \r\n line endings
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)(\s*\r?\n|\s+[A-Z])/gi, '**$1:**\n\n');
+    
+    // Pattern 6: Fix malformed "**When to Consult**Doctor**" → "**When to Consult a Doctor:**"
+    cleanedReply = cleanedReply.replace(/\*\*When to Consult\*\*([A-Z][a-z]+)\*\*/gi, '**When to Consult $1:**');
+    
+    // Pattern 7: Multiple passes to catch all edge cases (run 3 times)
+    for (let pass = 0; pass < 3; pass++) {
+      // Fix headers missing colon and closing bold
+      cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)(\s*\r?\n)/gi, '**$1:**\n\n');
+      // Fix headers missing closing bold before dash
+      cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*-\s+/gi, '**$1:**\n\n- ');
+      // Fix headers without bold markers
+      cleanedReply = cleanedReply.replace(/(^|\r?\n)(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)([A-Z][a-z])/gi, '$1\n\n**$2:**\n\n$3');
+      // Fix "including- " pattern
+      cleanedReply = cleanedReply.replace(/(including|such as|for example|e\.g\.|namely)\s*-\s+([A-Z])/gi, '$1:\n\n- $2');
+    }
+    
     // CRITICAL: Detect question type and format response accordingly
     const questionType = detectQuestionType(lastUserMessage);
     console.log(`[Response Formatting] Detected question type: ${questionType}`);
@@ -1139,14 +1198,17 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     // Match known header names followed by text
     cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s+([A-Z][a-z])/gi, '**$1:**\n\n$2');
     
-    // Fix headers missing colon and closing bold: "**Quick Answer\n" → "**Quick Answer:**\n\n"
+    // CRITICAL: Fix headers missing colon and closing bold - MUST RUN FIRST
+    // Fix "**Quick Answer\n" → "**Quick Answer:**\n\n"
     cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*\n/gi, '**$1:**\n\n');
     
-    // Fix headers missing closing bold: "**Practical Recommendations- " → "**Practical Recommendations:**\n\n- "
+    // Fix "**When to Consult a Doctor:\n" → "**When to Consult a Doctor:**\n\n"
+    cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor):\s*\n/gi, '**$1:**\n\n');
+    
+    // Fix "**Practical Recommendations- " → "**Practical Recommendations:**\n\n- "
     cleanedReply = cleanedReply.replace(/\*\*(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)\s*-\s+/gi, '**$1:**\n\n- ');
     
-    // Fix headers without bold markers: "Detailed Explanation" → "**Detailed Explanation:**"
-    // Must check if it's at start of line and followed by text
+    // STEP 5: Fix headers without bold markers: "Detailed ExplanationWhen" → "**Detailed Explanation:**\n\nWhen"
     cleanedReply = cleanedReply.replace(/(^|\n)(Quick Answer|Detailed Explanation|Practical Recommendations|Important Notes|When to Consult|Introduction|The List|Summary|Overview|Step-by-Step|Tips for Success|Common Mistakes|Safety Considerations|Medical Explanation|What This Means|Personalized Recommendations|Red Flags|When to Seek|When to Consult a Doctor)([A-Z][a-z])/gi, '$1\n\n**$2:**\n\n$3');
     
     // Fix "including- " → "including:\n\n- "
@@ -1284,5 +1346,221 @@ Provide a clear, organized summary that covers ALL the information from ALL the 
     throw new Error(
       error.message || "Failed to get response from AI. Please try again."
     );
+  }
+}
+
+/**
+ * Streaming version of askMomsCare - yields chunks as they arrive
+ * Returns an async generator that yields text chunks
+ */
+export async function* askMomsCareStream(
+  messages: Array<{ role: string; content: string }>,
+  profileContext?: string,
+  prescriptionUrls?: string[],
+  weeksPregnant?: number,
+  isPersonal?: boolean,
+  isLoggedIn?: boolean,
+  extraContexts?: {
+    dailyContext?: string;
+    doctorQAContext?: string;
+    motherId?: string;
+    translatedQuery?: string;
+    semanticContext?: string;
+  }
+): AsyncGenerator<string, void, unknown> {
+  if (!isGroqConfigured()) {
+    throw new Error("Groq API is not configured. Please set GROQ_API_KEY environment variable.");
+  }
+
+  try {
+    // Reuse the same setup logic from askMomsCare
+    const safetyPrompt = getSafetyPrompt();
+    const lastUserMessage = messages
+      .filter((m) => m.role === "user")
+      .pop()?.content || "";
+    
+    const forcedLanguage = getForcedLanguage();
+    const userLanguage = (forcedLanguage || detectLanguage(lastUserMessage)) as Language;
+    
+    const languageInstruction = userLanguage === "bn"
+      ? "\n\nIMPORTANT LANGUAGE RULE: The user is writing in Bangla or Banglish. You MUST respond in Bangla (বাংলা). Use Bengali script for your entire response."
+      : "\n\nIMPORTANT LANGUAGE RULE: The user is writing in English. You MUST respond in English.";
+    
+    const hasBengaliScript = /[\u0980-\u09FF]/.test(lastUserMessage);
+    const isBanglish = userLanguage === "bn" && !hasBengaliScript;
+    
+    let relevantDatasetItems: any[] = [];
+    let searchQuery = lastUserMessage;
+    
+    if (isBanglish) {
+      let translatedQuery = extraContexts?.translatedQuery;
+      if (!translatedQuery) {
+        try {
+          translatedQuery = await translateToEnglish(lastUserMessage);
+        } catch (error) {
+          relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "en", 3);
+        }
+      }
+      if (translatedQuery) {
+        searchQuery = translatedQuery;
+        relevantDatasetItems = await searchDatasetHybrid(translatedQuery, "en", 3);
+      }
+    } else if (userLanguage === "en") {
+      relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "en", 3);
+    } else {
+      relevantDatasetItems = await searchDatasetHybrid(lastUserMessage, "bn", 3);
+    }
+    
+    const datasetContext = relevantDatasetItems.length > 0 
+      ? "\n\n" + formatDatasetContext(relevantDatasetItems, userLanguage)
+      : "";
+    
+    const hasImage = prescriptionUrls && prescriptionUrls.length > 0;
+    const dailyContextRaw = extraContexts?.dailyContext;
+    const doctorQAContextRaw = extraContexts?.doctorQAContext;
+    let actualProfileContext: string | undefined = profileContext;
+    
+    const imageInstruction = hasImage 
+      ? `\n\nCRITICAL - PRESCRIPTION/REPORT IMAGES PROVIDED: The user has ${prescriptionUrls!.length} prescription/medical report image(s) attached. You MUST analyze these images carefully and provide specific, detailed guidance based on what you see in the images.`
+      : "";
+    
+    const greetingResponse = userLanguage === "bn"
+      ? 'হাই! আমি MomsCare AI। আমি গর্ভাবস্থা এবং স্বাস্থ্য সম্পর্কিত প্রশ্নে সাহায্য করতে পারি। আপনি কী জানতে চান?'
+      : 'Hi! I\'m MomsCare AI. I can help you with pregnancy and health-related questions. What would you like to know?';
+    
+    const thanksResponse = userLanguage === "bn"
+      ? 'আপনাকে স্বাগতম! আর কোনো প্রশ্ন থাকলে জানাবেন।'
+      : 'You\'re welcome! Feel free to ask if you have any more questions.';
+    
+    const nonHealthMessage = userLanguage === "bn" 
+      ? "আমি শুধু স্বাস্থ্য এবং গর্ভাবস্থা-সম্পর্কিত প্রশ্নে সাহায্য করতে পারি। আপনার কোনো স্বাস্থ্য-সম্পর্কিত প্রশ্ন আছে?"
+      : "I can only help with health and pregnancy-related questions. Do you have any health-related questions?";
+    
+    // Simplified system prompt for streaming (same core content)
+    let systemPrompt = `You are MomsCare AI, an expert pregnancy health assistant.${languageInstruction}${imageInstruction}
+
+🎯 YOUR CORE MISSION:
+Provide comprehensive, accurate, and helpful responses about pregnancy and maternal health.
+
+📋 RESPONSE STRUCTURE STANDARDS:
+- ALWAYS use line breaks (\\n\\n) between major sections
+- ALWAYS use bullet points (-) or numbered lists (1. 2. 3.) for multiple items
+- ALWAYS break up long explanations into digestible sections
+- Use "**Header:**" format (with colon and closing bold markers)
+- ALWAYS add a blank line (\\n\\n) after each header before content
+
+CRITICAL MARKDOWN FORMATTING RULES:
+- ALWAYS use "**Header:**" format (with colon and closing bold markers)
+- ALWAYS add a blank line (\\n\\n) after each header before content
+- NEVER write "**Header\\n" or "**Header- " or "HeaderText" without proper formatting
+
+1. GREETINGS & CASUAL MESSAGES:
+   - Greetings: "${greetingResponse}"
+   - Thanks: "${thanksResponse}"
+   - Non-health topics: "${nonHealthMessage}"
+
+${actualProfileContext || dailyContextRaw || doctorQAContextRaw 
+  ? 'You have access to the user\'s personal health data. USE IT INTELLIGENTLY.'
+  : hasImage 
+    ? 'The user has uploaded prescription/medical report images. ANALYZE THEM THOROUGHLY.'
+    : 'No personal data available. Provide general guidance.'}
+
+${safetyPrompt}`;
+    
+    let trimester: number | undefined;
+    if (weeksPregnant) {
+      trimester = weeksPregnant;
+    } else if (actualProfileContext) {
+      const weeksMatch = actualProfileContext.match(/সপ্তাহ:\s*(\d+)|(\d+)\s*সপ্তাহ|Weeks pregnant:\s*(\d+)|(\d+)\s*weeks/i);
+      if (weeksMatch) {
+        trimester = parseInt(weeksMatch[1] || weeksMatch[2] || weeksMatch[3] || weeksMatch[4], 10);
+      }
+    }
+    
+    const relevantGuidelines = retrieveRelevantGuidelines(lastUserMessage, trimester, 5);
+    const guidelinesContext = formatGuidelinesForContext(relevantGuidelines);
+    
+    const profileNote = actualProfileContext ? `\n\n${actualProfileContext}` : "";
+    const dailyNote = dailyContextRaw ? `\n\n${dailyContextRaw}` : "";
+    const doctorQANote = doctorQAContextRaw ? `\n\n${doctorQAContextRaw}` : "";
+    
+    const filteredMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
+    const formattedMessages: any[] = [];
+    
+    for (let index = 0; index < filteredMessages.length; index++) {
+      const m = filteredMessages[index];
+      const role = (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant";
+      const content = (m.content || "").trim();
+      
+      if (!content) continue;
+      
+      const isLastUserMessage = role === "user" && index === filteredMessages.length - 1;
+      if (isLastUserMessage && prescriptionUrls && prescriptionUrls.length > 0) {
+        const imageObjects = prescriptionUrls.slice(0, 5); // Limit to 5 for streaming
+        
+        let imageContext = `\n\n🚨 CRITICAL: ${prescriptionUrls.length} PRESCRIPTION/MEDICAL REPORT IMAGE(S) ATTACHED 🚨\n\nAnalyze these images carefully.`;
+        
+        formattedMessages.push({
+          role: "user",
+          content: [
+            { type: "text" as const, text: content + imageContext },
+            ...imageObjects.map((url) => ({
+              type: "image_url" as const,
+              image_url: { url },
+            })),
+          ],
+        });
+      } else {
+        formattedMessages.push({ role, content });
+      }
+    }
+    
+    if (formattedMessages.length === 0) {
+      throw new Error("No valid messages provided");
+    }
+    
+    const hasImages = prescriptionUrls && prescriptionUrls.length > 0;
+    const visionModel = "meta-llama/llama-4-maverick-17b-128e-instruct";
+    const textModel = "llama-3.3-70b-versatile";
+    const model = hasImages ? visionModel : textModel;
+    
+    const aiParams = {
+      temperature: 0.3,
+      max_tokens: 3200,
+      top_p: 0.85,
+      stream: true, // Enable streaming
+    };
+    
+    // Stream the response
+    const stream = await groq.chat.completions.create({
+      model,
+      messages: [
+        { 
+          role: "system", 
+          content: systemPrompt + profileNote + dailyNote + doctorQANote + guidelinesContext + datasetContext 
+        },
+        ...formattedMessages,
+      ],
+      ...aiParams,
+      stop: ["\n\n\n\n"],
+    }) as any; // Type assertion needed for streaming
+    
+    let accumulatedText = "";
+    
+    // Iterate over the stream chunks
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content || "";
+      if (content) {
+        accumulatedText += content;
+        yield content; // Yield each chunk as it arrives
+      }
+    }
+    
+    // Note: Post-processing will be done on the frontend for streaming
+    // The frontend will accumulate chunks and apply markdown preprocessing
+    
+  } catch (error: any) {
+    console.error("Groq streaming error:", error);
+    throw error;
   }
 }
