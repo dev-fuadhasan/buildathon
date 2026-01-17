@@ -29,12 +29,15 @@ export async function PUT(req: NextRequest) {
       // Basic info
       name: body.name !== undefined ? (body.name.trim() || null) : mother.name,
       age: body.age !== undefined ? (body.age || null) : mother.age,
+      ageRange: body.ageRange !== undefined ? (body.ageRange || null) : mother.ageRange,
       phone: body.phone !== undefined ? (body.phone.trim() || null) : mother.phone,
       address: body.address !== undefined ? (body.address.trim() || null) : mother.address,
       area: body.area !== undefined ? (body.area.trim() || null) : mother.area,
+      onboardingComplete: body.onboardingComplete !== undefined ? body.onboardingComplete : (body.ageRange ? true : mother.onboardingComplete),
       
       // Health info
       bloodGroup: body.bloodGroup !== undefined ? (body.bloodGroup || null) : mother.bloodGroup,
+      pregnancyStatus: body.pregnancyStatus !== undefined ? (body.pregnancyStatus || null) : mother.pregnancyStatus,
       weeksPregnant: body.weeksPregnant !== undefined ? (body.weeksPregnant || null) : mother.weeksPregnant,
       daysPregnant: body.daysPregnant !== undefined ? (body.daysPregnant || null) : mother.daysPregnant,
       dueDate: body.dueDate !== undefined ? (body.dueDate || null) : mother.dueDate,

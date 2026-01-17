@@ -50,7 +50,7 @@ function cleanMessages(messages: Array<{ role: string; content: string }>): Arra
 // Helper to limit conversation history to prevent token overflow
 function limitConversationHistory(
   messages: Array<{ role: string; content: string }>,
-  maxMessages: number = 20
+  maxMessages: number = 10  // Reduced from 20 → 10 for faster AI response
 ): Array<{ role: string; content: string }> {
   // Always keep the first message if it's a system/assistant greeting
   // Keep the last maxMessages messages
@@ -107,6 +107,20 @@ export async function POST(req: NextRequest) {
     // Check if user is logged in
     const user = await getUserFromRequest(req);
     const isLoggedIn = user?.role === "mother";
+    let motherProfile: any = null;
+    let emergencyContactName: string | undefined;
+    let emergencyContactPhone: string | undefined;
+    
+    if (isLoggedIn) {
+      try {
+        const { getMother } = await import("@/lib/data");
+        motherProfile = await getMother(user!.id);
+        emergencyContactName = motherProfile?.emergencyContact;
+        emergencyContactPhone = motherProfile?.emergencyPhone;
+      } catch (err) {
+        console.error("Failed to fetch mother profile for emergency contact:", err);
+      }
+    }
     
     // ============================================================
     // LOGGED-OUT USER (GUEST MODE) - Start fresh session
@@ -115,7 +129,7 @@ export async function POST(req: NextRequest) {
       // For logged-out users: Use only current session messages
       // No history, no profile, no personalization
       messages = cleanMessages(messages);
-      messages = limitConversationHistory(messages, 18);
+      messages = limitConversationHistory(messages, 10);  // Reduced for faster response
       
       // Get the last user message
       const lastUserMessage = messages
@@ -146,7 +160,10 @@ export async function POST(req: NextRequest) {
       const safetyCheck = checkSafety(translatedUserMessage, undefined);
       
       if (safetyCheck.requiresEmergency) {
-        const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
+        const emergencyContactLine = emergencyContactPhone
+          ? `Emergency Contact: ${emergencyContactName ? `${emergencyContactName} — ` : ""}${emergencyContactPhone}`
+          : "Emergency Contact: Please call your emergency contact or nearest medical facility.";
+        const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.\n${emergencyContactLine}`;
         const finalReply = userLanguage === "bn" 
           ? await translateToBangla(emergencyMessage).catch(() => emergencyMessage)
           : emergencyMessage;
@@ -221,7 +238,10 @@ export async function POST(req: NextRequest) {
               
               // Add safety warnings first if needed
               if (safetyCheck.riskLevel === "high" && safetyCheck.recommendation) {
-                const warning = `${safetyCheck.recommendation}\n\n`;
+                const emergencyContactLine = emergencyContactPhone
+                  ? `Emergency Contact: ${emergencyContactName ? `${emergencyContactName} — ` : ""}${emergencyContactPhone}\n\n`
+                  : "";
+                const warning = `${safetyCheck.recommendation}\n\n${emergencyContactLine}`;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: warning })}\n\n`));
               } else if (safetyCheck.riskLevel === "medium" && safetyCheck.recommendation) {
                 const warning = `${safetyCheck.recommendation}\n\n`;
@@ -315,7 +335,7 @@ export async function POST(req: NextRequest) {
     
     // Clean and limit current session messages
     messages = cleanMessages(messages);
-    messages = limitConversationHistory(messages, 15);
+    messages = limitConversationHistory(messages, 10);  // Reduced for faster response
     
     const currentUserMessage = messages
       .filter((m: any) => m.role === "user")
@@ -336,7 +356,10 @@ export async function POST(req: NextRequest) {
     const safetyCheck = checkSafety(currentUserMessage, undefined, hasImage);
     
     if (safetyCheck.requiresEmergency) {
-      const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.`;
+        const emergencyContactLine = emergencyContactPhone
+          ? `Emergency Contact: ${emergencyContactName ? `${emergencyContactName} — ` : ""}${emergencyContactPhone}`
+          : "Emergency Contact: Please call your emergency contact or nearest medical facility.";
+        const emergencyMessage = `${safetyCheck.recommendation}\n\nPlease seek immediate medical attention. This is a medical emergency.\n${emergencyContactLine}`;
       const finalReply = userLanguage === "bn" 
         ? await translateToBangla(emergencyMessage).catch(() => emergencyMessage)
         : emergencyMessage;
@@ -401,7 +424,7 @@ export async function POST(req: NextRequest) {
         const { listObjects, signedUrl } = await import("@/lib/r2Client");
         const { getCurrentDateInTimezone } = await import("@/lib/pregnancyTracker");
         
-        const mother = await getMother(user!.id);
+        const mother = motherProfile || await getMother(user!.id);
         if (mother) {
           const daysPregnant = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
           const weeks = daysPregnant ? Math.floor(daysPregnant / 7) : mother.weeksPregnant;
@@ -427,9 +450,20 @@ export async function POST(req: NextRequest) {
           rawProfileData = profileParts.join("\n");
           weeksPregnant = weeks;
           
+          const prefix = `prescriptions/${user!.id}/`;
+          const dailyPromise = listDailyEntries(user!.id);
+          const doctorQAPromise = listMotherQuestions(user!.id);
+          const objectsPromise = listObjects(prefix);
+
+          const [dailyResult, doctorQAResult, objectsResult] = await Promise.allSettled([
+            dailyPromise,
+            doctorQAPromise,
+            objectsPromise,
+          ]);
+
           // Build DAILY ENTRIES data (separate)
-          try {
-            const dailyEntries = await listDailyEntries(user!.id);
+          if (dailyResult.status === "fulfilled") {
+            const dailyEntries = dailyResult.value;
             const today = getCurrentDateInTimezone(mother.timezone || "Asia/Dhaka");
             const recentEntries = dailyEntries
               .filter(entry => entry.date === today || entry.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
@@ -443,13 +477,13 @@ export async function POST(req: NextRequest) {
               });
               rawDailyData = dailyParts.join("\n");
             }
-          } catch (err) {
-            console.error("Failed to load daily entries:", err);
+          } else {
+            console.error("Failed to load daily entries:", dailyResult.reason);
           }
-          
+
           // Build DOCTOR Q&A data (separate)
-          try {
-            const questions = await listMotherQuestions(user!.id);
+          if (doctorQAResult.status === "fulfilled") {
+            const questions = doctorQAResult.value;
             const recentQAs = questions
               .filter(q => q.answer)
               .sort((a, b) => new Date(b.answeredAt || b.createdAt).getTime() - new Date(a.answeredAt || a.createdAt).getTime())
@@ -463,18 +497,17 @@ export async function POST(req: NextRequest) {
               });
               rawDoctorQAData = doctorQAParts.join("\n");
             }
-          } catch (err) {
-            console.error("Failed to load doctor Q&A:", err);
+          } else {
+            console.error("Failed to load doctor Q&A:", doctorQAResult.reason);
           }
-          
+
           // Load prescriptions
           // CRITICAL: PDFs are converted to images, so we ONLY load image files (not PDFs)
           // This includes:
           // 1. Direct image uploads (.png, .jpg, .jpeg)
           // 2. Converted PDF pages (stored as {filename}_page{number}.jpg)
-          try {
-            const prefix = `prescriptions/${user!.id}/`;
-            const objects = await listObjects(prefix);
+          if (objectsResult.status === "fulfilled") {
+            const objects = objectsResult.value;
             
             console.log(`[Chat] Found ${objects?.length || 0} total objects in prescriptions/${user!.id}/`);
             
@@ -549,13 +582,8 @@ export async function POST(req: NextRequest) {
             } else {
               console.log(`[Chat] ⚠️ WARNING: No prescription image URLs generated! This means AI cannot access prescriptions.`);
             }
-          } catch (err) {
-            console.error("[Chat] ❌ CRITICAL ERROR: Failed to fetch prescriptions:", err);
-            console.error("[Chat] Error details:", {
-              message: (err as any)?.message,
-              stack: (err as any)?.stack,
-              name: (err as any)?.name,
-            });
+          } else {
+            console.error("[Chat] ❌ CRITICAL ERROR: Failed to fetch prescriptions:", objectsResult.reason);
           }
           
           // Always add uploaded chat image if provided - AI will determine what to do with it
@@ -642,39 +670,39 @@ export async function POST(req: NextRequest) {
     }
     
     // ✅ VECTOR SEARCH (for logged-in users) - Do this before streaming check
-    let semanticContext = "";
-    if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
-      try {
-        console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
-        const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-          minSimilarity: 0.25,
-          maxResults: 3,
-        }, clientEmbedding);
-        semanticContext = formatSearchResultsForContext(searchResults);
-        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
-      } catch (err) {
-        console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
+      let semanticContext = "";
+      if (clientEmbedding && Array.isArray(clientEmbedding) && clientEmbedding.length === 384) {
+        try {
+          console.log('[💬 CHAT API] ℹ️ Received client embedding (384d) for logged-in user - using for Supabase RPC search');
+          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          }, clientEmbedding);
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context (client embedding)`);
+        } catch (err) {
+          console.error('[💬 CHAT API] ❌ Vector search (client embedding) failed:', err);
+        }
+      } else if (!clientContext) {
+        try {
+          console.log("\n" + "=".repeat(70));
+          console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
+          console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
+          const searchResults = await semanticSearchWithFallback(currentUserMessage, {
+            minSimilarity: 0.25,
+            maxResults: 3,
+          }, null);
+          semanticContext = formatSearchResultsForContext(searchResults);
+          console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
+          console.log("=".repeat(70) + "\n");
+        } catch (err) {
+          console.error("[💬 CHAT API] ❌ Vector search failed:", err);
+        }
+      } else {
+        semanticContext = clientContext;
+        console.log("[Chat API] Using client-provided semantic context");
       }
-    } else if (!clientContext) {
-      try {
-        console.log("\n" + "=".repeat(70));
-        console.log("[💬 CHAT API] 🔍 Performing Supabase vector search for LOGGED-IN user");
-        console.log("[💬 CHAT API] Query:", currentUserMessage.substring(0, 100));
-        const searchResults = await semanticSearchWithFallback(currentUserMessage, {
-          minSimilarity: 0.25,
-          maxResults: 3,
-        }, null);
-        semanticContext = formatSearchResultsForContext(searchResults);
-        console.log(`[💬 CHAT API] ✅ Found ${searchResults.length} search results for context`);
-        console.log("=".repeat(70) + "\n");
-      } catch (err) {
-        console.error("[💬 CHAT API] ❌ Vector search failed:", err);
-      }
-    } else {
-      semanticContext = clientContext;
-      console.log("[Chat API] Using client-provided semantic context");
-    }
-    
+      
     // Check if client wants streaming
     const wantsStreaming = req.headers.get("accept")?.includes("text/event-stream") || 
                           req.nextUrl.searchParams.get("stream") === "true";
@@ -726,7 +754,7 @@ export async function POST(req: NextRequest) {
                 
                 const allMessages = [...previousHistory, ...messages];
                 const cleanedMessages = cleanMessages(allMessages);
-                const limitedMessages = limitConversationHistory(cleanedMessages, 20);
+                const limitedMessages = limitConversationHistory(cleanedMessages, 10);  // Reduced for faster response
                 
                 const updatedMessages: ChatMessage[] = limitedMessages.map((m: any) => ({
                   role: m.role as "user" | "assistant",
@@ -906,7 +934,7 @@ export async function POST(req: NextRequest) {
         // Merge previous + current session messages
         const allMessages = [...previousHistory, ...messages];
         const cleanedMessages = cleanMessages(allMessages);
-        const limitedMessages = limitConversationHistory(cleanedMessages, 20);
+        const limitedMessages = limitConversationHistory(cleanedMessages, 10);  // Reduced for faster response
         
         const updatedMessages: ChatMessage[] = limitedMessages.map((m: any) => ({
           role: m.role as "user" | "assistant",

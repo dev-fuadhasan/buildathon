@@ -80,34 +80,68 @@ export async function GET(req: NextRequest) {
         console.error("Error fetching prescriptions:", err);
       }
       
-      // Generate new recommendations
-      const routineData = await generateDailyRoutineRecommendations(
-        mother,
-        dailyEntries,
-        pastRecommendations,
-        prescriptionUrls,
-        chatHistory?.messages
-      );
+      // Generate new recommendations with timeout
+      console.log("[Food Recommendations GET] Generating new recommendations for date:", today);
+      console.log("[Food Recommendations GET] Mother ID:", user.id);
+      
+      let routineData;
+      try {
+        // Add timeout: 60 seconds max
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Food recommendation generation timed out after 60 seconds")), 60000);
+        });
+        
+        routineData = await Promise.race([
+          generateDailyRoutineRecommendations(
+            mother,
+            dailyEntries,
+            pastRecommendations,
+            prescriptionUrls,
+            chatHistory?.messages
+          ),
+          timeoutPromise
+        ]);
+        
+        console.log("[Food Recommendations GET] ✅ Successfully generated recommendations");
+      } catch (genError: any) {
+        console.error("[Food Recommendations GET] ❌ Failed to generate recommendations:", genError.message);
+        console.error("[Food Recommendations GET] Error details:", {
+          message: genError.message,
+          stack: genError.stack,
+        });
+        
+        // Return error response instead of silently failing
+        return NextResponse.json(
+          { 
+            error: "Failed to generate recommendations. Please try again.",
+            details: genError.message,
+            fallback: true,
+          },
+          { status: 500 }
+        );
+      }
 
-          // Create new recommendation
-          const now = new Date().toISOString();
-          recommendation = {
-            id: uuid(),
-            motherId: user.id,
-            date: today,
-            breakfast: routineData.breakfast,
-            lunch: routineData.lunch,
-            dinner: routineData.dinner,
-            exercises: routineData.exercises,
-            waterIntake: routineData.waterIntake || "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.",
-            exerciseVideos: routineData.exerciseVideos || undefined,
-            breakfastEaten: false,
-            lunchEaten: false,
-            dinnerEaten: false,
-            exercisesDone: false,
-            createdAt: now,
-            updatedAt: now,
-          };
+      // Create new recommendation
+      const now = new Date().toISOString();
+      recommendation = {
+        id: uuid(),
+        motherId: user.id,
+        date: today,
+        breakfast: routineData.breakfast,
+        lunch: routineData.lunch,
+        dinner: routineData.dinner,
+        exercises: routineData.exercises,
+        waterIntake: routineData.waterIntake || "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals.",
+        exerciseVideos: routineData.exerciseVideos || undefined,
+        breakfastEaten: false,
+        lunchEaten: false,
+        dinnerEaten: false,
+        exercisesDone: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      console.log("[Food Recommendations GET] Saving recommendation to database...");
 
       await saveFoodRecommendation(recommendation);
     }
@@ -170,14 +204,46 @@ export async function POST(req: NextRequest) {
       console.error("Error fetching prescriptions:", err);
     }
     
-    // Generate new recommendations
-    const routineData = await generateDailyRoutineRecommendations(
-      mother,
-      dailyEntries,
-      pastRecommendations,
-      prescriptionUrls,
-      chatHistory?.messages
-    );
+    // Generate new recommendations with timeout
+    console.log("[Food Recommendations POST] Generating new recommendations for date:", today);
+    console.log("[Food Recommendations POST] Mother ID:", user.id);
+    
+    let routineData;
+    try {
+      // Add timeout: 60 seconds max
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Food recommendation generation timed out after 60 seconds")), 60000);
+      });
+      
+      routineData = await Promise.race([
+        generateDailyRoutineRecommendations(
+          mother,
+          dailyEntries,
+          pastRecommendations,
+          prescriptionUrls,
+          chatHistory?.messages
+        ),
+        timeoutPromise
+      ]);
+      
+      console.log("[Food Recommendations POST] ✅ Successfully generated recommendations");
+    } catch (genError: any) {
+      console.error("[Food Recommendations POST] ❌ Failed to generate recommendations:", genError.message);
+      console.error("[Food Recommendations POST] Error details:", {
+        message: genError.message,
+        stack: genError.stack,
+      });
+      
+      // Return error response instead of silently failing
+      return NextResponse.json(
+        { 
+          error: "Failed to generate recommendations. Please try again.",
+          details: genError.message,
+          fallback: true,
+        },
+        { status: 500 }
+      );
+    }
 
     // Create or update recommendation
     const now = new Date().toISOString();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { hashPassword } from "@/lib/auth";
-import { findDoctorByEmail, saveDoctor, listAllDoctors } from "@/lib/data";
+import { findDoctorByEmail, saveDoctor, listAllDoctors, generateUniqueReferenceNumber } from "@/lib/data";
 import { copyObject, getJson as getR2Json } from "@/lib/r2Client";
 import { findMatchingHospitalName, getAllHospitalNames } from "@/lib/hospitalNameMatcher";
 
@@ -100,6 +100,12 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const doctorId = uuid();
     
+    // Generate unique 8-digit reference number for doctors
+    let referenceNumber: string | undefined;
+    if (role === "doctor") {
+      referenceNumber = await generateUniqueReferenceNumber();
+    }
+    
     // If profilePicture is provided and contains a temp path, copy it to the doctor's folder
     let finalProfilePictureKey = profilePicture || "";
     if (profilePicture && profilePicture.includes("temp-")) {
@@ -129,6 +135,7 @@ export async function POST(req: NextRequest) {
       role: role as "doctor" | "others",
       specialty: role === "doctor" ? specialty : undefined,
       bmdcNumber: role === "doctor" ? bmdcNumber : undefined,
+      referenceNumber: role === "doctor" ? referenceNumber : undefined,
       hospitalClinicName: matchedHospitalName, // Normalized/matched name
       hospitalClinicNameOriginal: finalHospitalClinicName, // Original as entered
       clinicName: matchedHospitalName, // Keep for backward compatibility

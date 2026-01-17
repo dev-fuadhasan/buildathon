@@ -206,53 +206,31 @@ async function decideContextNeeds(
   hasDaily: boolean,
   hasDoctorQA: boolean
 ): Promise<ContextDecision> {
-  // Default/fallback decision
-  const fallback: ContextDecision = {
-    useProfile: isPersonal && hasProfileContext,
-    usePrescriptions: hasImages,
-    useDaily: isPersonal && hasDaily,
-    useDoctorQA: isPersonal && hasDoctorQA,
+  // ⚡ FAST RULE-BASED DECISION (replaces slow AI call - saves 200-500ms!)
+  const msgLower = userMessage.toLowerCase();
+  
+  // Keywords that indicate need for specific context
+  const profileKeywords = /\b(my|i|me|age|condition|allerg|history|pregnant|weeks?|due date)\b/i;
+  const prescriptionKeywords = /\b(medicine|medication|prescription|drug|pill|dose|tablet|report)\b/i;
+  const dailyKeywords = /\b(today|yesterday|recent|lately|feel|feeling|mood|sleep|eat|diet|habit)\b/i;
+  const doctorKeywords = /\b(doctor|advice|recommend|told me|said|appointment|visit|checkup)\b/i;
+  
+  const decision: ContextDecision = {
+    // Use profile if personal question or mentions profile-related terms
+    useProfile: (isPersonal || profileKeywords.test(msgLower)) && hasProfileContext,
+    
+    // Use prescriptions if images uploaded or mentions medication
+    usePrescriptions: hasImages || (prescriptionKeywords.test(msgLower) && hasImages),
+    
+    // Use daily entries if mentions recent symptoms/feelings
+    useDaily: (dailyKeywords.test(msgLower) && hasDaily) || (isPersonal && hasDaily && msgLower.length < 50),
+    
+    // Use doctor Q&A if mentions doctor advice
+    useDoctorQA: (doctorKeywords.test(msgLower) && hasDoctorQA) || (isPersonal && hasDoctorQA && msgLower.length < 50),
   };
 
-  if (!isGroqConfigured()) {
-    return fallback;
-  }
-
-  try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: `You are a medical assistant. Decide which context sources to load to answer the user's question. Be efficient: include only what is likely useful.\nRespond in JSON ONLY:\n{\n  "useProfile": true/false,\n  "usePrescriptions": true/false,\n  "useDaily": true/false,\n  "useDoctorQA": true/false\n}\nGuidance:\n- If question is personal about the user and health → likely use profile.\n- If symptoms/meds/reports/prescriptions mentioned → consider prescriptions.\n- If question about habits, mood, sleep, diet, daily symptoms → consider daily.\n- If question about prior doctor advice → consider doctorQA.\n- If general/educational → usually skip.\nKeep answers short. JSON only.`,
-        },
-        {
-          role: "user",
-          content: `Question: ${userMessage}\nIs personal: ${isPersonal}\nHas images uploaded: ${hasImages}\nAvailable: profile=${hasProfileContext}, daily=${hasDaily}, doctorQA=${hasDoctorQA}\nWhich contexts should be included?`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 80,
-    });
-
-    const resp = completion.choices?.[0]?.message?.content?.trim() || "";
-    const match = resp.match(/\{[\s\S]*\}/);
-    if (!match) return fallback;
-    const parsed = JSON.parse(match[0]);
-
-    const decision: ContextDecision = {
-      useProfile: !!parsed.useProfile && hasProfileContext,
-      usePrescriptions: !!parsed.usePrescriptions && hasImages,
-      useDaily: !!parsed.useDaily && hasDaily,
-      useDoctorQA: !!parsed.useDoctorQA && hasDoctorQA,
-    };
-
-    console.log(`[Context Decision] profile=${decision.useProfile} prescriptions=${decision.usePrescriptions} daily=${decision.useDaily} doctorQA=${decision.useDoctorQA}`);
-    return decision;
-  } catch (err) {
-    console.error("[Context Decision] AI failed, using fallback:", (err as any)?.message);
-    return fallback;
-  }
+  console.log(`[Context Decision] ⚡ FAST (no AI): profile=${decision.useProfile} prescriptions=${decision.usePrescriptions} daily=${decision.useDaily} doctorQA=${decision.useDoctorQA}`);
+  return decision;
 }
 
 /**
@@ -571,7 +549,11 @@ CRITICAL RULES:
        ? 'The user has uploaded prescription/medical report images. ANALYZE THEM THOROUGHLY:\n   - Extract ALL medication names, dosages, frequencies\n   - Extract ALL test results with values and normal ranges\n   - Extract doctor notes, diagnoses, recommendations\n   - Use this information to provide SPECIFIC, DETAILED guidance\n   - If user asks "my prescription" or "amar prescription", analyze the images and explain everything'
        : 'No personal data available. Provide general guidance but make it comprehensive and actionable.'}
 
-4. DATASET & REFERENCE DATA USAGE:
+4. EMERGENCY CONTACT USAGE:
+   - If recommending a phone number, use the user's Emergency Contact Phone when available
+   - NEVER suggest the user's own phone number as an emergency contact
+
+5. DATASET & REFERENCE DATA USAGE:
    - Reference Q&A examples are provided for context ONLY
    - Use them if DIRECTLY relevant to the EXACT question
    - If reference data doesn't match, use your OWN comprehensive medical knowledge

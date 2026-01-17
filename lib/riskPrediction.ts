@@ -10,6 +10,8 @@ export type RiskFactor = {
   factor: string;
   severity: "critical" | "low" | "medium" | "high";
   recommendation: string;
+  points: number;
+  source?: "profile" | "symptoms"; // Track where the risk comes from
 };
 
 export type RiskAssessment = {
@@ -37,6 +39,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Teenage pregnancy (<18 years)",
         severity: "high",
         recommendation: "Requires specialized care and monitoring. Higher risk of complications.",
+        points: 15,
+        source: "profile",
       });
       riskScore += 15;
     } else if (age >= 40) {
@@ -45,6 +49,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Advanced maternal age (≥40 years)",
         severity: "high",
         recommendation: "Requires close monitoring. Higher risk of complications and chromosomal abnormalities.",
+        points: 20,
+        source: "profile",
       });
       riskScore += 20;
     } else if (age >= 35) {
@@ -53,6 +59,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Advanced maternal age (≥35 years)",
         severity: "medium",
         recommendation: "Increased monitoring recommended. Higher risk of gestational diabetes and hypertension.",
+        points: 10,
+        source: "profile",
       });
       riskScore += 10;
     }
@@ -68,6 +76,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Early pregnancy (first trimester)",
         severity: "low",
         recommendation: "Focus on folic acid, avoid harmful substances, and early prenatal care.",
+        points: 0,
+        source: "profile",
       });
     } else if (weeksPregnant >= 37) {
       riskFactors.push({
@@ -75,6 +85,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Full-term pregnancy (≥37 weeks)",
         severity: "low",
         recommendation: "Monitor for labor signs. Prepare for delivery.",
+        points: 0,
+        source: "profile",
       });
     }
   }
@@ -89,6 +101,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Diabetes",
         severity: "high",
         recommendation: "Requires strict blood sugar control and regular monitoring. Increased risk of complications.",
+        points: 20,
+        source: "profile",
       });
       riskScore += 20;
     }
@@ -99,6 +113,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Hypertension",
         severity: "high",
         recommendation: "Requires close blood pressure monitoring. Risk of preeclampsia.",
+        points: 20,
+        source: "profile",
       });
       riskScore += 20;
     }
@@ -109,6 +125,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Anemia",
         severity: "medium",
         recommendation: "Iron supplementation and monitoring required. May affect delivery.",
+        points: 10,
+        source: "profile",
       });
       riskScore += 10;
     }
@@ -119,6 +137,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Preeclampsia/Eclampsia",
         severity: "critical",
         recommendation: "CRITICAL: Requires immediate medical attention and close monitoring.",
+        points: 30,
+        source: "profile",
       });
       riskScore += 30;
     }
@@ -130,6 +150,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Heart condition",
         severity: "high",
         recommendation: "Requires specialized cardiac care during pregnancy.",
+        points: 15,
+        source: "profile",
       });
       riskScore += 15;
     }
@@ -140,6 +162,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Thyroid condition",
         severity: "medium",
         recommendation: "Thyroid function monitoring required during pregnancy.",
+        points: 8,
+        source: "profile",
       });
       riskScore += 8;
     }
@@ -154,6 +178,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "First pregnancy",
         severity: "low",
         recommendation: "First-time mothers may have more questions. Regular prenatal care is essential.",
+        points: 0,
+        source: "profile",
       });
     } else if (prevPreg >= 5) {
       riskFactors.push({
@@ -161,6 +187,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Grand multiparity (≥5 previous pregnancies)",
         severity: "medium",
         recommendation: "Increased risk of complications. Requires careful monitoring.",
+        points: 10,
+        source: "profile",
       });
       riskScore += 10;
     }
@@ -173,6 +201,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
       factor: "Known allergies",
       severity: "medium",
       recommendation: "Ensure healthcare providers are aware. Avoid allergens and have emergency plan.",
+      points: 5,
+      source: "profile",
     });
     riskScore += 5;
   }
@@ -186,6 +216,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Blood thinning medication",
         severity: "high",
         recommendation: "Requires specialized monitoring. May need medication adjustment during pregnancy.",
+        points: 15,
+        source: "profile",
       });
       riskScore += 15;
     }
@@ -201,6 +233,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Vaginal bleeding",
         severity: "critical",
         recommendation: "URGENT: Seek immediate medical attention. This is a medical emergency.",
+        points: 30,
+        source: "symptoms",
       });
       riskScore += 30;
     }
@@ -211,6 +245,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Severe pain",
         severity: "critical",
         recommendation: "URGENT: Seek immediate medical attention.",
+        points: 25,
+        source: "symptoms",
       });
       riskScore += 25;
     }
@@ -221,6 +257,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Reduced fetal movement",
         severity: "high",
         recommendation: "Seek medical evaluation immediately. May indicate fetal distress.",
+        points: 20,
+        source: "symptoms",
       });
       riskScore += 20;
     }
@@ -231,6 +269,8 @@ export function assessRisk(profile: MotherProfile, currentSymptoms?: string): Ri
         factor: "Fever",
         severity: "high",
         recommendation: "Seek medical attention. Fever during pregnancy requires evaluation.",
+        points: 15,
+        source: "symptoms",
       });
       riskScore += 15;
     }

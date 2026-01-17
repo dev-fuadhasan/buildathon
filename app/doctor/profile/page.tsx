@@ -15,6 +15,7 @@ type Profile = {
   phone?: string;
   specialty?: string;
   bmdcNumber?: string;
+  referenceNumber?: string;
   clinicName?: string;
   clinicAddress?: string;
   profilePicture?: string;
@@ -443,6 +444,15 @@ export default function DoctorProfile() {
                 <div>
                   <p className="text-sm font-medium text-slate-600">BMDC Number</p>
                   <p className="text-lg font-semibold text-slate-800">{profile.bmdcNumber || "N/A"}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm font-medium text-slate-600">Reference Number for Patient Consultations</p>
+                  <div className="mt-2 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                    <p className="text-3xl font-black text-blue-600 mb-2">{profile.referenceNumber || "Generating..."}</p>
+                    <p className="text-sm text-slate-600">
+                      <strong>Share this 8-digit number with your patients</strong> so they can request consultations with you.
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-600">Qualifications</p>

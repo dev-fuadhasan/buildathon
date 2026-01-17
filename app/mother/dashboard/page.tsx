@@ -7,6 +7,7 @@ import MessagePopup from "@/components/MessagePopup";
 import DailyQuestionPopup from "@/components/DailyQuestionPopup";
 import FoodRecommendations from "@/components/FoodRecommendations";
 import GenerateReportModal from "@/components/GenerateReportModal";
+import PatientBooking from "@/components/PatientBooking";
 import Icon from "@/components/Icon";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -15,6 +16,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLanguage } from "@/lib/i18n";
 import { safeAsync } from "@/lib/safeAsync";
+import { assessRisk, type RiskFactor } from "@/lib/riskPrediction";
+import { calculateRiskState, getLatestActivityTimestamp, getRiskKey } from "@/lib/riskDetectionSimple";
 import { Suspense } from "react";
 
 type Profile = {
@@ -24,6 +27,8 @@ type Profile = {
   phone?: string;
   address?: string;
   area?: string;
+  ageRange?: string;
+  pregnancyStatus?: string;
   bloodGroup?: string;
   weeksPregnant?: number;
   daysPregnant?: number;
@@ -44,6 +49,15 @@ type DailyEntry = {
   createdAt: string;
   updatedAt: string;
 };
+
+type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  id?: string; // For tracking dismissed messages
+};
+
+type AiRiskFactor = RiskFactor;
 
 type Notification = {
   id: string;
@@ -105,24 +119,6 @@ const AREA_OPTIONS = [
   "Kushtia",
 ];
 
-const AREA_LINKS: Record<string, string> = {
-  Dhaka: "https://www.doctorbangladesh.com/gynecologist-dhaka/",
-  Chittagong: "https://www.doctorbangladesh.com/gynecologist-chittagong/",
-  Sylhet: "https://www.doctorbangladesh.com/gynecologist-sylhet/",
-  Rajshahi: "https://www.doctorbangladesh.com/gynecologist-rajshahi/",
-  Rangpur: "https://www.doctorbangladesh.com/gynecologist-rangpur/",
-  Khulna: "https://www.doctorbangladesh.com/gynecologist-khulna/",
-  Barishal: "https://www.doctorbangladesh.com/gynecologist-barisal/",
-  Mymensingh: "https://www.doctorbangladesh.com/gynecologist-mymensingh/",
-  Pabna: "https://www.doctorbangladesh.com/gynecologist-pabna/",
-  Cumilla: "https://www.doctorbangladesh.com/gynecologist-cumilla/",
-  Bogura: "https://www.doctorbangladesh.com/gynecologist-bogura/",
-  Narayaganj: "https://www.doctorbangladesh.com/gynecologist-Narayanganj/",
-  Kushtia: "https://www.doctorbangladesh.com/gynecologist-kushtia/",
-};
-
-const SCRAPINGDOG_API_KEY = process.env.NEXT_PUBLIC_SCRAPINGDOG_API_KEY || "";
-
 export default function MotherDashboard() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Icon name="sync" size={48} className="animate-spin text-pink-600" /></div>}>
@@ -133,18 +129,23 @@ export default function MotherDashboard() {
 
 function MotherDashboardContent() {
   const t = useTranslation();
+  const [lang] = useState(() => getLanguage());
   const router = useRouter();
   const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [motherId, setMotherId] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [questionText, setQuestionText] = useState("");
+  const [consultations, setConsultations] = useState<any[]>([]);
+  const [consultationReference, setConsultationReference] = useState("");
+  const [consultationLoading, setConsultationLoading] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] = useState<string | null>(null);
+  const [consultationMessages, setConsultationMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "questions" | "progress" | "journal" | "notifications" | "find-doctor" | "food" | null>(null);
+  const [activeTab, setActiveTab] = useState<"profile" | "prescriptions" | "consultation" | "progress" | "journal" | "notifications" | "food" | null>(null);
   const [showCards, setShowCards] = useState(true);
   const [deletingPrescription, setDeletingPrescription] = useState<string | null>(null);
   const [renamingPrescription, setRenamingPrescription] = useState<string | null>(null);
@@ -154,6 +155,11 @@ function MotherDashboardContent() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dailyEntries, setDailyEntries] = useState<DailyEntry[]>([]);
+  const [dismissedRiskFactors, setDismissedRiskFactors] = useState<Record<string, number>>({});
+  const [dismissedRisksLoaded, setDismissedRisksLoaded] = useState(false);
+  const [aiRiskFactors, setAiRiskFactors] = useState<AiRiskFactor[]>([]);
+  const [aiRiskLoading, setAiRiskLoading] = useState(false);
+  const [chatHistoryMessages, setChatHistoryMessages] = useState<ChatHistoryMessage[]>([]);
   const [newEntryText, setNewEntryText] = useState("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -168,29 +174,8 @@ function MotherDashboardContent() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
-  const [doctorArea, setDoctorArea] = useState<string>("");
-  const [doctorLoading, setDoctorLoading] = useState(false);
-  const [doctorError, setDoctorError] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
-  type Doctor = {
-    name: string;
-    qualifications?: string;
-    specialty?: string;
-    designation?: string;
-    hospital?: string;
-    image?: string;
-    detailsUrl?: string;
-  };
-  const [doctorList, setDoctorList] = useState<Doctor[]>([]);
-  const [selectedDoctorDetails, setSelectedDoctorDetails] = useState<{
-    doctor: Doctor;
-    details?: string;
-    chambers?: string;
-    appointments?: string;
-    about?: string;
-  } | null>(null);
-  const [doctorDetailsLoading, setDoctorDetailsLoading] = useState(false);
   const commentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
     isOpen: false,
@@ -223,7 +208,7 @@ function MotherDashboardContent() {
   }, [activeTab, shouldScrollToNotifications]);
 
   useEffect(() => {
-    const validTabs = ["profile", "prescriptions", "questions", "progress", "journal", "notifications", "find-doctor", "food"];
+    const validTabs = ["profile", "prescriptions", "consultation", "progress", "journal", "notifications", "food"];
     const tab = searchParams.get("tab");
     
     if (tab && validTabs.includes(tab)) {
@@ -235,10 +220,80 @@ function MotherDashboardContent() {
     }
   }, [searchParams]);
 
+  // Load dismissed risk factors from cloud (FORCE FRESH - NO CACHE)
   useEffect(() => {
-    const t = localStorage.getItem("motherToken") || "";
-    setToken(t);
-    if (!t) return;
+    if (!motherId || !token) {
+      setDismissedRisksLoaded(true);
+      return;
+    }
+    
+    const loadDismissedRisks = async () => {
+      try {
+        // Force fresh data with cache busting
+        const res = await fetch(`/api/mother/dismissed-risks?t=${Date.now()}`, {
+          headers: {
+            ...authHeaders(token),
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+          },
+          cache: "no-store",
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const dismissed = data.dismissedRiskFactors || {};
+          console.log("[Dashboard] Loaded dismissed risks from cloud:", {
+            count: Object.keys(dismissed).length,
+            keys: Object.keys(dismissed),
+            timestamp: data.timestamp,
+          });
+          setDismissedRiskFactors(dismissed);
+        } else {
+          console.error("[Dashboard] Failed to load dismissed risks:", res.status);
+        }
+      } catch (err) {
+        console.error("[Dashboard] Error loading dismissed risks:", err);
+      } finally {
+        setDismissedRisksLoaded(true);
+      }
+    };
+    
+    loadDismissedRisks();
+  }, [motherId, token]);
+
+  useEffect(() => {
+    if (!motherId) return;
+    try {
+      localStorage.setItem(
+        `dismissedRiskFactors:${motherId}`,
+        JSON.stringify(dismissedRiskFactors)
+      );
+    } catch (err) {
+      console.error("Failed to save dismissed risk factors:", err);
+    }
+  }, [motherId, dismissedRiskFactors]);
+
+  useEffect(() => {
+    // Check for OAuth token in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthToken = urlParams.get('token');
+    const isOAuth = urlParams.get('oauth') === 'true';
+    
+    let t: string;
+    if (oauthToken && isOAuth) {
+      // OAuth login - save token and clean URL
+      localStorage.setItem("motherToken", oauthToken);
+      setToken(oauthToken);
+      t = oauthToken;
+      // Clean URL
+      window.history.replaceState({}, '', '/mother/dashboard');
+    } else {
+      // Regular token check
+      t = localStorage.getItem("motherToken") || "";
+      setToken(t);
+      if (!t) return;
+    }
+    
     try {
       const payload = JSON.parse(atob(t.split('.')[1]));
       setMotherId(payload.id || "");
@@ -247,9 +302,35 @@ function MotherDashboardContent() {
     }
     
     fetchProfile(t);
+    
+    // Check if onboarding is needed after profile loads
+    const checkOnboarding = async () => {
+      try {
+        const res = await fetch("/api/mother/profile", {
+          headers: { Authorization: `Bearer ${t}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const profile = data.profile;
+          
+          // Redirect to onboarding if not completed
+          if (!profile.onboardingComplete && !profile.age) {
+            router.push("/mother/onboarding");
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error checking onboarding:", err);
+      }
+    };
+    
+    // Check onboarding after a short delay to allow profile to load
+    setTimeout(checkOnboarding, 500);
+    
     fetchPrescriptions(t);
     fetchQuestions(t);
     fetchDailyEntries(t);
+    fetchChatHistory(t);
     fetchNotifications(t);
     updatePregnancyProgress(t);
     checkDailyTask(t);
@@ -274,6 +355,7 @@ function MotherDashboardContent() {
     const mediumInterval = setInterval(() => {
       fetchPrescriptions(t);
       fetchDailyEntries(t);
+      fetchChatHistory(t);
     }, 2 * 60 * 1000);
     
     const slowInterval = setInterval(() => {
@@ -289,18 +371,13 @@ function MotherDashboardContent() {
     };
   }, []);
   
-  useEffect(() => {
-    if (!doctorArea && profile?.area) {
-      setDoctorArea(profile.area);
-    }
-  }, [profile, doctorArea]);
 
-  // Auto fetch doctors when entering the tab with a known area
+  // Auto fetch consultations when entering the tab
   useEffect(() => {
-    if (activeTab === "find-doctor" && doctorArea && doctorList.length === 0 && !doctorLoading) {
-      fetchDoctorList(doctorArea);
+    if (activeTab === "consultation") {
+      fetchConsultations();
     }
-  }, [activeTab, doctorArea, doctorList.length, doctorLoading]);
+  }, [activeTab]);
 
   const authHeaders = (t = token) =>
     t ? { Authorization: `Bearer ${t}` } : undefined;
@@ -421,6 +498,53 @@ function MotherDashboardContent() {
       setPrescriptions([]);
     }
   };
+
+  const fetchChatHistory = async (t = token) => {
+    try {
+      console.log("[Chat History] 🔄 Fetching updated chat history...");
+      const res = await fetch("/api/mother/chat-history", {
+        headers: authHeaders(t),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[Chat History] ✅ Loaded messages:", { count: data.messages?.length || 0 });
+        setChatHistoryMessages(data.messages || []);
+      } else {
+        console.error("[Chat History] ❌ Fetch failed:", res.status);
+      }
+    } catch (err) {
+      console.error("[Chat History] ❌ Error:", err);
+    }
+  };
+
+  useEffect(() => {
+    const handleChatHistoryUpdated = () => {
+      console.log("[Chat History] 🔔 Received update event");
+      if (token) {
+        // Add tiny delay to ensure save completes (backup for race condition)
+        setTimeout(() => {
+          fetchChatHistory(token);
+        }, 150); // 150ms delay to ensure save completes
+      } else {
+        console.warn("[Chat History] ⚠️ No token, skipping fetch");
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "chatHistoryUpdated") {
+        console.log("[Chat History] 🔔 Received storage event");
+        handleChatHistoryUpdated();
+      }
+    };
+
+    window.addEventListener("chatHistoryUpdated", handleChatHistoryUpdated as EventListener);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("chatHistoryUpdated", handleChatHistoryUpdated as EventListener);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [token]);
 
   const updatePregnancyProgress = async (t = token) => {
     // Call API endpoint which handles timezone detection and updates pregnancy day
@@ -600,14 +724,14 @@ function MotherDashboardContent() {
     fetchNotifications(token, true);
   }, [token, fetchNotifications]);
 
-  const parseDoctorMarkdown = (markdown: string): Doctor[] => {
+  const parseDoctorMarkdown = (markdown: string): any[] => {
     if (!markdown || markdown.trim().length === 0) {
       return [];
     }
 
-    const entries: Doctor[] = [];
+    const entries: any[] = [];
     const lines = markdown.split('\n').map(l => l.trim()).filter(Boolean);
-    let currentDoctor: Partial<Doctor> = {};
+    let currentDoctor: any = {};
     let pendingImage: string | null = null;
     let pendingDetailsUrl: string | null = null;
 
@@ -631,7 +755,7 @@ function MotherDashboardContent() {
       if (h3Match) {
         // Save previous doctor if exists
         if (currentDoctor.name) {
-          entries.push(currentDoctor as Doctor);
+          entries.push(currentDoctor);
         }
         // Start new doctor
         currentDoctor = {
@@ -687,14 +811,14 @@ function MotherDashboardContent() {
 
     // Add last doctor
     if (currentDoctor.name) {
-      entries.push(currentDoctor as Doctor);
+      entries.push(currentDoctor);
     }
 
     return entries;
   };
 
-  const fetchDoctorDetails = async (doctor: Doctor) => {
-    if (!doctor.detailsUrl) {
+  const fetchDoctorDetails = async (_doctor: any) => {
+    if (!_doctor.detailsUrl) {
       setPopup({
         isOpen: true,
         type: "error",
@@ -704,13 +828,13 @@ function MotherDashboardContent() {
       return;
     }
 
-    setDoctorDetailsLoading(true);
-    setSelectedDoctorDetails({ doctor });
+    // setDoctorDetailsLoading(true);
+    // setSelectedDoctorDetails({ doctor });
 
     try {
       const params = new URLSearchParams({
-        api_key: SCRAPINGDOG_API_KEY,
-        url: doctor.detailsUrl,
+        api_key: process.env.NEXT_PUBLIC_SCRAPINGDOG_API_KEY || "",
+        url: _doctor.detailsUrl,
         dynamic: 'false',
         markdown: 'true'
       });
@@ -818,13 +942,13 @@ function MotherDashboardContent() {
         previousLine = line;
       });
 
-      setSelectedDoctorDetails({
-        doctor,
-        details: details || undefined,
-        chambers: chambers || undefined,
-        appointments: appointments || undefined,
-        about: about || undefined,
-      });
+      // setSelectedDoctorDetails({
+      //   doctor: _doctor,
+      //   details: details || undefined,
+      //   chambers: chambers || undefined,
+      //   appointments: appointments || undefined,
+      //   about: about || undefined,
+      // });
     } catch (err: any) {
       console.error("Error fetching doctor details:", err);
       setPopup({
@@ -833,63 +957,15 @@ function MotherDashboardContent() {
         title: "Error",
         message: err?.message || "Could not load doctor details. Please try again.",
       });
-      setSelectedDoctorDetails(null);
+      // setSelectedDoctorDetails(null);
     } finally {
-      setDoctorDetailsLoading(false);
+      // setDoctorDetailsLoading(false);
     }
   };
 
-  const fetchDoctorList = async (area: string) => {
-    if (!area) {
-      setDoctorError("Please select an area");
-      return;
-    }
-    if (!SCRAPINGDOG_API_KEY) {
-      setDoctorError("API key is not configured. Please contact support.");
-      return;
-    }
-    const url = AREA_LINKS[area];
-    if (!url) {
-      setDoctorError("No doctor list available for this area yet.");
-      return;
-    }
-    setDoctorLoading(true);
-    setDoctorError("");
-    setDoctorList([]);
-    try {
-      const params = new URLSearchParams({
-        api_key: SCRAPINGDOG_API_KEY,
-        url: url,
-        dynamic: 'false',
-        markdown: 'true'
-      });
-
-      const res = await fetch(`https://api.scrapingdog.com/scrape?${params.toString()}`);
-      
-      if (!res.ok) {
-        throw new Error(`Failed to fetch doctors (${res.status})`);
-      }
-      
-      const markdown = await res.text();
-      
-      if (!markdown || markdown.trim().length === 0) {
-        throw new Error("No data received from the server. Please try again.");
-      }
-      
-      const parsed = parseDoctorMarkdown(markdown);
-      
-      if (parsed.length === 0) {
-        throw new Error("Could not parse doctor information. Please try again later.");
-      }
-      
-      setDoctorList(parsed);
-    } catch (err: any) {
-      console.error("Error fetching doctors:", err);
-      setDoctorError(err?.message || "Could not load doctor list. Please try again.");
-      setDoctorList([]);
-    } finally {
-      setDoctorLoading(false);
-    }
+  const fetchDoctorList = async (_area: string) => {
+    // Function disabled - Find a Doctor feature removed
+    return;
   };
 
   const deleteNotification = async (notificationId: string) => {
@@ -1437,22 +1513,122 @@ function MotherDashboardContent() {
     }
   };
 
-  const fetchQuestions = async (t = token) => {
-    const res = await fetch("/api/mother/questions", { headers: authHeaders(t) });
-    if (res.ok) {
-      const data = await res.json();
-      setQuestions(data.questions || []);
-      // If a question is selected, update it with latest data but don't reopen if it was closed
-      setSelectedQuestion((current) => {
-        if (current) {
-          const updated = data.questions?.find((q: Question) => q.id === current.id);
-          if (updated) {
-            return { ...updated, comments: current.comments || updated.comments || [] };
-          }
-        }
-        return current;
+  // Consultation functions
+  const fetchConsultations = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/mother/consultations", {
+        headers: authHeaders(),
       });
+      if (res.ok) {
+        const data = await res.json();
+        setConsultations(data.consultations || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch consultations:", err);
     }
+  };
+
+  const requestConsultation = async () => {
+    if (!consultationReference?.trim() || !token) return;
+    setConsultationLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/mother/consultations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ referenceNumber: consultationReference.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Consultation request sent successfully!");
+        setConsultationReference("");
+        fetchConsultations();
+      } else {
+        setMessage(`❌ ${data.error || "Failed to send consultation request"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setConsultationLoading(false);
+    }
+  };
+
+  const removeConsultation = async (consultationId: string) => {
+    if (!confirm("Are you sure you want to remove this consultation? This will delete all messages with this doctor.")) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/consultations/${consultationId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      
+      if (res.ok) {
+        setMessage("✅ Consultation removed successfully");
+        fetchConsultations();
+      } else {
+        const data = await res.json();
+        setMessage(`❌ ${data.error || "Failed to remove consultation"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openConsultationChat = async (consultationId: string) => {
+    setSelectedConsultation(consultationId);
+    await loadConsultationMessages(consultationId);
+  };
+
+  const loadConsultationMessages = async (consultationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/consultations/${consultationId}/messages`, {
+        headers: authHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setConsultationMessages(data.messages || []);
+      }
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    }
+  };
+
+  const sendConsultationMessage = async () => {
+    if (!selectedConsultation || !newMessage.trim() || !token) return;
+    try {
+      const res = await fetch(`/api/consultations/${selectedConsultation}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ message: newMessage.trim() }),
+      });
+      if (res.ok) {
+        setNewMessage("");
+        await loadConsultationMessages(selectedConsultation);
+      } else {
+        const data = await res.json();
+        setMessage(`❌ ${data.error || "Failed to send message"}`);
+      }
+    } catch (err) {
+      setMessage("❌ Network error. Please try again.");
+    }
+  };
+
+  const fetchQuestions = async (t = token) => {
+    // Function disabled - QnA feature removed
+    return;
   };
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -1651,35 +1827,8 @@ function MotherDashboardContent() {
   };
 
   const submitQuestion = async () => {
-    const text = questionText.trim();
-    if (!text) {
-      setMessage("Please enter a question");
-      return;
-    }
-    setLoading(true);
-    setMessage("");
-    try {
-      const res = await fetch("/api/mother/questions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
-        body: JSON.stringify({ question: text }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setQuestionText("");
-        setMessage(`✅ ${t.mother.questionSubmitted}`);
-        fetchQuestions();
-      } else {
-        setMessage(`❌ ${data.error || "Could not send question"}`);
-      }
-    } catch (err) {
-      setMessage("❌ Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    // Function disabled - QnA feature removed
+    return;
   };
 
   const calculateProgress = () => {
@@ -1695,6 +1844,313 @@ function MotherDashboardContent() {
   };
 
   const progress = calculateProgress();
+
+  // SIMPLIFIED RISK DETECTION - Build symptom text
+  const symptomSignalText = useMemo(() => {
+    const recentDailyEntryText = [...dailyEntries]
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+      .slice(0, 3)
+      .map(e => e.entry)
+      .filter(Boolean)
+      .join(" ");
+
+    const recentConsultationText = [...consultationMessages]
+      .filter(m => m.senderRole === "mother")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10)
+      .map(m => m.message)
+      .filter(Boolean)
+      .join(" ");
+
+    const recentChatText = [...chatHistoryMessages]
+      .filter(m => m.role === "user")
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 12)
+      .map(m => m.content)
+      .filter(Boolean)
+      .join(" ");
+
+    const result = [recentDailyEntryText, recentConsultationText, recentChatText].filter(Boolean).join(" ").trim();
+    
+    console.log("[SymptomText] Updated:", {
+      length: result.length,
+      preview: result.substring(0, 100) + (result.length > 100 ? "..." : ""),
+      sources: {
+        dailyEntries: dailyEntries.length,
+        consultation: consultationMessages.length,
+        chat: chatHistoryMessages.length,
+      }
+    });
+    
+    return result;
+  }, [dailyEntries, consultationMessages, chatHistoryMessages]);
+
+  // Get latest activity timestamp
+  const latestActivityAt = useMemo(() => 
+    getLatestActivityTimestamp(dailyEntries, chatHistoryMessages, consultationMessages),
+    [dailyEntries, chatHistoryMessages, consultationMessages]
+  );
+
+  // Stable profile data for AI risk detection (prevent unnecessary API calls)
+  const profileDataForAI = useMemo(() => ({
+    age: profile?.age,
+    conditions: profile?.conditions,
+    medications: profile?.medications,
+    allergies: profile?.allergies,
+    previousPregnancies: profile?.previousPregnancies,
+  }), [profile?.age, profile?.conditions, profile?.medications, profile?.allergies, profile?.previousPregnancies]);
+
+  useEffect(() => {
+    if (!token || !dismissedRisksLoaded) return; // Wait for dismissed risks to load
+    const trimmedText = symptomSignalText.trim();
+    if (!trimmedText) {
+      // DON'T CLEAR! Just skip processing if no text
+      // Keep existing aiRiskFactors - they're still valid
+      console.log("[AI Risk] ℹ️  No symptom text, keeping existing risks");
+      return; // Exit without clearing aiRiskFactors
+    }
+
+    // Create stable hash from text content
+    const textHash = trimmedText
+      .split('')
+      .reduce((acc, char) => ((acc << 5) - acc) + char.charCodeAt(0), 0)
+      .toString(36);
+
+    const controller = new AbortController();
+    // DON'T clear existing aiRiskFactors here - keep them while loading new ones
+    setAiRiskLoading(true);
+    
+    const timeout = setTimeout(async () => {
+      try {
+        console.log("[AI Risk] 🔍 Starting analysis for hash:", textHash);
+        
+        // Try to get cached AI results from CLOUD first (prevents different chips on different devices!)
+        const cacheRes = await fetch(`/api/mother/ai-risk/cache?hash=${textHash}`, {
+          headers: authHeaders(token),
+          signal: controller.signal,
+        });
+        
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.risks && cacheData.risks.length > 0) {
+            console.log("[AI Risk] ✅ Using CLOUD cached results:", {
+              count: cacheData.risks.length,
+              risks: cacheData.risks.map((r: any) => r.factor),
+              hash: textHash,
+            });
+            setAiRiskFactors(cacheData.risks);
+            setAiRiskLoading(false);
+            return;
+          }
+        }
+        
+        // No cache found, generate new AI risks
+        console.log("[AI Risk] ⚙️ Cache miss, calling AI API...");
+        const res = await fetch("/api/mother/ai-risk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(token),
+          },
+          body: JSON.stringify({
+            text: trimmedText,
+            profile: profileDataForAI,
+            textHash, // Send hash so API can cache it
+          }),
+          signal: controller.signal,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Mark AI-generated risks as symptom-based (dismissible)
+          const aiFactors = (data.riskFactors || []).map((factor: RiskFactor) => ({
+            ...factor,
+            source: "symptoms" as const,
+          }));
+          console.log("[AI Risk] ✅ AI analysis complete:", {
+            count: aiFactors.length,
+            risks: aiFactors.map((r: any) => ({ factor: r.factor, points: r.points })),
+            hash: textHash,
+          });
+          
+          // Only update if we got valid risks
+          if (aiFactors.length > 0) {
+            setAiRiskFactors(aiFactors);
+          } else {
+            console.log("[AI Risk] ℹ️  No risks detected, keeping existing ones");
+            // Don't clear - keep existing risks
+          }
+        } else {
+          console.error("[AI Risk] ❌ API error:", res.status);
+          // Don't clear on error - keep existing risks
+        }
+      } catch (err) {
+        if ((err as any)?.name !== "AbortError") {
+          console.error("[AI Risk] ❌ Fetch error:", err);
+          // Don't clear on error - keep existing risks
+        }
+      } finally {
+        setAiRiskLoading(false);
+      }
+    }, 300); // Increased to 300ms for debouncing rapid updates
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+      setAiRiskLoading(false);
+    };
+  }, [token, symptomSignalText, profileDataForAI, dismissedRisksLoaded]);
+
+  // SIMPLIFIED RISK STATE - Single calculation (wait for dismissed risks to load)
+  const riskState = useMemo(() => {
+    if (!profile || !dismissedRisksLoaded) {
+      console.log("[Risk] ⏳ Waiting for data:", { hasProfile: !!profile, dismissedRisksLoaded });
+      return null;
+    }
+    
+    console.log("[Risk] 📊 Calculating risk state with:", {
+      aiRiskCount: aiRiskFactors.length,
+      aiRisks: aiRiskFactors.map(r => ({ factor: r.factor, points: r.points })),
+      dismissedCount: Object.keys(dismissedRiskFactors).length,
+    });
+    
+    const state = calculateRiskState(
+      profile,
+      symptomSignalText,
+      aiRiskFactors,
+      dismissedRiskFactors,
+      latestActivityAt
+    );
+    
+    console.log("[Risk] ✅ Risk calculated:", {
+      riskLevel: state?.riskLevel,
+      riskScore: state?.riskScore,
+      activeRisks: state?.activeRisks.length,
+      activeRiskDetails: state?.activeRisks.map(r => ({ factor: r.factor, points: r.points })),
+      dismissedCount: Object.keys(dismissedRiskFactors).length,
+      timestamp: new Date().toISOString()
+    });
+    
+    return state;
+  }, [profile, symptomSignalText, aiRiskFactors, dismissedRiskFactors, latestActivityAt, dismissedRisksLoaded]);
+
+  const handleDismissRiskFactor = useCallback(
+    async (factor: RiskFactor) => {
+      const key = getRiskKey(factor);
+      const timestamp = Date.now();
+      const updated = {
+        ...dismissedRiskFactors,
+        [key]: timestamp
+      };
+      
+      console.log("[Dashboard] Dismissing risk:", {
+        key,
+        timestamp,
+        totalDismissed: Object.keys(updated).length,
+      });
+      
+      // Update local state immediately for instant UI feedback
+      setDismissedRiskFactors(updated);
+      
+      // Save to cloud and WAIT for confirmation
+      if (token) {
+        try {
+          const res = await fetch("/api/mother/dismissed-risks", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders(token),
+              "Cache-Control": "no-cache",
+            },
+            body: JSON.stringify({ dismissedRiskFactors: updated }),
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            console.log("[Dashboard] Saved to cloud successfully:", {
+              timestamp: data.timestamp,
+              count: Object.keys(updated).length,
+            });
+          } else {
+            console.error("[Dashboard] Save failed:", res.status);
+          }
+        } catch (err) {
+          console.error("[Dashboard] Save error:", err);
+        }
+      }
+    },
+    [dismissedRiskFactors, token]
+  );
+
+  // Compatibility wrapper - old code uses activeRiskAssessment
+  const activeRiskAssessment = useMemo(() => {
+    if (!riskState) return null;
+    
+    const recommendations: string[] = [];
+    if (riskState.riskLevel === "high") {
+      recommendations.push("⚠️ HIGH RISK: Requires close monitoring and frequent prenatal visits.");
+      recommendations.push("Consider consultation with a maternal-fetal medicine specialist.");
+    } else if (riskState.riskLevel === "medium") {
+      recommendations.push("Moderate risk factors present. Regular monitoring recommended.");
+    } else {
+      recommendations.push("Low risk profile. Continue regular prenatal care.");
+    }
+
+    riskState.activeRisks
+      .filter(f => f.severity === "high" || f.severity === "critical")
+      .forEach(f => {
+        if (!recommendations.includes(f.recommendation)) {
+          recommendations.push(f.recommendation);
+        }
+      });
+
+    return {
+      riskFactors: riskState.activeRisks,
+      riskScore: riskState.riskScore,
+      overallRisk: riskState.riskLevel,
+      recommendations,
+      requiresMonitoring: riskState.riskLevel !== "low",
+    };
+  }, [riskState]);
+
+  const aiEarlyRiskSummary = useMemo(() => {
+    if (!activeRiskAssessment) return null;
+
+    const factorHighlights = activeRiskAssessment.riskFactors
+      .map((factor) => factor.factor)
+      .filter(Boolean)
+      .slice(0, 3);
+
+    const whySummary =
+      factorHighlights.length > 0
+        ? `Detected signals: ${factorHighlights.join(", ")}.`
+        : "No high-risk signals detected from the latest profile updates or recent activity.";
+
+    const actionItems =
+      activeRiskAssessment.recommendations.length > 0
+        ? activeRiskAssessment.recommendations.slice(0, 3)
+        : [
+            "Continue daily entries so the system can detect subtle changes.",
+            "Upload new prescriptions whenever they change.",
+            "Contact a clinician if you notice concerning symptoms.",
+          ];
+
+    return {
+      whySummary,
+      actionItems,
+    };
+  }, [activeRiskAssessment]);
+
+  const handleEarlyRiskCardClick = () => {
+    setActiveTab("progress");
+    setShowCards(false);
+    setTimeout(() => {
+      const riskSection = document.getElementById("early-risk-section");
+      if (riskSection) {
+        riskSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 250);
+  };
 
   if (!token) {
     return (
@@ -1731,6 +2187,14 @@ function MotherDashboardContent() {
       accent: "from-indigo-500 to-blue-500",
     },
     {
+      id: "progress",
+      title: "Risk Report",
+      description: "Track your pregnancy journey and comprehensive health risk analysis.",
+      icon: "warning.png",
+      href: "/mother/dashboard?tab=progress",
+      accent: "from-yellow-400 to-amber-500",
+    },
+    {
       id: "prescriptions",
       title: "Prescription",
       description: "Upload or review prescriptions for better guidance.",
@@ -1739,12 +2203,12 @@ function MotherDashboardContent() {
       accent: "from-cyan-500 to-teal-500",
     },
     {
-      id: "questions",
-      title: "Q&A",
-      description: "Ask doctors, read answers, and comments.",
-      icon: "question",
-      href: "/mother/dashboard?tab=questions",
-      accent: "from-purple-500 to-violet-500",
+      id: "consultation",
+      title: "Doctor Consultation",
+      description: "Connect with your doctor, share medical details, and message directly.",
+      icon: "doctor",
+      href: "/mother/dashboard?tab=consultation",
+      accent: "from-blue-500 to-cyan-500",
     },
     {
       id: "journal",
@@ -1761,22 +2225,6 @@ function MotherDashboardContent() {
       icon: "health",
       href: "/mother/dashboard?tab=food",
       accent: "from-orange-500 to-pink-500",
-    },
-    {
-      id: "progress",
-      title: "Progress",
-      description: "Track your pregnancy journey and milestones.",
-      icon: "progress",
-      href: "/mother/dashboard?tab=progress",
-      accent: "from-emerald-500 to-green-500",
-    },
-    {
-      id: "find-doctor",
-      title: "Find a Doctor",
-      description: "See gynecologists near you by area.",
-      icon: "doctor",
-      href: "/mother/dashboard?tab=find-doctor",
-      accent: "from-rose-500 to-orange-500",
     },
     {
       id: "generate-report",
@@ -1861,6 +2309,41 @@ function MotherDashboardContent() {
                         <p className="text-lg sm:text-xl font-black text-white">{daysLeft} <span className="text-xs sm:text-sm font-medium opacity-80">Days Left</span></p>
                         </div>
                       )}
+                      
+                      {activeRiskAssessment && (
+                        <button
+                          type="button"
+                          onClick={handleEarlyRiskCardClick}
+                          aria-label="View early risk details"
+                          className={`bg-white/10 backdrop-blur-md rounded-xl px-3 py-2 sm:px-5 sm:py-3 border border-white/10 shadow-lg group hover:bg-white/20 transition-all duration-300 relative overflow-hidden text-left cursor-pointer`}
+                        >
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-pink-100 text-[10px] font-bold uppercase tracking-wider opacity-80">Early Risk Detection</p>
+                            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                              activeRiskAssessment.overallRisk === "high" ? "bg-red-400" : 
+                              activeRiskAssessment.overallRisk === "medium" ? "bg-yellow-400" : "bg-green-400"
+                            }`}></div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-lg sm:text-xl font-black uppercase tracking-tight ${
+                              activeRiskAssessment.overallRisk === "high" ? "text-red-100" : 
+                              activeRiskAssessment.overallRisk === "medium" ? "text-yellow-100" : "text-green-100"
+                            }`}>
+                              {activeRiskAssessment.overallRisk === "low" ? (lang === "bn" ? "নিম্ন" : "Low") :
+                               activeRiskAssessment.overallRisk === "medium" ? (lang === "bn" ? "মধ্যম" : "Medium") :
+                               (lang === "bn" ? "উচ্চ" : "High")}
+                            </p>
+                            <span className="text-[10px] font-bold text-white/60 bg-white/10 px-1.5 py-0.5 rounded-md border border-white/10">
+                              {activeRiskAssessment.riskScore}%
+                            </span>
+                          </div>
+                          {/* Subtle background glow based on risk */}
+                          <div className={`absolute -right-2 -bottom-2 w-12 h-12 rounded-full blur-xl opacity-20 ${
+                            activeRiskAssessment.overallRisk === "high" ? "bg-red-500" : 
+                            activeRiskAssessment.overallRisk === "medium" ? "bg-yellow-500" : "bg-green-500"
+                          }`}></div>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1874,6 +2357,48 @@ function MotherDashboardContent() {
               </div>
             </div>
           </section>
+          
+          {/* Risk Alert Section - Only show when cards are visible */}
+          {showCards && activeRiskAssessment && activeRiskAssessment.overallRisk !== "low" && (
+            <div className={`p-4 rounded-3xl border-2 animate-in slide-in-from-top-4 duration-500 ${
+              activeRiskAssessment.overallRisk === "high" 
+                ? "bg-red-50 border-red-100 shadow-lg shadow-red-100/50" 
+                : "bg-yellow-50 border-yellow-100 shadow-lg shadow-yellow-100/50"
+            }`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+                  activeRiskAssessment.overallRisk === "high" ? "bg-red-500 text-white" : "bg-yellow-500 text-white"
+                }`}>
+                  <Icon name="warning" size={24} className="brightness-0 invert" />
+                </div>
+                <div className="flex-1">
+                  <div className="mb-1">
+                    <h3 className={`font-black uppercase tracking-wider text-sm ${
+                      activeRiskAssessment.overallRisk === "high" ? "text-red-700" : "text-yellow-700"
+                    }`}>
+                      {activeRiskAssessment.overallRisk === "high" ? "Attention Required: High Risk" : "Notice: Medium Risk Detected"}
+                    </h3>
+                  </div>
+                  <p className={`text-sm font-medium leading-relaxed ${
+                    activeRiskAssessment.overallRisk === "high" ? "text-red-600/80" : "text-yellow-600/80"
+                  }`}>
+                    {activeRiskAssessment.recommendations[0]}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEarlyRiskCardClick}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 shadow-md hover:shadow-lg ${
+                    activeRiskAssessment.overallRisk === "high"
+                      ? "bg-red-600 hover:bg-red-700 text-white"
+                      : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                  }`}
+                >
+                  Full Report
+                </button>
+              </div>
+            </div>
+          )}
 
           <MessagePopup
             isOpen={popup.isOpen}
@@ -1883,140 +2408,6 @@ function MotherDashboardContent() {
             message={popup.message}
           />
 
-          {/* Doctor Details Popup */}
-          {selectedDoctorDetails && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm">
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
-                {/* Header */}
-                <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">Doctor Details</h2>
-                  <button
-                    onClick={() => setSelectedDoctorDetails(null)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2 -mr-2 touch-manipulation"
-                    aria-label="Close"
-                  >
-                    <Icon name="close" size={24} />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-                  {doctorDetailsLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="flex flex-col items-center gap-3">
-                        <Icon name="sync" size={32} className="animate-spin text-pink-600" />
-                        <p className="text-gray-600 text-sm sm:text-base">Loading doctor details...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Doctor Info */}
-                      <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 pb-4 border-b border-gray-200">
-                        {selectedDoctorDetails.doctor.image ? (
-                          <img
-                            src={selectedDoctorDetails.doctor.image}
-                            alt={selectedDoctorDetails.doctor.name}
-                            className="w-24 h-24 rounded-xl object-cover border-2 border-pink-200"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                        ) : null}
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900 mb-2">
-                            {selectedDoctorDetails.doctor.name}
-                          </h3>
-                          {selectedDoctorDetails.doctor.qualifications && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              {selectedDoctorDetails.doctor.qualifications}
-                            </p>
-                          )}
-                          {selectedDoctorDetails.doctor.specialty && (
-                            <p className="text-sm text-pink-600 font-medium mb-1">
-                              {selectedDoctorDetails.doctor.specialty}
-                            </p>
-                          )}
-                          {selectedDoctorDetails.doctor.designation && (
-                            <p className="text-xs text-gray-500 mb-1">
-                              {selectedDoctorDetails.doctor.designation}
-                            </p>
-                          )}
-                          {selectedDoctorDetails.doctor.hospital && (
-                            <p className="text-xs text-gray-600">
-                              {selectedDoctorDetails.doctor.hospital}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Chambers */}
-                      {selectedDoctorDetails.chambers && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <Image
-                              src="/icons/clinic.png"
-                              alt="Clinic"
-                              width={18}
-                              height={18}
-                              className="object-contain"
-                            />
-                            Chambers
-                          </h4>
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {selectedDoctorDetails.chambers}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Appointments */}
-                      {selectedDoctorDetails.appointments && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <Icon name="clock" size={18} className="text-pink-600" />
-                            Appointment Details
-                          </h4>
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {selectedDoctorDetails.appointments}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Additional Details */}
-                      {selectedDoctorDetails.details && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <Icon name="info" size={18} className="text-pink-600" />
-                            Additional Information
-                          </h4>
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {selectedDoctorDetails.details}
-                          </p>
-                        </div>
-                      )}
-
-                      {!selectedDoctorDetails.chambers && 
-                       !selectedDoctorDetails.appointments && !selectedDoctorDetails.details && (
-                        <div className="text-center py-8 text-gray-500">
-                          <p>No additional details available for this doctor.</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
-                  <button
-                    onClick={() => setSelectedDoctorDetails(null)}
-                    className="w-full btn-primary touch-manipulation min-h-[44px]"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Message Alert - For simple messages */}
           {message && !popup.isOpen && (
@@ -2046,15 +2437,19 @@ function MotherDashboardContent() {
               <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                 {navigationCards.map((card) => {
                   const CardContent = (
-                    <div className="flex items-center gap-4 sm:gap-6 h-full">
-                      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${card.accent || "from-pink-500 to-rose-500"} flex items-center justify-center shadow-xl flex-shrink-0 group-hover:rotate-6 group-hover:scale-110 transition-all duration-300`}>
-                        <Icon name={card.icon} size={28} className="sm:w-10 sm:h-10 brightness-0 invert" />
+                    <div className="flex items-start gap-4 sm:gap-6 h-full">
+                      <div className={`w-14 h-14 sm:w-16 sm:h-16 ${card.icon === "warning.png" ? "rounded-full bg-yellow-100" : "rounded-2xl bg-gradient-to-br"} ${card.icon !== "warning.png" ? card.accent || "from-pink-500 to-rose-500" : ""} flex items-center justify-center shadow-xl flex-shrink-0 mt-1 group-hover:rotate-6 group-hover:scale-110 transition-all duration-300`}>
+                        {card.icon === "warning.png" ? (
+                          <Image src="/icons/warning.png" alt="Warning" width={32} height={32} className="sm:w-10 sm:h-10" />
+                        ) : (
+                          <Icon name={card.icon} size={28} className="sm:w-10 sm:h-10 brightness-0 invert" />
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-xl sm:text-2xl font-black text-neutral-900 mb-1 group-hover:text-pink-600 transition-colors tracking-tight truncate">
+                      <div className="flex-1 min-w-0 py-1">
+                        <h3 className="text-xl sm:text-2xl font-black text-neutral-900 mb-1 group-hover:text-pink-600 transition-colors whitespace-normal leading-tight">
                           {card.title}
                         </h3>
-                        <p className="text-neutral-600 text-sm sm:text-base line-clamp-1 opacity-80">
+                        <p className="text-neutral-600 text-sm sm:text-base opacity-80 whitespace-normal leading-relaxed">
                           {card.description}
                         </p>
                         </div>
@@ -2149,6 +2544,21 @@ function MotherDashboardContent() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Pregnancy Status
+                    </label>
+                    <select
+                      className="input w-full"
+                      value={profile.pregnancyStatus || ""}
+                      onChange={(e) => setProfile({ ...profile, pregnancyStatus: e.target.value || undefined })}
+                    >
+                      <option value="">Select status</option>
+                      <option value="not_pregnant">Not Pregnant</option>
+                      <option value="pregnant">Pregnant</option>
+                      <option value="recently_delivered">Recently Delivered</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Days Pregnant
                     </label>
                     <input
@@ -2227,22 +2637,54 @@ function MotherDashboardContent() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Area you live
-                  </label>
-                  <select
-                    className="input w-full"
-                    value={profile.area || ""}
-                    onChange={(e) => setProfile({ ...profile, area: e.target.value || undefined })}
-                  >
-                    <option value="">Select area</option>
-                    {AREA_OPTIONS.map((area) => (
-                      <option key={area} value={area}>
-                        {area}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Location Type (from onboarding)
+                    </label>
+                    <select
+                      className="input w-full"
+                      value={profile.area === "urban" || profile.area === "semi_rural" || profile.area === "rural" ? profile.area : ""}
+                      onChange={(e) => setProfile({ ...profile, area: e.target.value || undefined })}
+                    >
+                      <option value="">Select location type</option>
+                      <option value="urban">Urban</option>
+                      <option value="semi_rural">Semi-Rural</option>
+                      <option value="rural">Rural</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      This field stores your location type from onboarding
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      City/Area (optional)
+                    </label>
+                    <select
+                      className="input w-full"
+                      value={AREA_OPTIONS.includes(profile.area || "") ? profile.area : ""}
+                      onChange={(e) => {
+                        // Only update if it's a city, don't overwrite location type
+                        if (e.target.value) {
+                          // Check if current area is a location type
+                          const isLocationType = profile.area === "urban" || profile.area === "semi_rural" || profile.area === "rural";
+                          if (!isLocationType) {
+                            setProfile({ ...profile, area: e.target.value });
+                          }
+                        }
+                      }}
+                    >
+                      <option value="">Select city (optional)</option>
+                      {AREA_OPTIONS.map((area) => (
+                        <option key={area} value={area}>
+                          {area}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Optional: Select your city for doctor recommendations
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -2250,7 +2692,7 @@ function MotherDashboardContent() {
                   </label>
                   <textarea
                     className="input w-full h-20"
-                    placeholder="Example: House 123, Road 45, Area/Neighborhood, City, Division/State, Country (e.g., Dhaka, Bangladesh or New York, USA). Please include your area, city, division/state, and country for personalized food and exercise recommendations."
+                    placeholder={lang === "bn" ? "উদাহরণ: বাড়ি ১২৩, রোড ৪৫, এলাকা/পাড়া, শহর, বিভাগ/রাজ্য, দেশ (যেমন: ঢাকা, বাংলাদেশ)" : "Example: House 123, Road 45, Area/Neighborhood, City, Division/State, Country (e.g., Dhaka, Bangladesh)"}
                     value={profile.address || ""}
                     onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                   />
@@ -2790,8 +3232,238 @@ function MotherDashboardContent() {
             </DashboardCard>
           )}
 
-          {/* Questions Tab */}
-          {activeTab === "questions" && (
+          {/* Doctor Consultation Tab */}
+          {activeTab === "consultation" && (
+            <div className="space-y-6">
+              <DashboardCard title={
+                <span className="flex items-center gap-2">
+                  <Icon name="doctor" size={20} />
+                  Doctor Consultation
+                </span>
+              }>
+                <div className="space-y-6">
+                  {/* Request New Consultation */}
+                  <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <Icon name="doctor" size={24} />
+                      Request Consultation
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Enter your doctor's 8-digit reference number to request a consultation. Once approved, you can share your medical details and message directly with your doctor.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        className="input flex-1"
+                        placeholder="Enter 8-digit Reference Number (e.g., 12345678)"
+                        value={consultationReference || ""}
+                        onChange={(e) => {
+                          // Only allow digits and limit to 8 characters
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                          setConsultationReference(value);
+                        }}
+                        disabled={consultationLoading}
+                        maxLength={8}
+                      />
+                      <button
+                        className="btn-primary whitespace-nowrap min-h-[44px]"
+                        onClick={requestConsultation}
+                        disabled={!consultationReference?.trim() || consultationReference.length !== 8 || consultationLoading}
+                      >
+                        {consultationLoading ? (
+                          <span className="flex items-center gap-2">
+                            <Icon name="sync" size={18} className="animate-spin" />
+                            Sending...
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <Icon name="submit" size={18} />
+                            Request Consultation
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* My Consultations */}
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                      <Icon name="doctor" size={24} />
+                      My Consultations ({consultations.length})
+                    </h3>
+                    {consultations.length === 0 ? (
+                      <div className="text-center py-12 text-slate-500 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+                        <Icon name="doctor" size={48} className="mx-auto mb-3 text-slate-300" />
+                        <p className="text-lg font-medium mb-2">No consultations yet</p>
+                        <p className="text-sm">Request a consultation with your doctor to get started</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {consultations.map((consultation) => (
+                          <div
+                            key={consultation.id}
+                            className={`rounded-xl border-2 p-5 ${
+                              consultation.status === "approved"
+                                ? "border-green-200 bg-green-50"
+                                : consultation.status === "pending"
+                                ? "border-yellow-200 bg-yellow-50"
+                                : "border-red-200 bg-red-50"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-slate-800">
+                                    {consultation.doctor?.name || "Doctor"}
+                                  </h4>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    consultation.status === "approved"
+                                      ? "bg-green-100 text-green-700"
+                                      : consultation.status === "pending"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}>
+                                    {consultation.status === "approved" ? "Approved" : consultation.status === "pending" ? "Pending" : "Rejected"}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-600">
+                                  Reference: {consultation.doctorReferenceNumber || consultation.doctor?.referenceNumber || (consultation as any).doctorBmdcNumber || "N/A"}
+                                </p>
+                                {consultation.doctor?.specialty && (
+                                  <p className="text-sm text-slate-500 mt-1">
+                                    {consultation.doctor.specialty}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                              {consultation.status === "approved" && (
+                                <button
+                                  className="btn-primary flex-1 text-sm min-h-[44px]"
+                                  onClick={() => openConsultationChat(consultation.id)}
+                                >
+                                  <span className="flex items-center gap-2 justify-center">
+                                    <Icon name="chat" size={16} />
+                                    Message Doctor
+                                  </span>
+                                </button>
+                              )}
+                              <button
+                                className="btn-secondary text-sm min-h-[44px] bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                onClick={() => removeConsultation(consultation.id)}
+                                disabled={loading}
+                              >
+                                <span className="flex items-center gap-2 justify-center">
+                                  <Icon name="delete" size={16} />
+                                  Remove
+                                </span>
+                              </button>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-3">
+                              Requested on {new Date(consultation.requestedAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Book Consultation Slots */}
+                  {consultations.filter(c => c.status === "approved").length > 0 && (
+                    <div className="mt-6">
+                      <PatientBooking 
+                        token={token} 
+                        connectedDoctors={consultations
+                          .filter(c => c.status === "approved" && c.doctor)
+                          .map(c => ({
+                            id: c.doctorId,
+                            name: c.doctor.name,
+                            specialty: c.doctor.specialty,
+                          }))
+                        } 
+                      />
+                    </div>
+                  )}
+                </div>
+              </DashboardCard>
+            </div>
+          )}
+
+          {/* Consultation Chat Modal */}
+          {selectedConsultation && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white rounded-lg sm:rounded-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                  <h2 className="text-xl sm:text-2xl font-bold">Consultation Chat</h2>
+                  <button
+                    onClick={() => {
+                      setSelectedConsultation(null);
+                      setConsultationMessages([]);
+                      setNewMessage("");
+                    }}
+                    className="text-slate-500 hover:text-slate-700 p-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+                  {consultationMessages.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500">
+                      <p>No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    consultationMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.senderRole === "mother" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            msg.senderRole === "mother"
+                              ? "bg-blue-500 text-white"
+                              : "bg-slate-100 text-slate-800"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${
+                            msg.senderRole === "mother" ? "text-blue-100" : "text-slate-500"
+                          }`}>
+                            {new Date(msg.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="p-4 sm:p-6 border-t">
+                  <div className="flex gap-2">
+                    <textarea
+                      className="input flex-1 min-h-[60px]"
+                      placeholder="Type your message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          sendConsultationMessage();
+                        }
+                      }}
+                    />
+                    <button
+                      className="btn-primary whitespace-nowrap min-h-[60px]"
+                      onClick={sendConsultationMessage}
+                      disabled={!newMessage.trim()}
+                    >
+                      <Icon name="submit" size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Questions Tab - REMOVED - Code removed */}
+          {false && (
             <div className="space-y-6">
               <DashboardCard title={t.mother.askDoctor}>
                 <div className="space-y-4">
@@ -2811,11 +3483,11 @@ function MotherDashboardContent() {
                   <textarea
                     className="input w-full h-32 sm:h-36 text-base"
                     placeholder={t.mother.questionPlaceholder}
-                    value={questionText}
-                    onChange={(e) => setQuestionText(e.target.value)}
-                    disabled={loading}
+                    value=""
+                    onChange={() => {}}
+                    disabled={true}
                   />
-                  <button className="btn-primary w-full flex items-center gap-2 justify-center py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" onClick={submitQuestion} disabled={loading || !questionText.trim()}>
+                  <button className="btn-primary w-full flex items-center gap-2 justify-center py-3 sm:py-4 text-base sm:text-lg font-semibold touch-manipulation min-h-[44px]" onClick={() => {}} disabled={true}>
                     {loading ? t.common.loading : (
                       <>
                         <Icon name="submit" size={20} />
@@ -2831,7 +3503,7 @@ function MotherDashboardContent() {
               </DashboardCard>
 
               <DashboardCard title={t.mother.yourQuestions}>
-                {questions.length === 0 ? (
+                {true ? (
                   <div className="text-center py-12 text-neutral-500 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50">
                     <Icon name="question" size={48} className="mx-auto mb-3 text-neutral-300" />
                     <p className="text-lg font-medium mb-2">{t.mother.noQuestions}</p>
@@ -2840,14 +3512,14 @@ function MotherDashboardContent() {
                 ) : (
                   <div className="space-y-6">
                     {/* Answered Questions - Grid View */}
-                    {questions.filter(q => q.answer).length > 0 && (
+                    {false && (
                       <div>
                         <h3 className="text-xl font-bold text-green-700 mb-4 flex items-center gap-2">
                           <Icon name="success" size={24} />
-                          Answered Questions ({questions.filter(q => q.answer).length})
+                          Answered Questions (0)
                         </h3>
                       <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
-                        {questions.filter(q => q.answer).map((q) => {
+                        {[].map((q: any) => {
                           const isReported = q.reported || q.reportStatus === "pending";
                           return (
                             <div
@@ -3004,14 +3676,14 @@ function MotherDashboardContent() {
                   )}
 
                     {/* Unanswered Questions - List View */}
-                    {questions.filter(q => !q.answer).length > 0 && (
+                    {false && (
                       <div className="mt-6">
                         <h3 className="text-xl font-bold text-yellow-700 mb-4 flex items-center gap-2">
                           <Icon name="pending" size={24} />
-                          Pending Questions ({questions.filter(q => !q.answer).length})
+                          Pending Questions (0)
                         </h3>
                       <div className="space-y-3">
-                        {questions.filter(q => !q.answer).map((q) => (
+                        {[].map((q: any) => (
                           <div
                             key={q.id}
                             className="rounded-xl border-2 border-yellow-300 bg-yellow-50 p-5 relative shadow-sm hover:shadow-md transition-all"
@@ -3253,156 +3925,212 @@ function MotherDashboardContent() {
 
         {/* Progress Tab */}
         {activeTab === "progress" && (
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
-            <DashboardCard title="Pregnancy Progress">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <DashboardCard title="Risk Report">
               {progress ? (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="font-medium">
-                        {progress.days 
-                          ? `${Math.floor(progress.days / 7)} weeks ${progress.days % 7} days`
-                          : `Week ${progress.weeks}`
-                        } of {progress.total} weeks
-                      </span>
-                      <span className="text-pink-600 font-semibold">{Math.round(progress.percentage)}%</span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Progress Info */}
+                  <div className="space-y-6">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Journey Progress</h3>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="font-bold text-slate-700">
+                          {progress.days 
+                            ? `${Math.floor(progress.days / 7)} weeks ${progress.days % 7} days`
+                            : `Week ${progress.weeks}`
+                          }
+                        </span>
+                        <span className="text-pink-600 font-bold">{Math.round(progress.percentage)}% Complete</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden mb-4 border border-slate-200">
+                        <div
+                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-4 rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${progress.percentage}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 text-center italic">
+                        Estimated {progress.total - progress.weeks} weeks remaining until your due date
+                      </p>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-pink-500 to-pink-600 h-4 rounded-full transition-all duration-500"
-                        style={{ width: `${progress.percentage}%` }}
-                      />
-                    </div>
+
+                    {profile?.daysPregnant && (
+                      <div className="rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 p-6 border border-pink-100 shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 bg-pink-200/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                        <p className="text-sm font-bold text-pink-700 mb-2 flex items-center gap-2">
+                          <Icon name="pregnancy-progress" size={18} />
+                          Pregnancy Milestones
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-2xl font-black text-pink-900 leading-none">
+                              {Math.floor((profile.daysPregnant || 0) / 7)}
+                            </p>
+                            <p className="text-[10px] uppercase font-bold text-pink-600 tracking-wider">Weeks</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-black text-pink-900 leading-none">
+                              {Math.floor((profile.daysPregnant || 0) / 30)}
+                            </p>
+                            <p className="text-[10px] uppercase font-bold text-pink-600 tracking-wider">Months</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-pink-700/80 font-medium mt-4 pt-4 border-t border-pink-200/50">
+                          Total Journey: {profile.daysPregnant} days
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  {profile?.daysPregnant && (
-                    <div className="rounded-lg bg-pink-50 p-4">
-                      <p className="text-sm font-medium text-pink-700 mb-1 flex items-center gap-1">
-                        <Icon name="pregnancy-progress" size={16} />
-                        Pregnancy Progress
-                      </p>
-                      <p className="text-lg font-semibold text-pink-900">
-                        {Math.floor((profile.daysPregnant || 0) / 7)} weeks, {Math.floor((profile.daysPregnant || 0) / 30)} months
-                      </p>
-                      <p className="text-sm text-pink-700 mt-1">
-                        {profile.daysPregnant} days pregnant
-                      </p>
-                    </div>
-                  )}
-                  {profile && (() => {
-                    const { assessRisk } = require("@/lib/riskPrediction");
-                    const riskAssessment = assessRisk(profile);
-                    const riskColors: Record<"low" | "medium" | "high", string> = {
-                      low: "bg-green-100 text-green-700 border-green-200",
-                      medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-                      high: "bg-red-100 text-red-700 border-red-200",
-                    };
-                    const riskLevel = riskAssessment.overallRisk as "low" | "medium" | "high";
-                    const riskPercentage = riskAssessment.riskScore;
-                    
-                    // Calculate contribution from each category
-                    const categoryContributions: Record<string, number> = {};
-                    riskAssessment.riskFactors.forEach((factor: any) => {
-                      const category = factor.category || "Other";
-                      if (!categoryContributions[category]) {
-                        categoryContributions[category] = 0;
-                      }
-                      // Estimate contribution based on severity
-                      let contribution = 0;
-                      if (factor.severity === "critical") contribution = 30;
-                      else if (factor.severity === "high") contribution = 20;
-                      else if (factor.severity === "medium") contribution = 10;
-                      else contribution = 5;
-                      categoryContributions[category] += contribution;
-                    });
-                    
-                    return (
-                      <div className={`rounded-lg border-2 p-4 ${riskColors[riskLevel]}`}>
-                        <p className="text-sm font-medium mb-1 flex items-center gap-1">
-                          <Icon name="warning" size={16} />
-                          Risk Level
-                        </p>
-                        <p className="text-lg font-semibold capitalize">
-                          {riskAssessment.overallRisk} Risk
-                        </p>
-                        <p className="text-xs mt-1 opacity-90">
-                          Risk Score: {riskAssessment.riskScore}/100 ({riskPercentage}%)
-                        </p>
-                        
-                        {/* Risk Breakdown */}
-                        {Object.keys(categoryContributions).length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-current border-opacity-20">
-                            <p className="text-xs font-medium mb-2">Risk Breakdown:</p>
-                            <div className="space-y-1.5">
-                              {Object.entries(categoryContributions)
-                                .sort(([, a], [, b]) => b - a)
-                                .map(([category, contribution]) => {
-                                  const percentage = Math.min(Math.round((contribution / 100) * 100), 100);
-                                  return (
-                                    <div key={category} className="text-xs">
-                                      <div className="flex items-center justify-between mb-0.5">
-                                        <span className="font-medium">{category}:</span>
-                                        <span>{percentage}%</span>
+
+                  {/* Right Column: Risk Analysis */}
+                  <div className="space-y-6">
+                    {activeRiskAssessment && (() => {
+                      const riskColors: Record<"low" | "medium" | "high", string> = {
+                        low: "bg-green-50 text-green-700 border-green-100",
+                        medium: "bg-yellow-50 text-yellow-700 border-yellow-100",
+                        high: "bg-red-50 text-red-700 border-red-100",
+                      };
+                      const riskLevel = activeRiskAssessment.overallRisk as "low" | "medium" | "high";
+                      const riskPercentage = activeRiskAssessment.riskScore;
+
+                      // Calculate contribution from each category
+                      const categoryContributions: Record<string, number> = {};
+                      activeRiskAssessment.riskFactors.forEach((factor) => {
+                        const category = factor.category || "Other";
+                        if (!categoryContributions[category]) {
+                          categoryContributions[category] = 0;
+                        }
+                        const contribution = factor.points || 0;
+                        categoryContributions[category] += contribution;
+                      });
+
+                      return (
+                        <div id="early-risk-section" className={`rounded-2xl border-2 p-6 shadow-sm transition-all duration-500 ${riskColors[riskLevel]}`}>
+                          <div className="flex items-center justify-between mb-4">
+                            <p className="text-xs font-black uppercase tracking-[0.2em] opacity-70 flex items-center gap-2">
+                              <Icon name="warning" size={16} />
+                              Health Risk Analysis
+                            </p>
+                            <div className="px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm text-[10px] font-bold border border-current/10">
+                              AI EVALUATED
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <p className="text-3xl font-black capitalize tracking-tight">
+                              {activeRiskAssessment.overallRisk} Risk
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 mb-6">
+                            <div className="flex-1 h-2 bg-black/5 rounded-full overflow-hidden border border-black/5">
+                              <div 
+                                className="h-full bg-current transition-all duration-1000"
+                                style={{ width: `${riskPercentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-black min-w-[3rem] text-right">{riskPercentage}%</span>
+                          </div>
+
+                          {/* Risk Breakdown */}
+                          {Object.keys(categoryContributions).length > 0 && (
+                            <div className="space-y-4 mb-6 pt-4 border-t border-current/10">
+                              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Risk Components</p>
+                              <div className="grid gap-3">
+                                {Object.entries(categoryContributions)
+                                  .sort(([, a], [, b]) => b - a)
+                                  .map(([category, contribution]) => {
+                                    const percentage = Math.min(Math.round((contribution / 100) * 100), 100);
+                                    if (percentage === 0) return null;
+                                    return (
+                                      <div key={category} className="space-y-1">
+                                        <div className="flex items-center justify-between text-[11px] font-bold">
+                                          <span className="opacity-80">{category}</span>
+                                          <span>{percentage}%</span>
+                                        </div>
+                                        <div className="w-full bg-current/10 rounded-full h-1">
+                                          <div
+                                            className="bg-current h-1 rounded-full opacity-60 transition-all duration-700"
+                                            style={{ width: `${percentage}%` }}
+                                          />
+                                        </div>
                                       </div>
-                                      <div className="w-full bg-current bg-opacity-20 rounded-full h-1.5">
-                                        <div
-                                          className="bg-current h-1.5 rounded-full transition-all"
-                                          style={{ width: `${percentage}%` }}
-                                        />
-                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+
+                          {activeRiskAssessment.riskFactors.length > 0 && (
+                            <div className="space-y-3 mb-6 pt-4 border-t border-current/10">
+                              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Detected Signals</p>
+                              <div className="flex flex-wrap gap-2">
+                                {activeRiskAssessment.riskFactors.map((factor) => {
+                                  const isDismissible = factor.source === "symptoms";
+                                  return isDismissible ? (
+                                    <button
+                                      key={getRiskKey(factor)}
+                                      type="button"
+                                      onClick={() => handleDismissRiskFactor(factor)}
+                                      className="inline-flex items-center gap-2 rounded-xl bg-white/40 hover:bg-white/60 border border-current/20 px-3 py-1.5 text-[11px] font-bold transition-all active:scale-95 group/chip"
+                                      title="Clear symptom-based risk"
+                                    >
+                                      <span className="truncate max-w-[140px]">{factor.factor}</span>
+                                      <span className="text-lg leading-none opacity-40 group-hover/chip:opacity-100 transition-opacity">×</span>
+                                    </button>
+                                  ) : (
+                                    <div
+                                      key={getRiskKey(factor)}
+                                      className="inline-flex items-center gap-2 rounded-xl bg-white/30 border border-current/20 px-3 py-1.5 text-[11px] font-bold"
+                                      title="Profile-based risk (update your health profile to change)"
+                                    >
+                                      <span className="truncate max-w-[140px]">{factor.factor}</span>
+                                      <span className="text-xs opacity-40">🔒</span>
                                     </div>
                                   );
                                 })}
+                              </div>
                             </div>
-                            <p className="text-xs mt-2 pt-2 border-t border-current border-opacity-20 italic opacity-80">
-                              Overall: {riskPercentage}% ({riskAssessment.riskScore} points out of 100)
-                            </p>
+                          )}
+
+                          <div className="pt-4 border-t border-current/10">
+                            <div className="bg-white/30 backdrop-blur-sm rounded-xl p-4 border border-current/5">
+                              <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">AI Insight & Actions</p>
+                              <p className="text-sm font-medium leading-relaxed mb-3">
+                                {aiEarlyRiskSummary?.whySummary || "Early risk insight will appear after data is analyzed."}
+                              </p>
+                              {aiEarlyRiskSummary?.actionItems && (
+                                <div className="space-y-2">
+                                  {aiEarlyRiskSummary.actionItems.map((item, idx) => (
+                                    <div key={idx} className="flex gap-2 text-[11px] font-bold leading-tight items-start">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-current mt-1 flex-shrink-0"></span>
+                                      <span className="opacity-80">{item}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        
-                        {riskAssessment.riskFactors.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-current border-opacity-20">
-                            <p className="text-xs font-medium mb-1">Key Factors:</p>
-                            <ul className="text-xs space-y-1">
-                              {riskAssessment.riskFactors.slice(0, 3).map((factor: any, idx: number) => (
-                                <li key={idx}>• {factor.factor} ({factor.severity})</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <p>Complete your profile to see progress</p>
+                <div className="text-center py-12 max-w-sm mx-auto">
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                    <Icon name="profile" size={32} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Profile Incomplete</h3>
+                  <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                    We need your health details to generate a comprehensive risk report and track your progress.
+                  </p>
                   <button
                     onClick={() => setActiveTab("profile")}
-                    className="btn-secondary mt-3 touch-manipulation min-h-[44px] w-full sm:w-auto"
+                    className="btn-primary w-full"
                   >
-                    Update Profile
+                    Complete Profile
                   </button>
                 </div>
               )}
-            </DashboardCard>
-
-            <DashboardCard title="Quick Stats">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50">
-                  <span className="text-sm font-medium">Prescriptions</span>
-                  <span className="text-2xl font-bold text-blue-600">{prescriptions.length}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-green-50">
-                  <span className="text-sm font-medium">Questions Asked</span>
-                  <span className="text-2xl font-bold text-green-600">{questions.length}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50">
-                  <span className="text-sm font-medium">Answered</span>
-                  <span className="text-2xl font-bold text-purple-600">
-                    {questions.filter((q) => q.answer).length}
-                  </span>
-                </div>
-              </div>
             </DashboardCard>
           </div>
         )}
@@ -3664,207 +4392,6 @@ function MotherDashboardContent() {
           </div>
         )}
 
-        {/* Find a Doctor Tab */}
-        {activeTab === "find-doctor" && (
-          <DashboardCard title={
-            <span className="flex items-center gap-2">
-              <Icon name="doctor" size={20} />
-              Find a Doctor
-            </span>
-          }>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <div className="flex-1 w-full">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Choose your area
-                  </label>
-                  <select
-                    className="input w-full text-base touch-manipulation min-h-[44px]"
-                    value={doctorArea}
-                    onChange={(e) => setDoctorArea(e.target.value)}
-                  >
-                    <option value="">Select area</option>
-                    {AREA_OPTIONS.map((area) => (
-                      <option key={area} value={area}>
-                        {area}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    We'll fetch gynecologists from the selected city list.
-                  </p>
-                </div>
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-slate-700 mb-2 opacity-0">
-                    Action
-                  </label>
-                  <button
-                    className="btn-primary w-full sm:w-auto whitespace-nowrap min-h-[42px] flex items-center justify-center"
-                    onClick={() => fetchDoctorList(doctorArea)}
-                    disabled={!doctorArea || doctorLoading}
-                  >
-                    {doctorLoading ? (
-                      <span className="flex items-center gap-2">
-                        <Icon name="sync" size={18} className="animate-spin" />
-                        Loading...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Icon name="doctor" size={18} />
-                        Find Doctors
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {doctorError && (
-                <div className="rounded-lg border-2 border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {doctorError}
-                </div>
-              )}
-
-              {doctorLoading && (
-                <div className="flex items-center gap-2 text-slate-600 text-sm">
-                  <Icon name="sync" size={18} className="animate-spin" />
-                  Fetching doctor list...
-                </div>
-              )}
-
-              {!doctorLoading && !doctorError && doctorList.length === 0 && (
-                <div className="text-sm text-slate-500">
-                  Select an area and tap "Find Doctors" to see the list.
-                </div>
-              )}
-
-              {!doctorLoading && doctorList.length > 0 && (
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {doctorList.map((doc, idx) => (
-                    <div
-                      key={`${doc.name}-${idx}`}
-                      className="group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:shadow-xl hover:border-pink-200 transition-all duration-300 flex flex-col h-full overflow-hidden"
-                    >
-                      {/* Header Section with Image */}
-                      <div className="bg-gradient-to-br from-pink-50 via-rose-50 to-pink-50 px-5 py-4 border-b border-gray-100">
-                        <div className="flex items-center gap-3">
-                          {doc.image ? (
-                            <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 border-white shadow-md relative bg-gradient-to-br from-pink-500 to-rose-500">
-                              <img 
-                                src={doc.image} 
-                                alt={doc.name}
-                                className="w-full h-full object-cover relative z-10"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center z-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="8" r="5"/>
-                                  <path d="M20 21a8 8 0 0 0-16 0"/>
-                                </svg>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-gradient-to-br from-pink-500 to-rose-500 p-2.5 rounded-xl shadow-sm flex-shrink-0 w-14 h-14 flex items-center justify-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                                <circle cx="12" cy="8" r="5"/>
-                                <path d="M20 21a8 8 0 0 0-16 0"/>
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-gray-900 leading-snug truncate group-hover:text-pink-700 transition-colors">
-                              {doc.name}
-                            </h3>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content Section */}
-                      <div className="p-5 flex-1 flex flex-col gap-3.5">
-                        {doc.qualifications && (
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-blue-50">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                                <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>
-                                <path d="M22 10v6"/>
-                                <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.qualifications}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {doc.specialty && (
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-pink-50">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-600">
-                                <path d="M11 2v2"/>
-                                <path d="M5 2v2"/>
-                                <path d="M5 5c0 4 2.5 6 5.5 6 2.65 0 4-2 4.5-5"/>
-                                <path d="M8 15a6 6 0 1 0 12 0v-3"/>
-                                <circle cx="20" cy="10" r="2"/>
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-700 leading-relaxed break-words font-medium">{doc.specialty}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {doc.designation && (
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-purple-50">
-                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.designation}</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {doc.hospital && (
-                          <div className="flex items-start gap-3 pt-1 border-t border-gray-100">
-                            <div className="mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-emerald-50">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
-                                <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-                                <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-                                <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
-                                <path d="M10 6h4"/>
-                                <path d="M10 10h4"/>
-                                <path d="M10 14h4"/>
-                                <path d="M10 18h4"/>
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-600 leading-relaxed break-words">{doc.hospital}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Footer with See Details Button */}
-                      {doc.detailsUrl && (
-                        <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50">
-                          <button
-                            onClick={() => fetchDoctorDetails(doc)}
-                            className="w-full btn-secondary text-center flex items-center justify-center gap-2 text-sm py-2.5"
-                          >
-                            <Icon name="view" size={16} />
-                            See Details
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DashboardCard>
-        )}
 
         {/* Notifications Tab */}
         {activeTab === "notifications" && (

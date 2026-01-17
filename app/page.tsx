@@ -81,23 +81,40 @@ export default function Home() {
                 Experience personalized care, expert guidance, and smart tools designed to support you every step of your journey—from conception to birth.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2 w-full sm:w-auto px-4 sm:px-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-4 w-full sm:w-auto px-4 sm:px-0">
+                {/* Primary Action */}
                 <button
                   onClick={handleMotherClick}
-                  className="w-full sm:w-auto group relative inline-flex items-center justify-center gap-3 text-lg font-bold px-8 py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 tap-highlight-none"
+                  className="group relative flex-1 sm:flex-none inline-flex items-center justify-center gap-3 text-lg font-black px-10 py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-[1.5rem] shadow-[0_20px_40px_rgba(225,29,72,0.2)] hover:shadow-[0_25px_50px_rgba(225,29,72,0.3)] transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 tap-highlight-none overflow-hidden"
                 >
-                  <Icon name="mom" size={24} className="brightness-0 invert" />
-                  <span className="whitespace-nowrap">{isMother ? "Go to Dashboard" : "Start Your Journey"}</span>
-                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                  <Icon name="mom" size={24} className="brightness-0 invert relative z-10" />
+                  <span className="whitespace-nowrap relative z-10">{isMother ? "Go to Dashboard" : "Start Your Journey"}</span>
+                  <span className="group-hover:translate-x-1 transition-transform relative z-10">→</span>
                 </button>
                 
+                {/* Secondary Actions Row */}
+                <div className="flex flex-row gap-3 flex-1 sm:flex-none">
                 <Link
                   href="/chat"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 text-lg font-semibold px-8 py-4 bg-white text-neutral-900 rounded-2xl border-2 border-neutral-200 shadow-md hover:border-pink-300 hover:bg-pink-50/50 active:scale-[0.98] transition-all duration-300 tap-highlight-none"
+                    className="flex-1 inline-flex items-center justify-center gap-2 text-base font-bold px-6 py-5 bg-white/80 backdrop-blur-md text-neutral-900 rounded-[1.5rem] border border-neutral-200/60 shadow-lg shadow-neutral-200/20 hover:border-pink-300 hover:bg-pink-50/50 hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 tap-highlight-none"
                 >
-                  <Icon name="chat" size={24} className="text-pink-500" />
-                  <span className="whitespace-nowrap">Chat with AI</span>
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
+                      <Icon name="chat" size={18} className="text-pink-600" />
+                    </div>
+                    <span className="whitespace-nowrap">AI Chat</span>
+                  </Link>
+
+                  <Link
+                    href="/risk-detection"
+                    className="flex-1 inline-flex items-center justify-center gap-2 text-base font-bold px-6 py-5 bg-rose-50/80 backdrop-blur-md text-rose-700 rounded-[1.5rem] border border-rose-200/60 shadow-lg shadow-rose-200/20 hover:border-rose-400 hover:bg-rose-100/50 hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 tap-highlight-none"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-rose-200/50 flex items-center justify-center">
+                      <Icon name="health" size={18} className="text-rose-600" />
+                    </div>
+                    <span className="whitespace-nowrap">Check Risk</span>
                 </Link>
+                </div>
               </div>
 
               <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 pt-4">
@@ -148,6 +165,88 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Core Feature: Early Risk Detection */}
+      <section className="py-24 bg-gradient-to-b from-pink-50/50 to-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-rose-50/50 to-transparent pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+            <div className="flex-1 order-2 lg:order-1">
+              <div className="relative group">
+                <div className="absolute -inset-4 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[3rem] opacity-10 blur-2xl group-hover:opacity-20 transition duration-700"></div>
+                <div className="relative bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-rose-100 overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full -mr-16 -mt-16"></div>
+                  
+                  <div className="space-y-8 relative z-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 shadow-inner">
+                        <Icon name="health" size={32} />
+                      </div>
+                      <div>
+                        <h4 className="text-2xl font-black text-neutral-900 tracking-tight">AI Risk Assessment</h4>
+                        <p className="text-rose-600 font-bold text-xs uppercase tracking-widest">Medical Grade Accuracy</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 flex items-start gap-4 hover:border-rose-200 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-rose-500 font-bold shrink-0">1</div>
+                        <p className="text-neutral-700 text-sm leading-relaxed font-medium">Identify potential complications like Pre-eclampsia or Gestational Diabetes early through smart symptom analysis.</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 flex items-start gap-4 hover:border-rose-200 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-rose-500 font-bold shrink-0">2</div>
+                        <p className="text-neutral-700 text-sm leading-relaxed font-medium">Answer a clinically-validated 10-question assessment based on global maternal health standards.</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-100 flex items-start gap-4 hover:border-rose-200 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-rose-500 font-bold shrink-0">3</div>
+                        <p className="text-neutral-700 text-sm leading-relaxed font-medium">Receive instant risk level insights (Low, Medium, or High) with clear next steps and doctor recommendations.</p>
+                      </div>
+                    </div>
+                    
+                    <Link
+                      href="/risk-detection"
+                      className="w-full inline-flex items-center justify-center gap-3 font-black px-8 py-5 bg-neutral-900 text-white rounded-2xl hover:bg-neutral-800 transition-all shadow-xl active:scale-95 tap-highlight-none"
+                    >
+                      Start Free Assessment
+                      <span className="text-xl">→</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 space-y-8 order-1 lg:order-2 text-center lg:text-left">
+              <div className="inline-block px-4 py-2 bg-rose-100 text-rose-700 rounded-xl font-bold text-xs uppercase tracking-[0.2em]">Core Feature</div>
+              <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-neutral-900 leading-[1.1] tracking-tight">
+                Early Risk Detection <br />
+                <span className="text-rose-600 italic">Always Active.</span>
+              </h3>
+              <p className="text-lg sm:text-xl text-neutral-600 leading-relaxed font-medium">
+                Our advanced AI-driven screening tool constantly monitors your health data. Whether you're online or offline, it intelligently tracks risks based on all your symptoms and logs.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-6 pt-4">
+                <div className="space-y-2">
+                  <div className="text-3xl font-black text-neutral-900 tracking-tight">Hybrid</div>
+                  <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider">Online & Offline</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-3xl font-black text-neutral-900 tracking-tight">24/7</div>
+                  <p className="text-sm font-bold text-neutral-500 uppercase tracking-wider">Continuous Tracking</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start pt-4">
+                {["BP Tracking", "Glucose Risk", "Symptom Checker", "Emergency Direct"].map((tag, i) => (
+                  <span key={i} className="px-4 py-2 bg-white border border-neutral-200 rounded-full text-xs font-bold text-neutral-600 shadow-sm hover:border-rose-300 transition-colors">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Why MomsCare? - Benefits Focused Section */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,9 +262,9 @@ export default function Home() {
               
               <div className="space-y-4 pt-4">
                 {[
+                  { title: "Continuous Risk Monitoring", desc: "Our AI constantly analyzes your health logs and symptoms to detect risks early, online or offline.", icon: "health" },
                   { title: "Personalized AI Responses", desc: "Our AI understands your specific health profile and pregnancy stage.", icon: "ai" },
                   { title: "Secure Health Records", desc: "Keep all your prescriptions and medical history in one encrypted vault.", icon: "secure" },
-                  { title: "Multilingual Support", desc: "Available in English and Bangla to serve diverse communities.", icon: "chat" }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-4 p-4 rounded-2xl hover:bg-pink-50 transition-colors">
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center">
@@ -277,9 +376,10 @@ export default function Home() {
               },
               { 
                 title: "Risk Detection Tool", 
-                desc: "Professional-grade tool for early detection of potential pregnancy risks, built for reliability.",
+                desc: "Always-active hybrid tool for early detection of potential pregnancy risks, working seamlessly online and offline.",
                 icon: "health",
-                badge: "Critical"
+                badge: "Core Feature",
+                highlight: true
               },
               { 
                 title: "Doctor Directory", 
@@ -290,18 +390,32 @@ export default function Home() {
             ].map((tool, idx) => (
               <div
                 key={idx}
-                className="group bg-white p-6 sm:p-8 rounded-[2rem] border border-neutral-200 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:border-pink-200 active:scale-95 tap-highlight-none"
+                className={`group p-6 sm:p-8 rounded-[2rem] border transition-all duration-500 hover:-translate-y-2 active:scale-95 tap-highlight-none ${
+                  tool.highlight 
+                    ? "bg-rose-50/50 border-rose-200 shadow-xl shadow-rose-900/5 hover:border-rose-400 hover:bg-rose-50" 
+                    : "bg-white border-neutral-200 shadow-sm hover:shadow-2xl hover:border-pink-200"
+                }`}
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-pink-50 flex items-center justify-center group-hover:bg-pink-600 group-hover:rotate-6 transition-all duration-500 shadow-sm">
-                    <Icon name={tool.icon} size={32} className="text-pink-600 group-hover:text-white transition-colors" />
+                  <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center group-hover:rotate-6 transition-all duration-500 shadow-sm ${
+                    tool.highlight ? "bg-rose-600 text-white" : "bg-pink-50 text-pink-600 group-hover:bg-pink-600 group-hover:text-white"
+                  }`}>
+                    <Icon name={tool.icon} size={32} className={`${tool.highlight ? "brightness-0 invert" : "transition-colors"}`} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-neutral-100 text-neutral-500 rounded-full group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">{tool.badge}</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-colors ${
+                    tool.highlight ? "bg-rose-600 text-white" : "bg-neutral-100 text-neutral-500 group-hover:bg-pink-100 group-hover:text-pink-600"
+                  }`}>{tool.badge}</span>
                 </div>
-                <h4 className="text-xl font-black text-neutral-900 mb-3 tracking-tight group-hover:text-pink-600 transition-colors">{tool.title}</h4>
+                <h4 className={`text-xl font-black mb-3 tracking-tight transition-colors ${
+                  tool.highlight ? "text-neutral-900 group-hover:text-rose-700" : "text-neutral-900 group-hover:text-pink-600"
+                }`}>{tool.title}</h4>
                 <p className="text-neutral-600 leading-relaxed text-sm mb-6 opacity-80 group-hover:opacity-100 transition-opacity">{tool.desc}</p>
-                <div className="h-1.5 w-12 bg-pink-100 group-hover:w-full transition-all duration-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-pink-500 w-0 group-hover:w-full transition-all duration-1000 delay-100"></div>
+                <div className={`h-1.5 w-12 transition-all duration-700 rounded-full overflow-hidden ${
+                  tool.highlight ? "bg-rose-200 group-hover:w-full" : "bg-pink-100 group-hover:w-full"
+                }`}>
+                  <div className={`h-full transition-all duration-1000 delay-100 w-0 group-hover:w-full ${
+                    tool.highlight ? "bg-rose-600" : "bg-pink-500"
+                  }`}></div>
                 </div>
               </div>
             ))}
@@ -433,7 +547,7 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-pink-500 font-bold tracking-widest uppercase text-sm mb-4">Join Our Community</h2>
+            <h2 className="text-white font-bold tracking-widest uppercase text-sm mb-4">Join Our Community</h2>
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-black !text-white mb-6">Designed for Mothers, Supported by Professionals</h3>
             <p className="text-lg !text-neutral-300">Choose your path and start experiencing a new standard of pregnancy care today.</p>
           </div>
@@ -561,7 +675,7 @@ export default function Home() {
                     src="/mainlogo.png"
                     alt="MomsCare Logo"
                     fill
-                  className="object-contain brightness-0 invert"
+                  className="object-contain"
                   />
               </div>
               <p className="text-lg leading-relaxed max-w-md">

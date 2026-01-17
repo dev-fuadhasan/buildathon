@@ -48,36 +48,44 @@ export default function ChatPrescriptionUpload({ onUpload, disabled }: Props) {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <label htmlFor="chat-prescription-input" className="text-xs sm:text-xs font-medium text-slate-600 cursor-pointer hover:text-pink-600 transition-colors flex items-center gap-1.5 touch-manipulation min-h-[36px] sm:min-h-0">
-        <Icon name="prescription" size={16} className="sm:w-4 sm:h-4" />
-        <span>{lang === "bn" ? "প্রেসক্রিপশন" : "Prescription"}</span>
-      </label>
-      <input
-        id="chat-prescription-input"
-        type="file"
-        accept=".pdf,.png,.jpg,.jpeg"
-        onChange={handleFileChange}
-        disabled={uploading || disabled}
-        className="hidden"
-      />
-      <label htmlFor="chat-prescription-input" className="flex-1 text-xs text-slate-500 cursor-pointer hover:text-slate-700 transition-colors truncate px-2 py-1.5 sm:py-0 border border-slate-200 rounded-lg sm:border-0 sm:rounded-none touch-manipulation min-h-[36px] sm:min-h-0 flex items-center">
-        {file ? file.name : (lang === "bn" ? "ফাইল নির্বাচন করুন" : "Choose file")}
-      </label>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="flex-1 flex items-center gap-2">
+        <label 
+          htmlFor="chat-prescription-input" 
+          className={`flex-1 flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+            file 
+              ? "border-pink-500 bg-pink-50 text-pink-700 shadow-md shadow-pink-100" 
+              : "border-slate-200 hover:border-pink-300 hover:bg-slate-50 text-slate-500"
+          }`}
+        >
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${file ? 'bg-pink-500 text-white' : 'bg-slate-100'}`}>
+            <Icon name="prescription" size={16} className={file ? 'brightness-0 invert' : ''} />
+          </div>
+          <span className="text-xs font-black uppercase tracking-widest truncate">
+            {file ? file.name : (lang === "bn" ? "প্রেসক্রিপশন আপলোড" : "Upload Prescription")}
+          </span>
+        </label>
+        <input
+          id="chat-prescription-input"
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg"
+          onChange={handleFileChange}
+          disabled={uploading || disabled}
+          className="hidden"
+        />
+      </div>
+
       {file && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 hidden sm:inline">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-          <button
-            onClick={handleUpload}
-            disabled={uploading || disabled}
-            className="btn-primary text-xs px-3 sm:px-3 py-2 sm:py-1.5 h-auto touch-manipulation min-h-[36px] sm:min-h-0 flex-1 sm:flex-initial"
-          >
-            {uploading 
-              ? (lang === "bn" ? "..." : "...")
-              : (lang === "bn" ? "আপলোড" : "Upload")
-            }
-          </button>
-        </div>
+        <button
+          onClick={handleUpload}
+          disabled={uploading || disabled}
+          className="bg-pink-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.1em] shadow-lg shadow-pink-200 hover:bg-pink-600 active:scale-95 transition-all disabled:opacity-50"
+        >
+          {uploading 
+            ? <Icon name="pending" size={16} className="animate-spin brightness-0 invert" />
+            : (lang === "bn" ? "আপলোড" : "Confirm")
+          }
+        </button>
       )}
     </div>
   );

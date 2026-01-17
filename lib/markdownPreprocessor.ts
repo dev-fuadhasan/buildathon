@@ -14,6 +14,15 @@ export function preprocessMarkdown(content: string, isStreaming: boolean = false
   
   // Step 1: Normalize line endings
   processed = processed.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Step 1.5: Convert escaped "\n" sequences (literal backslash+n from API/text) into real newlines
+  // This fixes cases where Bangla responses show "\n\n" instead of actual line breaks
+  // Do this BEFORE other markdown processing so structure works correctly
+  if (processed.includes('\\n')) {
+    // First handle double newlines, then single, to preserve paragraph breaks
+    processed = processed.replace(/\\n\\n/g, '\n\n');
+    processed = processed.replace(/\\n/g, '\n');
+  }
   
   // Step 2: Fix excessive blank lines
   processed = processed.replace(/\n{3,}/g, '\n\n');

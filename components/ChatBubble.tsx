@@ -1,15 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { preprocessMarkdown, isPlainText, formatPlainText } from "@/lib/markdownPreprocessor";
 import { useMemo } from "react";
+import Icon from "@/components/Icon";
 
 type Props = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  riskDetected?: boolean;
+  isMother?: boolean;
 };
 
 // Separate component for markdown rendering with error handling
@@ -103,47 +107,53 @@ function MarkdownRenderer({ content, isUser }: { content: string; isUser: boolea
   }
 }
 
-export default function ChatBubble({ role, content, imageUrl }: Props) {
+export default function ChatBubble({ role, content, imageUrl, riskDetected, isMother }: Props) {
   const isUser = role === "user";
   
   // Intelligently preprocess content to handle any format
   const processedContent = useMemo(() => {
-    if (!content) return '';
-    
+    if (!content) return "";
+
+    // Preserve user text exactly as typed (avoid auto ":" normalization)
+    if (isUser) {
+      return content;
+    }
+
     // First, try to preprocess markdown
     let processed = preprocessMarkdown(content);
-    
+
     // If it's plain text, format it intelligently
     if (isPlainText(processed)) {
       processed = formatPlainText(processed);
     }
-    
+
     return processed;
-  }, [content]);
+  }, [content, isUser]);
   
   return (
-    <div className={`flex gap-2 sm:gap-3 ${isUser ? "justify-end" : "justify-start"} items-start mb-3 sm:mb-4`}>
+    <div className={`flex gap-3 sm:gap-4 ${isUser ? "justify-end" : "justify-start"} items-start mb-6 sm:mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500`}>
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md sm:shadow-lg ring-2 ring-pink-200">
-          AI
+        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg border border-pink-100/50 group hover:scale-110 transition-transform duration-300">
+          <Icon name="ai" size={28} className="sm:w-[32px] sm:h-[32px]" />
         </div>
       )}
+      <div className="flex flex-col gap-2 max-w-[85%] sm:max-w-[80%] md:max-w-[70%]">
       <div
-        className={`max-w-[85%] sm:max-w-[80%] md:max-w-[70%] rounded-2xl sm:rounded-2xl shadow-md sm:shadow-lg transition-all ${
+        className={`rounded-3xl transition-all select-text hover:shadow-xl ${
           isUser
-            ? "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-br-sm"
-            : "bg-white text-slate-800 border-2 border-slate-100 rounded-bl-sm"
+            ? "bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-tr-sm shadow-lg shadow-pink-100/50"
+            : "bg-white text-slate-800 border border-slate-100 rounded-tl-sm shadow-lg shadow-slate-200/50"
         }`}
       >
         {/* Image (if present) */}
         {imageUrl && (
-          <div className="relative w-full rounded-t-2xl overflow-hidden bg-slate-50">
+          <div className="relative w-full rounded-t-3xl overflow-hidden bg-slate-50 border-b border-slate-100">
             <div className="relative w-full h-40 sm:h-48 md:h-64">
               <Image
                 src={imageUrl}
                 alt="Attached image"
                 fill
-                className="object-contain"
+                className="object-contain p-2"
                 unoptimized={imageUrl.includes('?') || imageUrl.includes('X-Amz')} // Unoptimized for signed URLs
                 onError={(e) => {
                   console.error("Image load error:", imageUrl);
@@ -157,14 +167,31 @@ export default function ChatBubble({ role, content, imageUrl }: Props) {
         
         {/* Text Content with Markdown Support */}
         {content && (
-          <div className={`px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 text-sm sm:text-sm md:text-base leading-relaxed ${imageUrl ? 'pt-2 sm:pt-3' : ''} ${isUser ? 'text-white' : 'text-slate-800'}`}>
+          <div className={`px-4 sm:px-5 md:px-6 py-3 sm:py-4 text-sm sm:text-base leading-relaxed ${imageUrl ? 'pt-3' : ''} ${isUser ? 'text-white' : 'text-slate-800'}`}>
             <MarkdownRenderer content={processedContent} isUser={isUser} />
           </div>
         )}
       </div>
+      
+      {/* Risk Detection Indicator - Only for assistant messages when risk is detected */}
+      {!isUser && riskDetected && isMother && (
+        <div className="flex items-center gap-2 bg-amber-50/90 backdrop-blur-sm border border-amber-200/50 rounded-2xl px-3 py-2 shadow-sm animate-in slide-in-from-bottom-2 fade-in duration-300">
+          <div className="flex items-center gap-1.5 flex-1">
+            <Icon name="warning" size={14} className="text-amber-600 flex-shrink-0" />
+            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Risk Detected</span>
+          </div>
+          <Link 
+            href="/mother/dashboard?tab=progress" 
+            className="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm hover:shadow-md"
+          >
+            View Report
+          </Link>
+        </div>
+      )}
+      </div>
       {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-md sm:shadow-lg ring-2 ring-blue-200">
-          <span className="text-[10px] sm:text-xs">You</span>
+        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg border border-blue-100/50 group hover:scale-110 transition-transform duration-300">
+          <Icon name="mom" size={28} className="sm:w-[32px] sm:h-[32px]" />
         </div>
       )}
     </div>

@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
     passwordHash: await hashPassword(password),
     createdAt: now,
     updatedAt: now,
+    status: 'active' as const,
+    onboardingComplete: false, // New users need onboarding
   };
 
   await saveMother(mother);

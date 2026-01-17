@@ -368,17 +368,36 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
       },
     ];
 
-    const response = await askMomsCare(
-      messages,
-      profileContext,
-      prescriptionUrls, // Include prescription URLs for context
-      weeksPregnant,
-      true, // isPersonal
-      true, // isLoggedIn
-      {
-        motherId: mother.id,
-      }
-    );
+    console.log("[Food Recommendation] 🚀 Calling AI to generate recommendations...");
+    console.log("[Food Recommendation] Mother ID:", mother.id);
+    console.log("[Food Recommendation] Weeks pregnant:", weeksPregnant);
+    console.log("[Food Recommendation] Location:", locationData?.country, locationData?.culture);
+    
+    let response: string;
+    try {
+      response = await askMomsCare(
+        messages,
+        profileContext,
+        prescriptionUrls, // Include prescription URLs for context
+        weeksPregnant,
+        true, // isPersonal
+        true, // isLoggedIn
+        {
+          motherId: mother.id,
+        }
+      );
+      console.log("[Food Recommendation] ✅ AI response received");
+    } catch (aiError: any) {
+      console.error("[Food Recommendation] ❌ AI FAILED:", aiError.message);
+      console.error("[Food Recommendation] Error details:", {
+        message: aiError.message,
+        status: aiError.status,
+        code: aiError.code,
+      });
+      
+      // CRITICAL: If AI completely fails, throw error to use fallback
+      throw new Error(`AI failed to generate recommendations: ${aiError.message}`);
+    }
     
     // Try to parse JSON from response
     let routineData: { 
@@ -483,14 +502,35 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
       exerciseVideos: exerciseVideos.length > 0 ? exerciseVideos : undefined,
     };
   } catch (error: any) {
-    console.error("Error generating daily routine recommendations:", error);
-    // Return default recommendations on error (safe for pregnancy)
+    console.error("[Food Recommendation] ❌ CRITICAL ERROR:", error.message);
+    console.error("[Food Recommendation] Full error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
+    // EMERGENCY FALLBACK: Return location-appropriate recommendations
+    const isSouthAsian = locationData?.culture === "South Asian" || 
+                        locationData?.country === "Bangladesh" || 
+                        locationData?.country === "India" ||
+                        locationData?.country === "Pakistan";
+    
+    console.log("[Food Recommendation] 🆘 Using EMERGENCY FALLBACK recommendations");
+    console.log("[Food Recommendation] Detected culture:", locationData?.culture, "Country:", locationData?.country);
+    console.log("[Food Recommendation] Using South Asian recommendations:", isSouthAsian);
+    
     return {
-      breakfast: "Oatmeal with fresh fruits and a glass of milk",
-      lunch: "Grilled chicken/fish with steamed vegetables and brown rice",
-      dinner: "Lentil soup with whole grain roti and fresh salad",
-      exercises: "15-minute gentle walk, 10 minutes of prenatal yoga stretches",
-      waterIntake: "Drink 8-10 glasses (2-2.5 liters) of water throughout the day. Increase intake if in hot climate or after exercise. Drink water between meals, not during meals."
+      breakfast: isSouthAsian
+        ? "Paratha with egg curry (if no egg allergies), fresh yogurt (if no dairy allergies), banana, and warm milk"
+        : "Whole grain toast with scrambled eggs (if no egg allergies), fresh fruit salad, and a glass of milk",
+      lunch: isSouthAsian
+        ? "Steamed rice with dal (lentil curry), mixed vegetable curry, and fresh salad"
+        : "Grilled chicken or fish with steamed vegetables and brown rice",
+      dinner: isSouthAsian
+        ? "Roti with chicken curry (or vegetable curry if vegetarian), dal, and fresh vegetables. Keep it light."
+        : "Light pasta with vegetables and lean protein, or soup with whole grain bread",
+      exercises: `15-minute gentle walk ${isSouthAsian ? "(early morning or evening to avoid heat)" : ""}, 10 minutes of prenatal yoga stretches, breathing exercises for relaxation`,
+      waterIntake: `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. ${locationData?.climate === "tropical" || locationData?.climate === "hot" ? "Increase intake due to hot climate." : ""} Drink water between meals, not during meals.`
     };
   }
 }

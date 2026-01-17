@@ -147,6 +147,8 @@ export default function AdminDashboard() {
   } | null>(null);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [motherSearch, setMotherSearch] = useState("");
+  const [doctorSort, setDoctorSort] = useState<"createdAt_asc" | "createdAt_desc" | "name_asc" | "name_desc">("createdAt_asc");
+  const [motherSort, setMotherSort] = useState<"createdAt_asc" | "createdAt_desc" | "name_asc" | "name_desc">("createdAt_asc");
   const [nurseSearch, setNurseSearch] = useState("");
   const [analyticsFilter, setAnalyticsFilter] = useState<{
     riskLevel?: "low" | "medium" | "high";
@@ -1456,8 +1458,8 @@ export default function AdminDashboard() {
         {/* Doctors Tab */}
         {activeTab === "doctors" && (
           <DashboardCard title="All Doctors">
-            {/* Search Bar */}
-            <div className="mb-4">
+            {/* Search Bar and Sort */}
+            <div className="mb-4 space-y-3">
               <input
                 type="text"
                 placeholder="🔍 Search doctors by name, email, specialty..."
@@ -1465,23 +1467,24 @@ export default function AdminDashboard() {
                 value={doctorSearch}
                 onChange={(e) => setDoctorSearch(e.target.value)}
               />
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600 whitespace-nowrap">Sort by:</label>
+                <select
+                  className="input text-sm flex-1"
+                  value={doctorSort}
+                  onChange={(e) => setDoctorSort(e.target.value as typeof doctorSort)}
+                >
+                  <option value="createdAt_asc">Created Date (Oldest First)</option>
+                  <option value="createdAt_desc">Created Date (Newest First)</option>
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                </select>
+              </div>
             </div>
             <div className="space-y-3">
-              {allDoctors.filter(d => {
-                if (!doctorSearch) return true;
-                const search = doctorSearch.toLowerCase();
-                return (
-                  d.name?.toLowerCase().includes(search) ||
-                  d.email.toLowerCase().includes(search) ||
-                  d.specialty?.toLowerCase().includes(search) ||
-                  d.bmdcNumber?.toLowerCase().includes(search)
-                );
-              }).length === 0 ? (
-                <p className="text-slate-500 text-center py-8">
-                  {doctorSearch ? "No doctors found matching your search." : "No doctors registered yet."}
-                </p>
-              ) : (
-                allDoctors.filter(d => {
+              {(() => {
+                // Filter first
+                let filtered = allDoctors.filter(d => {
                   if (!doctorSearch) return true;
                   const search = doctorSearch.toLowerCase();
                   return (
@@ -1490,7 +1493,57 @@ export default function AdminDashboard() {
                     d.specialty?.toLowerCase().includes(search) ||
                     d.bmdcNumber?.toLowerCase().includes(search)
                   );
-                }).map((d) => (
+                });
+                
+                // Sort filtered results
+                filtered = [...filtered].sort((a, b) => {
+                  if (doctorSort === "createdAt_asc") {
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                  } else if (doctorSort === "createdAt_desc") {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                  } else if (doctorSort === "name_asc") {
+                    return (a.name || "").localeCompare(b.name || "");
+                  } else if (doctorSort === "name_desc") {
+                    return (b.name || "").localeCompare(a.name || "");
+                  }
+                  return 0;
+                });
+                
+                return filtered;
+              })().length === 0 ? (
+                <p className="text-slate-500 text-center py-8">
+                  {doctorSearch ? "No doctors found matching your search." : "No doctors registered yet."}
+                </p>
+              ) : (
+                (() => {
+                  // Filter first
+                  let filtered = allDoctors.filter(d => {
+                    if (!doctorSearch) return true;
+                    const search = doctorSearch.toLowerCase();
+                    return (
+                      d.name?.toLowerCase().includes(search) ||
+                      d.email.toLowerCase().includes(search) ||
+                      d.specialty?.toLowerCase().includes(search) ||
+                      d.bmdcNumber?.toLowerCase().includes(search)
+                    );
+                  });
+                  
+                  // Sort filtered results
+                  filtered = [...filtered].sort((a, b) => {
+                    if (doctorSort === "createdAt_asc") {
+                      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    } else if (doctorSort === "createdAt_desc") {
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    } else if (doctorSort === "name_asc") {
+                      return (a.name || "").localeCompare(b.name || "");
+                    } else if (doctorSort === "name_desc") {
+                      return (b.name || "").localeCompare(a.name || "");
+                    }
+                    return 0;
+                  });
+                  
+                  return filtered;
+                })().map((d) => (
                   <ListCard
                     key={d.id}
                     title={d.name || "Unnamed health worker"}
@@ -1564,8 +1617,8 @@ export default function AdminDashboard() {
         {activeTab === "mothers" && (
           <div className="space-y-4">
             <DashboardCard title="All Mothers">
-              {/* Search Bar */}
-              <div className="mb-4">
+              {/* Search Bar and Sort */}
+              <div className="mb-4 space-y-3">
                 <input
                   type="text"
                   placeholder="🔍 Search mothers by name, email..."
@@ -1573,6 +1626,19 @@ export default function AdminDashboard() {
                   value={motherSearch}
                   onChange={(e) => setMotherSearch(e.target.value)}
                 />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-slate-600 whitespace-nowrap">Sort by:</label>
+                  <select
+                    className="input text-sm flex-1"
+                    value={motherSort}
+                    onChange={(e) => setMotherSort(e.target.value as typeof motherSort)}
+                  >
+                    <option value="createdAt_asc">Created Date (Oldest First)</option>
+                    <option value="createdAt_desc">Created Date (Newest First)</option>
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                  </select>
+                </div>
               </div>
               
               {/* Analytics Filters */}
@@ -1735,6 +1801,20 @@ export default function AdminDashboard() {
                     }
                     
                     return true;
+                  });
+                  
+                  // Sort filtered results
+                  filtered = [...filtered].sort((a, b) => {
+                    if (motherSort === "createdAt_asc") {
+                      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                    } else if (motherSort === "createdAt_desc") {
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    } else if (motherSort === "name_asc") {
+                      return (a.name || "").localeCompare(b.name || "");
+                    } else if (motherSort === "name_desc") {
+                      return (b.name || "").localeCompare(a.name || "");
+                    }
+                    return 0;
                   });
                   
                   return filtered.length === 0 ? (

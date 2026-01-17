@@ -6,10 +6,12 @@ export type MotherProfile = {
   passwordHash: string;
   name?: string;
   age?: number;
+  ageRange?: string; // Age range from onboarding: "18-24", "25-29", "30-34", "35-39", "40+"
   phone?: string;
   address?: string;
-  area?: string; // Area/location where the mother lives
+  area?: string; // Area/location where the mother lives (from onboarding: "urban", "semi_rural", "rural")
   bloodGroup?: string;
+  pregnancyStatus?: string; // Current pregnancy status from onboarding: "not_pregnant", "pregnant", "recently_delivered"
   weeksPregnant?: number; // Kept for backward compatibility
   daysPregnant?: number; // New: Days since LMP (Last Menstrual Period)
   dueDate?: string;
@@ -22,6 +24,7 @@ export type MotherProfile = {
   previousPregnancies?: number;
   allergies?: string;
   status?: "active" | "paused"; // Account status
+  onboardingComplete?: boolean; // Flag to track if onboarding is completed
   lastJournalEntryDate?: string; // YYYY-MM-DD
   lastMorningAdviceDate?: string; // YYYY-MM-DD
   lastNightAdviceDate?: string; // YYYY-MM-DD
@@ -48,7 +51,8 @@ export type DoctorProfile = {
   phone?: string;
   role: HealthWorkerRole; // "doctor" | "others"
   specialty?: string;
-  bmdcNumber?: string; // BMDC Registration Number
+  bmdcNumber?: string; // BMDC Registration Number (kept for backward compatibility)
+  referenceNumber?: string; // 8-digit unique reference number for consultations
   hospitalClinicName?: string; // Hospital/Clinic name (normalized for matching)
   hospitalClinicNameOriginal?: string; // Original name as entered by user
   clinicName?: string; // Keep for backward compatibility (same as hospitalClinicName)
@@ -147,6 +151,79 @@ export type Question = {
   reportStatus?: "pending" | "solved" | "rejected"; // Report status
   adminDecision?: string; // Admin's decision/response to the report
   adminDecisionAt?: string; // When admin made the decision
+};
+
+// Doctor Consultation types
+export type ConsultationStatus = "pending" | "approved" | "rejected";
+
+export type Consultation = {
+  id: string;
+  motherId: string;
+  doctorId: string;
+  doctorReferenceNumber: string; // 8-digit reference number entered by mother
+  status: ConsultationStatus;
+  requestedAt: string;
+  respondedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ConsultationMessage = {
+  id: string;
+  consultationId: string;
+  senderId: string;
+  senderRole: "mother" | "doctor";
+  message: string;
+  createdAt: string;
+  read: boolean;
+  readAt?: string;
+};
+
+// ============================================
+// TIME SLOTS & BOOKINGS
+// ============================================
+
+export type TimeSlotStatus = "available" | "full" | "cancelled";
+
+export type TimeSlot = {
+  id: string;
+  doctorId: string;
+  date: string;          // YYYY-MM-DD
+  startTime: string;     // HH:MM:SS
+  endTime: string;       // HH:MM:SS
+  durationMinutes: number;
+  maxBookings: number;
+  currentBookings: number;
+  status: TimeSlotStatus;
+  slotType?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ConsultationBookingStatus = 
+  | "pending" 
+  | "approved" 
+  | "rejected" 
+  | "completed" 
+  | "cancelled";
+
+export type ConsultationBooking = {
+  id: string;
+  timeSlotId: string;
+  doctorId: string;
+  motherId: string;
+  consultationId?: string;
+  issueDescription: string;
+  additionalNotes?: string;
+  status: ConsultationBookingStatus;
+  bookingReference: string;  // 8-digit reference
+  bookedAt: string;
+  respondedAt?: string;
+  completedAt?: string;
+  cancellationReason?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ChatMessage = {
@@ -261,7 +338,7 @@ export type FoodRecommendation = DailyRoutine;
 export type Notification = {
   id: string;
   motherId: string;
-  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general" | "report_decision";
+  type: "morning_recommendation" | "evening_recommendation" | "daily_task" | "general" | "report_decision" | "consultation_request" | "consultation_approved" | "consultation_rejected" | "consultation_message" | "booking_request" | "booking_approved" | "booking_rejected" | "booking_cancelled";
   title: string;
   message?: string;
   content?: string; // Alternative to message for report_decision type
@@ -804,6 +881,137 @@ export async function deleteNotification(motherId: string, notificationId: strin
     await deleteObject(notificationKey(motherId, notificationId));
   } catch (err) {
     console.error("Error deleting notification:", err);
+  }
+}
+
+// Consultation Functions
+function consultationKey(consultationId: string): string {
+  return `consultations/${consultationId}.json`;
+}
+
+function consultationMessageKey(consultationId: string, messageId: string): string {
+  return `consultations/${consultationId}/messages/${messageId}.json`;
+}
+
+export async function saveConsultation(consultation: Consultation): Promise<void> {
+  await putJson(consultationKey(consultation.id), consultation);
+}
+
+export async function getConsultation(consultationId: string): Promise<Consultation | null> {
+  try {
+    return await getJson<Consultation>(consultationKey(consultationId));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function listMotherConsultations(motherId: string): Promise<Consultation[]> {
+  try {
+    const all = await listJson<Consultation>("consultations/");
+    return all.filter(c => c.motherId === motherId);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function listDoctorConsultations(doctorId: string): Promise<Consultation[]> {
+  try {
+    const all = await listJson<Consultation>("consultations/");
+    return all.filter(c => c.doctorId === doctorId);
+  } catch (err) {
+    return [];
+  }
+}
+
+// Generate a unique 8-digit reference number for doctors
+export async function generateUniqueReferenceNumber(): Promise<string> {
+  const allDoctors = await listAllDoctors();
+  const existingNumbers = new Set(allDoctors.map(d => d.referenceNumber).filter(Boolean));
+  
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    // Generate random 8-digit number
+    const refNumber = Math.floor(10000000 + Math.random() * 90000000).toString();
+    
+    if (!existingNumbers.has(refNumber)) {
+      return refNumber;
+    }
+    
+    attempts++;
+  }
+  
+  // Fallback: use timestamp-based number if random generation fails
+  const timestamp = Date.now().toString().slice(-8);
+  return timestamp.padStart(8, '0');
+}
+
+export async function findConsultationByReference(referenceNumber: string, motherId: string): Promise<Consultation | null> {
+  try {
+    const all = await listJson<Consultation>("consultations/");
+    return all.find(c => c.motherId === motherId && c.doctorReferenceNumber === referenceNumber) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function findDoctorByReference(referenceNumber: string): Promise<DoctorProfile | null> {
+  try {
+    const allDoctors = await listAllDoctors();
+    return allDoctors.find(d => d.referenceNumber === referenceNumber && d.status === "approved") || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Keep old functions for backward compatibility (deprecated)
+export async function findConsultationByBmdc(bmdcNumber: string, motherId: string): Promise<Consultation | null> {
+  try {
+    const all = await listJson<Consultation>("consultations/");
+    return all.find(c => c.motherId === motherId && (c.doctorReferenceNumber === bmdcNumber || (c as any).doctorBmdcNumber === bmdcNumber)) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function findDoctorByBmdc(bmdcNumber: string): Promise<DoctorProfile | null> {
+  try {
+    const allDoctors = await listAllDoctors();
+    return allDoctors.find(d => (d.referenceNumber === bmdcNumber || d.bmdcNumber === bmdcNumber) && d.status === "approved") || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveConsultationMessage(message: ConsultationMessage): Promise<void> {
+  await putJson(consultationMessageKey(message.consultationId, message.id), message);
+}
+
+export async function listConsultationMessages(consultationId: string): Promise<ConsultationMessage[]> {
+  try {
+    return await listJson<ConsultationMessage>(`consultations/${consultationId}/messages/`);
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function markConsultationMessagesAsRead(consultationId: string, userId: string, userRole: "mother" | "doctor"): Promise<void> {
+  try {
+    const messages = await listConsultationMessages(consultationId);
+    const unreadMessages = messages.filter(m => 
+      !m.read && 
+      m.senderId !== userId && 
+      m.senderRole !== userRole
+    );
+    
+    for (const message of unreadMessages) {
+      message.read = true;
+      message.readAt = new Date().toISOString();
+      await saveConsultationMessage(message);
+    }
+  } catch (err) {
+    console.error("Error marking consultation messages as read:", err);
   }
 }
 

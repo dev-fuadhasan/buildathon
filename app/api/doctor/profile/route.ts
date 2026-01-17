@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserFromRequest, signAuthToken } from "@/lib/auth";
-import { getDoctor, saveDoctor, findDoctorByEmail } from "@/lib/data";
+import { getDoctor, saveDoctor, findDoctorByEmail, generateUniqueReferenceNumber } from "@/lib/data";
 import { signedUrl } from "@/lib/r2Client";
 
 export async function GET(req: NextRequest) {
@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
   const doctor = await getDoctor(user.id);
   if (!doctor) {
     return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
+  }
+
+  // Auto-generate reference number for existing doctors who don't have one
+  if (doctor.role === "doctor" && !doctor.referenceNumber) {
+    const referenceNumber = await generateUniqueReferenceNumber();
+    doctor.referenceNumber = referenceNumber;
+    doctor.updatedAt = new Date().toISOString();
+    await saveDoctor(doctor);
+    console.log(`[Doctor Profile] Auto-generated reference number for doctor ${doctor.id}: ${referenceNumber}`);
   }
 
   const { passwordHash, ...safe } = doctor;

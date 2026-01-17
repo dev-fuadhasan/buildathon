@@ -13,6 +13,7 @@ export default function DoctorLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [popup, setPopup] = useState<{ isOpen: boolean; type: "success" | "error" | "warning" | "info"; title: string; message: string }>({
     isOpen: false,
     type: "info",
@@ -61,15 +62,40 @@ export default function DoctorLogin() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/google?role=doctor");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to initiate Google login");
+        return;
+      }
+      // Redirect to Google OAuth
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || "An error occurred. Please try again.");
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <Layout>
-      <div className="mx-auto max-w-xl space-y-8 py-4 sm:py-8 px-4">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-700 shadow-xl mb-4 transform rotate-6">
-            <Icon name="doctor" size={40} className="brightness-0 invert" />
+      <div className="flex-1 flex flex-col justify-center py-8 sm:py-16 px-4 animate-in fade-in duration-700 w-full">
+        <div className="mx-auto w-full max-w-xl space-y-6 sm:space-y-8">
+          <div className="text-center space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 shadow-2xl shadow-blue-200 mb-2 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+            <Icon name="doctor" size={48} className="brightness-0 invert" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight">Doctor Login</h1>
-          <p className="text-neutral-600 font-medium max-w-xs mx-auto leading-relaxed">Access the clinical portal to manage patient interactions.</p>
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+              Clinical <span className="text-blue-600">Portal</span>
+            </h1>
+            <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed text-sm sm:text-base">
+              Securely manage patient interactions and maternal care records.
+            </p>
+          </div>
         </div>
 
         <MessagePopup
@@ -80,100 +106,194 @@ export default function DoctorLogin() {
           message={popup.message}
         />
 
-        <form onSubmit={onSubmit} className="bg-white rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-blue-100 space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50" />
+        <div className="relative group">
+          {/* Decorative background elements */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-[3rem] blur-xl opacity-50 group-hover:opacity-75 transition duration-1000"></div>
           
-          <div className="space-y-4 relative z-10">
-            <div>
-              <label className="block text-sm font-bold text-neutral-700 mb-2 ml-1">Email Address</label>
-              <input
-                className="input w-full bg-neutral-50 border-neutral-200 focus:bg-white"
-                placeholder="doctor@example.com"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
+          <form onSubmit={onSubmit} className="relative bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-[0_20px_50px_rgba(59,130,246,0.1)] border border-blue-50 space-y-8 overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-60" />
             
-            <div className="relative">
-              <label className="block text-sm font-bold text-neutral-700 mb-2 ml-1">Password</label>
-              <div className="relative">
-                <input
-                  className="input w-full bg-neutral-50 border-neutral-200 focus:bg-white pr-12"
-                  placeholder="Enter your password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-blue-600 transition-colors tap-highlight-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <Icon name="view" size={20} className="brightness-0 opacity-50" />
-                  ) : (
-                    <Icon name="view" size={20} className="brightness-0 opacity-20" />
-                  )}
-                </button>
+            <div className="space-y-5 relative z-10">
+              <div className="group/input">
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1 group-focus-within/input:text-blue-500 transition-colors">
+                  Medical ID / Email
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-blue-500 transition-colors">
+                    <Icon name="profile" size={18} />
+                  </div>
+                  <input
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300"
+                    placeholder="Enter clinical email address"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="group/input">
+                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 ml-1 group-focus-within/input:text-blue-500 transition-colors">
+                  Secure Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-blue-500 transition-colors">
+                    <Icon name="secure" size={18} />
+                  </div>
+                  <input
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-12 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all duration-300"
+                    placeholder="Enter your clinical password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    <Icon name="view" size={20} className={showPassword ? "opacity-100" : "opacity-40"} />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
-              <Icon name="error" size={16} />
-              <p className="font-medium">{error}</p>
+            <div className="flex items-center justify-end relative z-10">
+              <Link
+                href="/forgot-password?role=doctor"
+                className="text-xs font-black uppercase tracking-widest text-blue-600 hover:text-indigo-700 transition-colors px-2 py-1"
+              >
+                Forgot Password?
+              </Link>
             </div>
-          )}
 
-          <div className="flex items-center justify-end">
-            <Link
-              href="/forgot-password?role=doctor"
-              className="text-sm text-blue-600 hover:text-blue-700 font-bold underline underline-offset-4 decoration-2"
+            {error && (
+              <div className="flex items-center gap-3 text-sm text-red-600 bg-red-50/50 backdrop-blur-sm p-4 rounded-2xl border border-red-100 animate-in shake-in duration-300">
+                <Icon name="error" size={18} />
+                <p className="font-bold">{error}</p>
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              className="group/btn relative w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white py-5 rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-blue-100 hover:shadow-2xl hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none overflow-hidden" 
+              disabled={loading}
             >
-              Forgot Password?
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative flex items-center justify-center gap-3">
+                {loading ? (
+                  <>
+                    <Icon name="sync" size={20} className="animate-spin" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Authorize & Enter</span>
+                    <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
+                  </>
+                )}
+              </span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative bg-white px-4">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-400">OR</span>
+              </div>
+            </div>
+
+            {/* Google OAuth Button */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading || loading}
+              className="group/google relative w-full bg-white border-2 border-slate-200 text-slate-700 py-5 rounded-2xl text-base font-black uppercase tracking-widest shadow-sm hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-slate-50 translate-y-full group-hover/google:translate-y-0 transition-transform duration-300"></div>
+              <span className="relative flex items-center justify-center gap-3">
+                {googleLoading ? (
+                  <>
+                    <Icon name="sync" size={20} className="animate-spin text-slate-600" />
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </form>
+        </div>
+        
+        {/* Registration Section */}
+        <div className="text-center space-y-8 pb-12">
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Medical Professional?</p>
+            <Link 
+              href="/doctor/register" 
+              className="inline-flex items-center justify-center gap-3 px-10 py-4 bg-white text-slate-900 border-2 border-slate-100 rounded-2xl font-black uppercase tracking-widest text-xs shadow-sm hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600 transition-all duration-300 active:scale-95 group"
+            >
+              Request Practitioner Access
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
           </div>
-
-          <button 
-            type="submit" 
-            className="btn-primary w-full py-4 text-lg font-black shadow-blue-200 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 active:scale-95 transition-all tap-highlight-none" 
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <Icon name="sync" size={20} className="animate-spin brightness-0 invert" />
-                Signing in...
-              </span>
-            ) : "Login to Portal"}
-          </button>
-        </form>
-        
-        {/* Registration Link */}
-        <div className="text-center space-y-4 pb-8">
-          <p className="text-neutral-500 font-medium">Don't have an account yet?</p>
-          <Link 
-            href="/doctor/register" 
-            className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-neutral-900 border-2 border-neutral-200 rounded-2xl font-bold shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 active:scale-95 tap-highlight-none group"
-          >
-            Register as Doctor
-            <span className="group-hover:translate-x-1 transition-transform">→</span>
-          </Link>
           
-          {/* Demo Account Info */}
-          <div className="mt-8 bg-blue-50/50 backdrop-blur-sm border border-blue-100 rounded-2xl p-4 max-w-sm mx-auto">
-            <p className="text-xs text-blue-600 font-bold uppercase tracking-widest mb-2">Demo Access</p>
-            <div className="text-sm text-blue-800 flex justify-center gap-4">
-              <p><span className="font-bold">Email:</span> demo@doctor.com</p>
-              <p><span className="font-bold">Pass:</span> 123456</p>
+          {/* Trust Indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+            <div className="flex items-center gap-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                <Icon name="secure" size={20} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-left leading-tight">
+                Secure Clinical<br />Infrastructure
+              </p>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <Icon name="info" size={20} />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-left leading-tight">
+                Patient Data<br />Encryption
+              </p>
+            </div>
+          </div>
+
+          {/* Demo Account Info - Styled as an info card */}
+          <div className="bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 max-w-sm mx-auto relative overflow-hidden group hover:border-slate-700 transition-colors shadow-2xl">
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <Icon name="info" size={16} />
+              </div>
+              <p className="text-xs font-black text-blue-400 uppercase tracking-[0.2em]">Clinical Demo Access</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-black uppercase text-slate-500">Email</p>
+                <p className="text-xs font-bold text-slate-200">demo@doctor.com</p>
+              </div>
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-black uppercase text-slate-500">Password</p>
+                <p className="text-xs font-bold text-slate-200">123456</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </Layout>
   );
 }
