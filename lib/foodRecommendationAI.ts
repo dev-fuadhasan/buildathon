@@ -264,16 +264,25 @@ ${pastRoutineContext || "No past recommendations available."}
    - Build on what worked well
 
 CRITICAL MEDICAL GUIDELINES:
-1. ALLERGIES - CRITICAL SAFETY REQUIREMENT: The mother has allergies: ${mother.allergies || "None"}. 
+1. 🚨 ALLERGIES - CRITICAL SAFETY REQUIREMENT 🚨: The mother has allergies: ${mother.allergies || "None"}. 
+   
+   THIS IS A LIFE-THREATENING SAFETY ISSUE. YOU MUST BE 100% COMPLIANT.
+   
+   IF MOTHER HAS ALLERGIES, YOU MUST:
+   ✅ NEVER suggest the allergen itself
+   ✅ NEVER suggest foods containing the allergen
+   ✅ NEVER suggest foods in the same category
+   ✅ ALWAYS explicitly state in each meal: "⚠️ ALLERGY SAFE: Avoiding [allergen]"
    
    YOU MUST INTELLIGENTLY ANALYZE the allergen and identify ALL related foods WITHOUT using predefined lists. Use your knowledge of food relationships, categories, and ingredients.
    
-   ANALYSIS PROCESS:
+   ANALYSIS PROCESS (MANDATORY):
    a) Identify the FOOD CATEGORY of the allergen (e.g., bread, dairy, nuts, seafood, grains, etc.)
    b) Identify ALL foods in that same category (e.g., if allergic to "ruti" (roti/bread), avoid ALL bread types: porota/paratha, naan, pita, toast, etc.)
    c) Identify foods that CONTAIN the allergen as an ingredient
    d) Identify foods that are DERIVATIVES or VARIATIONS of the allergen
    e) Identify foods with CROSS-CONTAMINATION risks
+   f) For EVERY meal suggestion, DOUBLE-CHECK it doesn't contain the allergen
    
    EXAMPLES OF INTELLIGENT DETECTION (DO NOT hardcode these - use as examples of the thinking process):
    - If allergic to "ruti" (roti/bread in Bangla): Avoid porota/paratha, naan, pita, toast, bread, roti, chapati, kulcha - ALL bread/flour-based items
@@ -421,6 +430,39 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
         // Validate and ensure all required fields exist with proper content
         const isSouthAsian = locationData?.culture === "South Asian";
         
+        // CRITICAL: Validate allergy safety
+        if (mother.allergies && mother.allergies.trim()) {
+          console.log("[Food Recommendation] 🔍 Validating allergy safety for:", mother.allergies);
+          const allergies = mother.allergies.toLowerCase();
+          const allergyKeywords = allergies.split(/[,;\s]+/).filter(k => k.length > 2);
+          
+          // Check each meal for allergen violations
+          const checkAllergyViolation = (meal: string, mealName: string): boolean => {
+            const mealLower = meal.toLowerCase();
+            for (const allergen of allergyKeywords) {
+              if (mealLower.includes(allergen)) {
+                console.error(`[Food Recommendation] ❌ ALLERGY VIOLATION: ${mealName} contains "${allergen}"`);
+                console.error(`[Food Recommendation] Meal text: ${meal.substring(0, 100)}...`);
+                return true;
+              }
+            }
+            return false;
+          };
+          
+          let hasViolation = false;
+          hasViolation = checkAllergyViolation(routineData.breakfast, "Breakfast") || hasViolation;
+          hasViolation = checkAllergyViolation(routineData.lunch, "Lunch") || hasViolation;
+          hasViolation = checkAllergyViolation(routineData.dinner, "Dinner") || hasViolation;
+          
+          if (hasViolation) {
+            console.error("[Food Recommendation] ❌ AI generated recommendations with ALLERGY VIOLATIONS!");
+            console.error("[Food Recommendation] Using safe fallback recommendations instead");
+            throw new Error("AI generated unsafe recommendations with allergy violations");
+          }
+          
+          console.log("[Food Recommendation] ✅ Allergy safety validation passed");
+        }
+        
         if (!routineData.breakfast || routineData.breakfast.trim().length < 10) {
           console.warn("[Food Recommendation] ⚠️ Breakfast too short, using location-based fallback");
           routineData.breakfast = isSouthAsian
@@ -484,17 +526,27 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
     try {
       const { searchExerciseVideos } = await import("./youtubeClient");
       console.log(`[Food Recommendation] Searching YouTube videos for exercises: "${routineData.exercises}"`);
-      exerciseVideos = await searchExerciseVideos(routineData.exercises, 3);
+      
+      // Add timeout for video search (10 seconds max)
+      const videoSearchPromise = searchExerciseVideos(routineData.exercises, 3);
+      const timeoutPromise = new Promise<any[]>((_, reject) => {
+        setTimeout(() => reject(new Error("Video search timeout")), 10000);
+      });
+      
+      exerciseVideos = await Promise.race([videoSearchPromise, timeoutPromise]);
+      
       // Ensure maximum 3 videos (strict enforcement)
       exerciseVideos = exerciseVideos.slice(0, 3);
       if (exerciseVideos.length > 0) {
         console.log(`[Food Recommendation] ✅ Found ${exerciseVideos.length} exercise video(s) (max 3)`);
       } else {
-        console.log(`[Food Recommendation] ⚠️ No exercise videos found`);
+        console.log(`[Food Recommendation] ⚠️ No exercise videos found - YouTube API may not be configured`);
       }
     } catch (videoError: any) {
-      console.error(`[Food Recommendation] Error searching for exercise videos:`, videoError.message);
+      console.error(`[Food Recommendation] ⚠️ Video search failed:`, videoError.message);
+      console.error(`[Food Recommendation] This is OK - videos are optional. Check if YOUTUBE_API_KEY is set in Vercel.`);
       // Continue without videos - not critical
+      exerciseVideos = [];
     }
 
     return {
@@ -509,7 +561,7 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
       name: error.name,
     });
     
-    // EMERGENCY FALLBACK: Return location-appropriate recommendations
+    // EMERGENCY FALLBACK: Return location-appropriate recommendations with ALLERGY SAFETY
     const isSouthAsian = locationData?.culture === "South Asian" || 
                         locationData?.country === "Bangladesh" || 
                         locationData?.country === "India" ||
@@ -518,19 +570,81 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
     console.log("[Food Recommendation] 🆘 Using EMERGENCY FALLBACK recommendations");
     console.log("[Food Recommendation] Detected culture:", locationData?.culture, "Country:", locationData?.country);
     console.log("[Food Recommendation] Using South Asian recommendations:", isSouthAsian);
+    console.log("[Food Recommendation] Allergies to avoid:", mother.allergies || "None");
+    
+    // Check allergies to avoid dangerous foods
+    const allergies = (mother.allergies || "").toLowerCase();
+    const hasEggAllergy = allergies.includes("egg") || allergies.includes("dim");
+    const hasDairyAllergy = allergies.includes("dairy") || allergies.includes("milk") || allergies.includes("dudh") || allergies.includes("cheese") || allergies.includes("yogurt");
+    const hasNutAllergy = allergies.includes("nut") || allergies.includes("badam") || allergies.includes("peanut");
+    const hasFishAllergy = allergies.includes("fish") || allergies.includes("mach") || allergies.includes("seafood");
+    const hasWheatAllergy = allergies.includes("wheat") || allergies.includes("gluten") || allergies.includes("roti") || allergies.includes("ruti") || allergies.includes("bread") || allergies.includes("paratha") || allergies.includes("porota");
+    
+    // Build safe recommendations based on allergies
+    let breakfast, lunch, dinner;
+    
+    if (isSouthAsian) {
+      // South Asian recommendations
+      if (hasWheatAllergy && hasEggAllergy) {
+        breakfast = "Rice flakes (chira) with banana and warm milk (if no dairy allergy), fresh seasonal fruits";
+      } else if (hasWheatAllergy) {
+        breakfast = "Rice porridge with egg curry (if no egg allergy), fresh fruits, and warm milk";
+      } else if (hasEggAllergy) {
+        breakfast = "Paratha with vegetable curry, fresh yogurt (if no dairy allergy), banana, and warm milk";
+      } else {
+        breakfast = "Paratha with egg curry, fresh yogurt (if no dairy allergy), banana, and warm milk";
+      }
+      
+      if (hasFishAllergy) {
+        lunch = "Steamed rice with dal (lentil curry), mixed vegetable curry, chicken curry (if available), and fresh salad";
+      } else {
+        lunch = "Steamed rice with dal (lentil curry), mixed vegetable curry, fish curry, and fresh salad";
+      }
+      
+      if (hasWheatAllergy) {
+        dinner = "Steamed rice with vegetable curry, dal, and fresh vegetables. Keep it light and easy to digest.";
+      } else {
+        dinner = "Roti with chicken curry (or vegetable curry), dal, and fresh vegetables. Keep it light and easy to digest.";
+      }
+    } else {
+      // Western recommendations
+      if (hasWheatAllergy && hasEggAllergy) {
+        breakfast = "Rice porridge with fresh fruit salad, and a glass of milk (if no dairy allergy)";
+      } else if (hasWheatAllergy) {
+        breakfast = "Rice cakes with scrambled eggs, fresh fruit salad, and a glass of milk";
+      } else if (hasEggAllergy) {
+        breakfast = "Whole grain toast with avocado, fresh fruit salad, and a glass of milk";
+      } else {
+        breakfast = "Whole grain toast with scrambled eggs, fresh fruit salad, and a glass of milk";
+      }
+      
+      if (hasFishAllergy) {
+        lunch = "Grilled chicken with steamed vegetables, brown rice, and a side salad";
+      } else {
+        lunch = "Grilled chicken or fish with steamed vegetables, brown rice, and a side salad";
+      }
+      
+      if (hasWheatAllergy) {
+        dinner = "Grilled lean protein with roasted vegetables and quinoa";
+      } else {
+        dinner = "Light pasta with vegetables and lean protein, or soup with whole grain bread";
+      }
+    }
+    
+    // Add allergy warnings to meals
+    if (hasDairyAllergy) {
+      breakfast = breakfast.replace(/milk/gi, "plant-based milk (almond, soy, or oat milk)");
+      breakfast = breakfast.replace(/yogurt/gi, "plant-based yogurt");
+      lunch = lunch.replace(/milk/gi, "plant-based milk");
+      dinner = dinner.replace(/milk/gi, "plant-based milk");
+    }
     
     return {
-      breakfast: isSouthAsian
-        ? "Paratha with egg curry (if no egg allergies), fresh yogurt (if no dairy allergies), banana, and warm milk"
-        : "Whole grain toast with scrambled eggs (if no egg allergies), fresh fruit salad, and a glass of milk",
-      lunch: isSouthAsian
-        ? "Steamed rice with dal (lentil curry), mixed vegetable curry, and fresh salad"
-        : "Grilled chicken or fish with steamed vegetables and brown rice",
-      dinner: isSouthAsian
-        ? "Roti with chicken curry (or vegetable curry if vegetarian), dal, and fresh vegetables. Keep it light."
-        : "Light pasta with vegetables and lean protein, or soup with whole grain bread",
-      exercises: `15-minute gentle walk ${isSouthAsian ? "(early morning or evening to avoid heat)" : ""}, 10 minutes of prenatal yoga stretches, breathing exercises for relaxation`,
-      waterIntake: `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. ${locationData?.climate === "tropical" || locationData?.climate === "hot" ? "Increase intake due to hot climate." : ""} Drink water between meals, not during meals.`
+      breakfast: `${breakfast}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
+      lunch: `${lunch}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
+      dinner: `${dinner}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
+      exercises: `15-minute gentle walk ${isSouthAsian ? "(early morning or evening to avoid heat)" : ""}, 10 minutes of prenatal yoga stretches, 5 minutes of breathing exercises for relaxation${weeksPregnant && weeksPregnant > 30 ? ". Focus on pelvic floor exercises and gentle stretching." : ""}`,
+      waterIntake: `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. ${locationData?.climate === "tropical" || locationData?.climate === "hot" ? "Increase intake due to hot climate." : ""} Drink water between meals, not during meals.${weeksPregnant && weeksPregnant > 30 ? " Stay well-hydrated as you approach delivery." : ""}`
     };
   }
 }
