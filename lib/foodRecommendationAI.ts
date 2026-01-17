@@ -639,12 +639,17 @@ Respond ONLY with valid JSON in the exact format specified above. No additional 
       dinner = dinner.replace(/milk/gi, "plant-based milk");
     }
     
+    // Calculate weeks pregnant for exercise recommendations
+    const daysPreg = mother.daysPregnant || (mother.weeksPregnant ? mother.weeksPregnant * 7 : undefined);
+    const weeksPrg = daysPreg ? Math.floor(daysPreg / 7) : mother.weeksPregnant;
+    const isLatePregnancy = weeksPrg && weeksPrg > 30;
+    
     return {
       breakfast: `${breakfast}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
       lunch: `${lunch}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
       dinner: `${dinner}${mother.allergies ? `\n\n⚠️ ALLERGY SAFE: Avoiding ${mother.allergies}` : ""}`,
-      exercises: `15-minute gentle walk ${isSouthAsian ? "(early morning or evening to avoid heat)" : ""}, 10 minutes of prenatal yoga stretches, 5 minutes of breathing exercises for relaxation${weeksPregnant && weeksPregnant > 30 ? ". Focus on pelvic floor exercises and gentle stretching." : ""}`,
-      waterIntake: `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. ${locationData?.climate === "tropical" || locationData?.climate === "hot" ? "Increase intake due to hot climate." : ""} Drink water between meals, not during meals.${weeksPregnant && weeksPregnant > 30 ? " Stay well-hydrated as you approach delivery." : ""}`
+      exercises: `15-minute gentle walk ${isSouthAsian ? "(early morning or evening to avoid heat)" : ""}, 10 minutes of prenatal yoga stretches, 5 minutes of breathing exercises for relaxation${isLatePregnancy ? ". Focus on pelvic floor exercises and gentle stretching." : ""}`,
+      waterIntake: `Drink 8-10 glasses (2-2.5 liters) of water throughout the day. ${locationData?.climate === "tropical" || locationData?.climate === "hot" ? "Increase intake due to hot climate." : ""} Drink water between meals, not during meals.${isLatePregnancy ? " Stay well-hydrated as you approach delivery." : ""}`
     };
   }
 }
